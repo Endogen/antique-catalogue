@@ -21,12 +21,13 @@ antique-catalogue/
 ## Commands
 
 ### Backend
+- **Activate venv**: `source backend/.venv/bin/activate`
 - **Install**: `cd backend && pip install -e ".[dev]"`
-- **Run**: `cd backend && uvicorn app.main:app --reload`
-- **Test**: `cd backend && pytest --cov=app --cov-report=term-missing`
-- **Lint**: `cd backend && ruff check . && ruff format --check .`
-- **Format**: `cd backend && ruff format .`
-- **Migrate**: `cd backend && alembic upgrade head`
+- **Run**: `cd backend && .venv/bin/uvicorn app.main:app --reload`
+- **Test**: `cd backend && .venv/bin/pytest --cov=app --cov-report=term-missing`
+- **Lint**: `cd backend && .venv/bin/ruff check . && .venv/bin/ruff format --check .`
+- **Format**: `cd backend && .venv/bin/ruff format .`
+- **Migrate**: `cd backend && .venv/bin/alembic upgrade head`
 
 ### Frontend
 - **Install**: `cd frontend && npm install`
@@ -37,8 +38,8 @@ antique-catalogue/
 
 ## Backpressure
 Run after each implementation:
-1. `cd backend && ruff check . --fix && ruff format .`
-2. `cd backend && pytest`
+1. `cd backend && .venv/bin/ruff check . --fix && .venv/bin/ruff format .`
+2. `cd backend && .venv/bin/pytest`
 
 ## Completion Criteria
 - All tests pass
@@ -52,4 +53,4 @@ Run after each implementation:
 <!-- Decisions made by humans are recorded here -->
 
 ## Learnings
-<!-- Agent appends operational notes here -->
+- Virtual environment at `backend/.venv` has all dependencies installed.

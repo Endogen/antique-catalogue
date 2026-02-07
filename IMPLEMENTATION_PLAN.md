@@ -3,7 +3,7 @@ STATUS: READY
 # Implementation Plan
 
 ## Phase 1: Backend Setup
-- [ ] 1.1: Initialize backend project (FastAPI, SQLAlchemy, Alembic, pyproject.toml)
+- [x] 1.1: Initialize backend project (FastAPI, SQLAlchemy, Alembic, pyproject.toml)
 - [ ] 1.2: Configure settings (env vars: DB, JWT secret, SMTP, uploads path)
 - [ ] 1.3: Set up SQLAlchemy models base and database session
 - [ ] 1.4: Implement password hashing and JWT utilities
