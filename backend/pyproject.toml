@@ -29,7 +29,7 @@ where = ["."]
 include = ["app*"]
 
 [tool.pytest.ini_options]
-addopts = "-ra"
+addopts = "-ra -p no:anyio"
 testpaths = ["tests"]
 pythonpath = ["."]
 
