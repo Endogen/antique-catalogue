@@ -24,7 +24,7 @@ antique-catalogue/
 - **Activate venv**: `source backend/.venv/bin/activate`
 - **Install**: `cd backend && pip install -e ".[dev]"`
 - **Run**: `cd backend && .venv/bin/uvicorn app.main:app --reload`
-- **Test**: `cd backend && .venv/bin/pytest --cov=app --cov-report=term-missing`
+- **Test**: `cd backend && .venv/bin/pytest --timeout=30 --cov=app --cov-report=term-missing`
 - **Lint**: `cd backend && .venv/bin/ruff check . && .venv/bin/ruff format --check .`
 - **Format**: `cd backend && .venv/bin/ruff format .`
 - **Migrate**: `cd backend && .venv/bin/alembic upgrade head`
@@ -39,7 +39,7 @@ antique-catalogue/
 ## Backpressure
 Run after each implementation:
 1. `cd backend && .venv/bin/ruff check . --fix && .venv/bin/ruff format .`
-2. `cd backend && .venv/bin/pytest`
+2. `cd backend && .venv/bin/pytest --timeout=30`
 
 ## Completion Criteria
 - All tests pass
