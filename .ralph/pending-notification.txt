@@ -1,1 +1,0 @@
-{"timestamp":"$(date -Iseconds)","message":"ERROR: Backpressure failed because ruff/pytest are unavailable and python3 lacks pip; unable to run lint/tests.","status":"pending"}
