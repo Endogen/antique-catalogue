@@ -35,7 +35,7 @@ STATUS: READY
 - [x] 5.2: Implement metadata validation service
 - [x] 5.3: Implement item CRUD endpoints
 - [x] 5.4: Implement item list with search/filter/sort/pagination
-- [ ] 5.5: Add item tests
+- [x] 5.5: Add item tests
 
 ## Phase 6: Backend Images
 - [ ] 6.1: Create ItemImage model with migrations
