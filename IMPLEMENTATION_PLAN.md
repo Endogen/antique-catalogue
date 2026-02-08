@@ -6,11 +6,11 @@ STATUS: READY
 - [x] 1.1: Initialize backend project (FastAPI, SQLAlchemy, Alembic, pyproject.toml)
 - [x] 1.2: Configure settings (env vars: DB, JWT secret, SMTP, uploads path)
 - [x] 1.3: Set up SQLAlchemy models base and database session
-- [ ] 1.4: Implement password hashing and JWT utilities
-- [ ] 1.5: Add global exception handling and API response schemas
+- [x] 1.4: Implement password hashing and JWT utilities
+- [x] 1.5: Add global exception handling and API response schemas
 
 ## Phase 2: Backend Auth
-- [ ] 2.1: Create User and EmailToken models with migrations
+- [x] 2.1: Create User and EmailToken models with migrations
 - [ ] 2.2: Implement register endpoint with email verification token
 - [ ] 2.3: Implement verify email endpoint
 - [ ] 2.4: Implement login/logout/refresh endpoints
