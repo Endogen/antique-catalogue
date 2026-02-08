@@ -47,7 +47,7 @@ STATUS: READY
 
 ## Phase 7: Frontend Setup
 - [x] 7.1: Initialize Next.js app with Tailwind and shadcn/ui
-- [ ] 7.2: Set up API client with auth handling
+- [x] 7.2: Set up API client with auth handling
 - [ ] 7.3: Build layout (header, sidebar, responsive shell)
 - [ ] 7.4: Implement auth context and route guards
 
