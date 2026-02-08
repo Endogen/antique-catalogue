@@ -31,7 +31,7 @@ STATUS: READY
 - [x] 4.4: Add schema tests
 
 ## Phase 5: Backend Items
-- [ ] 5.1: Create Item model with migrations
+- [x] 5.1: Create Item model with migrations
 - [ ] 5.2: Implement metadata validation service
 - [ ] 5.3: Implement item CRUD endpoints
 - [ ] 5.4: Implement item list with search/filter/sort/pagination

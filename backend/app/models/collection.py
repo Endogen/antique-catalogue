@@ -10,6 +10,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.field_definition import FieldDefinition
+    from app.models.item import Item
     from app.models.user import User
 
 
@@ -34,5 +35,8 @@ class Collection(Base):
 
     owner: Mapped[User] = relationship(back_populates="collections")
     fields: Mapped[list[FieldDefinition]] = relationship(
+        back_populates="collection", cascade="all, delete-orphan", passive_deletes=True
+    )
+    items: Mapped[list[Item]] = relationship(
         back_populates="collection", cascade="all, delete-orphan", passive_deletes=True
     )

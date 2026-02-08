@@ -3,6 +3,7 @@
 from app.models.collection import Collection
 from app.models.email_token import EmailToken
 from app.models.field_definition import FieldDefinition
+from app.models.item import Item
 from app.models.user import User
 
-__all__ = ["Collection", "EmailToken", "FieldDefinition", "User"]
+__all__ = ["Collection", "EmailToken", "FieldDefinition", "Item", "User"]
