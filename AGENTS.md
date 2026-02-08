@@ -57,3 +57,4 @@ Run after each implementation:
 - Verification emails are skipped (logged) when `SMTP_HOST` or `SMTP_FROM` is unset.
 - In tests, sync FastAPI endpoints may hang unless `run_in_threadpool` and `contextmanager_in_threadpool` are patched to run inline.
 - Request validation errors can include exception objects in `ctx`, so sanitize them before JSON serialization.
+- Starlette deprecates `HTTP_422_UNPROCESSABLE_ENTITY`; prefer `HTTP_422_UNPROCESSABLE_CONTENT` to avoid warnings.

@@ -12,6 +12,7 @@ from app.models.field_definition import FieldDefinition
 from app.models.user import User
 from app.schemas.fields import (
     FieldDefinitionCreateRequest,
+    FieldDefinitionReorderRequest,
     FieldDefinitionResponse,
     FieldDefinitionUpdateRequest,
 )
@@ -131,6 +132,36 @@ def create_field(
         )
     db.refresh(field)
     return field
+
+
+@router.patch("/reorder", response_model=list[FieldDefinitionResponse])
+def reorder_fields(
+    collection_id: int,
+    request: FieldDefinitionReorderRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[FieldDefinitionResponse]:
+    _get_collection_or_404(db, collection_id, current_user.id)
+    fields = (
+        db.execute(select(FieldDefinition).where(FieldDefinition.collection_id == collection_id))
+        .scalars()
+        .all()
+    )
+    existing_ids = {field.id for field in fields}
+    requested_ids = request.field_ids
+
+    if len(requested_ids) != len(existing_ids) or set(requested_ids) != existing_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Field order must include all fields for the collection",
+        )
+
+    field_by_id = {field.id: field for field in fields}
+    for position, field_id in enumerate(requested_ids, start=1):
+        field_by_id[field_id].position = position
+
+    db.commit()
+    return [field_by_id[field_id] for field_id in requested_ids]
 
 
 @router.patch("/{field_id}", response_model=FieldDefinitionResponse)

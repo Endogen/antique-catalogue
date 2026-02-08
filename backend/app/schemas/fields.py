@@ -104,6 +104,21 @@ class FieldDefinitionUpdateRequest(BaseModel):
         return _normalize_options(value)
 
 
+class FieldDefinitionReorderRequest(BaseModel):
+    field_ids: list[int] = Field(..., examples=[[1, 2, 3]])
+
+    @field_validator("field_ids")
+    @classmethod
+    def validate_field_ids(cls, value: list[int]) -> list[int]:
+        if not value:
+            return value
+        if any(field_id <= 0 for field_id in value):
+            raise ValueError("Field IDs must be positive")
+        if len(set(value)) != len(value):
+            raise ValueError("Field order contains duplicate ids")
+        return value
+
+
 class FieldDefinitionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
