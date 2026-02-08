@@ -6,7 +6,8 @@ import {
   ArrowUp,
   GripVertical,
   Image as ImageIcon,
-  RefreshCcw
+  RefreshCcw,
+  Trash2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -59,12 +60,17 @@ export function ImageGallery({
   const [images, setImages] = React.useState<ItemImageResponse[]>([]);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [reorderError, setReorderError] = React.useState<string | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [isReordering, setIsReordering] = React.useState(false);
+  const [deletePendingId, setDeletePendingId] = React.useState<number | null>(
+    null
+  );
   const [draggingId, setDraggingId] = React.useState<number | null>(null);
   const [dragOverId, setDragOverId] = React.useState<number | null>(null);
   const hasLoadedRef = React.useRef(false);
 
   const canInteract = Boolean(itemId) && !disabled;
+  const isBusy = isReordering || deletePendingId !== null;
 
   const loadImages = React.useCallback(
     async (options?: { silent?: boolean }) => {
@@ -77,6 +83,7 @@ export function ImageGallery({
         setStatus("loading");
       }
       setLoadError(null);
+      setDeleteError(null);
       try {
         const data = await imageApi.list(itemId);
         setImages(sortImages(data));
@@ -139,7 +146,7 @@ export function ImageGallery({
 
   const moveImage = React.useCallback(
     async (fromIndex: number, toIndex: number) => {
-      if (!canInteract || isReordering) {
+      if (!canInteract || isBusy) {
         return;
       }
       if (toIndex < 0 || toIndex >= images.length) {
@@ -151,14 +158,14 @@ export function ImageGallery({
       const moved = previous[fromIndex];
       await commitReorder(moved, toIndex, previous);
     },
-    [canInteract, commitReorder, images, isReordering]
+    [canInteract, commitReorder, images, isBusy]
   );
 
   const handleDragStart = (
     event: React.DragEvent<HTMLButtonElement>,
     imageId: number
   ) => {
-    if (!canInteract || isReordering) {
+    if (!canInteract || isBusy) {
       return;
     }
     event.dataTransfer.effectAllowed = "move";
@@ -211,6 +218,37 @@ export function ImageGallery({
     setDragOverId(null);
   };
 
+  const handleDelete = React.useCallback(
+    async (image: ItemImageResponse) => {
+      if (!itemId || deletePendingId) {
+        return;
+      }
+      const confirmed = window.confirm(
+        `Delete "${image.filename || "this image"}"? This cannot be undone.`
+      );
+      if (!confirmed) {
+        return;
+      }
+      setDeletePendingId(image.id);
+      setDeleteError(null);
+      setReorderError(null);
+      try {
+        await imageApi.delete(itemId, image.id);
+        setImages((prev) => prev.filter((item) => item.id !== image.id));
+        await loadImages({ silent: true });
+      } catch (error) {
+        setDeleteError(
+          isApiError(error)
+            ? error.detail
+            : "We couldn't delete the image. Please try again."
+        );
+      } finally {
+        setDeletePendingId(null);
+      }
+    },
+    [deletePendingId, itemId, loadImages]
+  );
+
   return (
     <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -248,6 +286,12 @@ export function ImageGallery({
           </div>
         ) : null}
 
+        {deleteError ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs text-rose-700">
+            {deleteError}
+          </div>
+        ) : null}
+
         {!canInteract ? (
           <div className="text-xs text-stone-500">
             Finish loading the item to manage image order.
@@ -256,6 +300,10 @@ export function ImageGallery({
 
         {isReordering ? (
           <div className="text-xs text-amber-700">Saving image order...</div>
+        ) : null}
+
+        {deletePendingId !== null ? (
+          <div className="text-xs text-amber-700">Deleting image...</div>
         ) : null}
 
         {status === "loading" ? (
@@ -310,7 +358,7 @@ export function ImageGallery({
                           ? "border-amber-300 bg-amber-50 text-amber-700"
                           : "border-stone-200 bg-stone-50 hover:border-stone-300"
                       )}
-                      draggable={canInteract && !isReordering}
+                      draggable={canInteract && !isBusy}
                       aria-label={`Drag to reorder ${image.filename}`}
                       onDragStart={(event) =>
                         handleDragStart(event, image.id)
@@ -347,7 +395,7 @@ export function ImageGallery({
                       size="sm"
                       variant="ghost"
                       onClick={() => moveImage(index, index - 1)}
-                      disabled={!canInteract || isReordering || isFirst}
+                      disabled={!canInteract || isBusy || isFirst}
                     >
                       <ArrowUp className="h-4 w-4" />
                       Move up
@@ -356,10 +404,20 @@ export function ImageGallery({
                       size="sm"
                       variant="ghost"
                       onClick={() => moveImage(index, index + 1)}
-                      disabled={!canInteract || isReordering || isLast}
+                      disabled={!canInteract || isBusy || isLast}
                     >
                       <ArrowDown className="h-4 w-4" />
                       Move down
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                      onClick={() => handleDelete(image)}
+                      disabled={!canInteract || isBusy}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {deletePendingId === image.id ? "Deleting..." : "Delete"}
                     </Button>
                   </div>
                 </div>

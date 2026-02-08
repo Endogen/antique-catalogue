@@ -71,7 +71,7 @@ STATUS: READY
 ## Phase 11: Frontend Images
 - [x] 11.1: Build image uploader (drag-drop + camera capture)
 - [x] 11.2: Build image gallery with reorder
-- [ ] 11.3: Build image delete flow
+- [x] 11.3: Build image delete flow
 
 ## Phase 12: Docker & Polish
 - [ ] 12.1: Create Dockerfile for backend
