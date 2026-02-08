@@ -10,6 +10,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.collection import Collection
+    from app.models.item_image import ItemImage
 
 
 class Item(Base):
@@ -30,3 +31,6 @@ class Item(Base):
     )
 
     collection: Mapped[Collection] = relationship(back_populates="items")
+    images: Mapped[list[ItemImage]] = relationship(
+        back_populates="item", cascade="all, delete-orphan", passive_deletes=True
+    )

@@ -38,7 +38,7 @@ STATUS: READY
 - [x] 5.5: Add item tests
 
 ## Phase 6: Backend Images
-- [ ] 6.1: Create ItemImage model with migrations
+- [x] 6.1: Create ItemImage model with migrations
 - [ ] 6.2: Implement image processing service (resize, convert to JPG)
 - [ ] 6.3: Implement image upload endpoint
 - [ ] 6.4: Implement image list/delete/reorder endpoints
