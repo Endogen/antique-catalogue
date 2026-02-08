@@ -26,6 +26,18 @@ export type CollectionResponse = {
   updated_at: string;
 };
 
+export type CollectionCreatePayload = {
+  name: string;
+  description?: string | null;
+  is_public?: boolean;
+};
+
+export type CollectionUpdatePayload = {
+  name?: string;
+  description?: string | null;
+  is_public?: boolean;
+};
+
 export type ApiErrorPayload = {
   detail?: string;
   message?: string;
@@ -334,5 +346,17 @@ export const authApi = {
 };
 
 export const collectionApi = {
-  list: () => apiRequest<CollectionResponse[]>("/collections")
+  list: () => apiRequest<CollectionResponse[]>("/collections"),
+  create: (payload: CollectionCreatePayload) =>
+    apiRequest<CollectionResponse>("/collections", {
+      method: "POST",
+      body: payload
+    }),
+  get: (collectionId: number | string) =>
+    apiRequest<CollectionResponse>(`/collections/${collectionId}`),
+  update: (collectionId: number | string, payload: CollectionUpdatePayload) =>
+    apiRequest<CollectionResponse>(`/collections/${collectionId}`, {
+      method: "PATCH",
+      body: payload
+    })
 };
