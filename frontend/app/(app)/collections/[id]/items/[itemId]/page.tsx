@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { ItemForm, type ItemFormValues } from "@/components/item-form";
+import { ImageGallery } from "@/components/image-gallery";
 import { ImageUploader } from "@/components/image-uploader";
 import { Button } from "@/components/ui/button";
 import {
@@ -143,6 +144,7 @@ export default function ItemDetailPage() {
   const [isEditing, setIsEditing] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
+  const [imageRefreshToken, setImageRefreshToken] = React.useState(0);
   const [deletePhrase, setDeletePhrase] = React.useState("");
   const [deleteState, setDeleteState] = React.useState<DeleteState>({
     status: "idle"
@@ -330,6 +332,10 @@ export default function ItemDetailPage() {
       });
     }
   };
+
+  const handleImageUploaded = React.useCallback(() => {
+    setImageRefreshToken((prev) => prev + 1);
+  }, []);
 
   const collectionName =
     collectionState.status === "ready" ? collectionState.data?.name : null;
@@ -606,9 +612,15 @@ export default function ItemDetailPage() {
               </>
             )}
 
+            <ImageGallery
+              itemId={itemId ?? null}
+              disabled={itemState.status !== "ready"}
+              refreshToken={imageRefreshToken}
+            />
             <ImageUploader
               itemId={itemId ?? null}
               disabled={itemState.status !== "ready"}
+              onUploaded={handleImageUploaded}
             />
           </div>
 

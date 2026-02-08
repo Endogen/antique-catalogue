@@ -70,7 +70,7 @@ STATUS: READY
 
 ## Phase 11: Frontend Images
 - [x] 11.1: Build image uploader (drag-drop + camera capture)
-- [ ] 11.2: Build image gallery with reorder
+- [x] 11.2: Build image gallery with reorder
 - [ ] 11.3: Build image delete flow
 
 ## Phase 12: Docker & Polish

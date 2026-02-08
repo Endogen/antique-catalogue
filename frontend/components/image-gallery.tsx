@@ -1,0 +1,373 @@
+"use client";
+
+import * as React from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  GripVertical,
+  Image as ImageIcon,
+  RefreshCcw
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  imageApi,
+  isApiError,
+  type ItemImageResponse
+} from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+const sortImages = (items: ItemImageResponse[]) =>
+  [...items].sort((a, b) => a.position - b.position || a.id - b.id);
+
+const arrayMove = <T,>(items: T[], fromIndex: number, toIndex: number) => {
+  const result = [...items];
+  const [removed] = result.splice(fromIndex, 1);
+  result.splice(toIndex, 0, removed);
+  return result;
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) {
+    return "—";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(parsed);
+};
+
+type ImageGalleryProps = {
+  itemId?: number | string | null;
+  disabled?: boolean;
+  refreshToken?: number;
+};
+
+export function ImageGallery({
+  itemId,
+  disabled = false,
+  refreshToken
+}: ImageGalleryProps) {
+  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
+    "loading"
+  );
+  const [images, setImages] = React.useState<ItemImageResponse[]>([]);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [reorderError, setReorderError] = React.useState<string | null>(null);
+  const [isReordering, setIsReordering] = React.useState(false);
+  const [draggingId, setDraggingId] = React.useState<number | null>(null);
+  const [dragOverId, setDragOverId] = React.useState<number | null>(null);
+  const hasLoadedRef = React.useRef(false);
+
+  const canInteract = Boolean(itemId) && !disabled;
+
+  const loadImages = React.useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!itemId) {
+        setStatus("error");
+        setLoadError("Item ID is missing.");
+        return;
+      }
+      if (!options?.silent) {
+        setStatus("loading");
+      }
+      setLoadError(null);
+      try {
+        const data = await imageApi.list(itemId);
+        setImages(sortImages(data));
+        setStatus("ready");
+        hasLoadedRef.current = true;
+      } catch (error) {
+        setStatus("error");
+        setLoadError(
+          isApiError(error) ? error.detail : "We couldn't load item images."
+        );
+      }
+    },
+    [itemId]
+  );
+
+  React.useEffect(() => {
+    hasLoadedRef.current = false;
+    if (!itemId) {
+      setStatus("error");
+      setLoadError("Item ID is missing.");
+      return;
+    }
+    void loadImages();
+  }, [itemId, loadImages]);
+
+  React.useEffect(() => {
+    if (!itemId || !hasLoadedRef.current) {
+      return;
+    }
+    void loadImages({ silent: true });
+  }, [refreshToken, itemId, loadImages]);
+
+  const commitReorder = React.useCallback(
+    async (
+      image: ItemImageResponse,
+      position: number,
+      previous: ItemImageResponse[]
+    ) => {
+      if (!itemId) {
+        return;
+      }
+      setIsReordering(true);
+      setReorderError(null);
+      try {
+        await imageApi.update(itemId, image.id, { position });
+        await loadImages({ silent: true });
+      } catch (error) {
+        setImages(previous);
+        setReorderError(
+          isApiError(error)
+            ? error.detail
+            : "We couldn't reorder images. Please try again."
+        );
+      } finally {
+        setIsReordering(false);
+      }
+    },
+    [itemId, loadImages]
+  );
+
+  const moveImage = React.useCallback(
+    async (fromIndex: number, toIndex: number) => {
+      if (!canInteract || isReordering) {
+        return;
+      }
+      if (toIndex < 0 || toIndex >= images.length) {
+        return;
+      }
+      const previous = images;
+      const next = arrayMove(previous, fromIndex, toIndex);
+      setImages(next);
+      const moved = previous[fromIndex];
+      await commitReorder(moved, toIndex, previous);
+    },
+    [canInteract, commitReorder, images, isReordering]
+  );
+
+  const handleDragStart = (
+    event: React.DragEvent<HTMLButtonElement>,
+    imageId: number
+  ) => {
+    if (!canInteract || isReordering) {
+      return;
+    }
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(imageId));
+    setDraggingId(imageId);
+  };
+
+  const handleDragOver = (
+    event: React.DragEvent<HTMLDivElement>,
+    imageId: number
+  ) => {
+    if (!canInteract) {
+      return;
+    }
+    event.preventDefault();
+    if (dragOverId !== imageId) {
+      setDragOverId(imageId);
+    }
+  };
+
+  const handleDrop = async (
+    event: React.DragEvent<HTMLDivElement>,
+    imageId: number
+  ) => {
+    if (!canInteract) {
+      return;
+    }
+    event.preventDefault();
+    const sourceId =
+      draggingId ?? Number(event.dataTransfer.getData("text/plain"));
+    if (!sourceId || sourceId === imageId) {
+      setDraggingId(null);
+      setDragOverId(null);
+      return;
+    }
+    const fromIndex = images.findIndex((image) => image.id === sourceId);
+    const toIndex = images.findIndex((image) => image.id === imageId);
+    if (fromIndex === -1 || toIndex === -1) {
+      setDraggingId(null);
+      setDragOverId(null);
+      return;
+    }
+    await moveImage(fromIndex, toIndex);
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+
+  return (
+    <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            Image gallery
+          </p>
+          <h3 className="font-display mt-3 text-2xl text-stone-900">
+            Arrange item imagery
+          </h3>
+          <p className="mt-3 max-w-xl text-sm text-stone-600">
+            Drag images to reorder them or use the move controls to fine-tune the
+            sequence.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => loadImages()}
+            disabled={!itemId}
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+            <ImageIcon className="h-6 w-6" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {reorderError ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs text-rose-700">
+            {reorderError}
+          </div>
+        ) : null}
+
+        {!canInteract ? (
+          <div className="text-xs text-stone-500">
+            Finish loading the item to manage image order.
+          </div>
+        ) : null}
+
+        {isReordering ? (
+          <div className="text-xs text-amber-700">Saving image order...</div>
+        ) : null}
+
+        {status === "loading" ? (
+          <div
+            className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500"
+            aria-busy="true"
+          >
+            Loading images...
+          </div>
+        ) : status === "error" ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-6">
+            <p className="text-sm font-medium text-rose-700">
+              We couldn't load the image gallery.
+            </p>
+            <p className="mt-2 text-sm text-rose-600">
+              {loadError ?? "Please try again."}
+            </p>
+            <div className="mt-4">
+              <Button size="sm" variant="outline" onClick={() => loadImages()}>
+                Try again
+              </Button>
+            </div>
+          </div>
+        ) : images.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+            No images yet. Upload imagery to start building this gallery.
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {images.map((image, index) => {
+              const isFirst = index === 0;
+              const isLast = index === images.length - 1;
+
+              return (
+                <div
+                  key={image.id}
+                  className={cn(
+                    "rounded-2xl border bg-white/80 p-4 shadow-sm transition",
+                    dragOverId === image.id
+                      ? "border-amber-300 bg-amber-50/70"
+                      : "border-stone-200"
+                  )}
+                  onDragOver={(event) => handleDragOver(event, image.id)}
+                  onDrop={(event) => handleDrop(event, image.id)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-xl border text-stone-500 transition",
+                        draggingId === image.id
+                          ? "border-amber-300 bg-amber-50 text-amber-700"
+                          : "border-stone-200 bg-stone-50 hover:border-stone-300"
+                      )}
+                      draggable={canInteract && !isReordering}
+                      aria-label={`Drag to reorder ${image.filename}`}
+                      onDragStart={(event) =>
+                        handleDragStart(event, image.id)
+                      }
+                      onDragEnd={handleDragEnd}
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </button>
+                    <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
+                      {index + 1}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
+                    <img
+                      src={imageApi.url(image.id, "medium")}
+                      alt={image.filename || "Item image"}
+                      className="h-36 w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <div className="mt-3">
+                    <p className="truncate text-sm font-medium text-stone-900">
+                      {image.filename || "Untitled image"}
+                    </p>
+                    <p className="mt-1 text-xs text-stone-500">
+                      Added {formatDate(image.created_at)}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-stone-500">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => moveImage(index, index - 1)}
+                      disabled={!canInteract || isReordering || isFirst}
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                      Move up
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => moveImage(index, index + 1)}
+                      disabled={!canInteract || isReordering || isLast}
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                      Move down
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
