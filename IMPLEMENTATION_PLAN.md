@@ -54,7 +54,7 @@ STATUS: READY
 ## Phase 8: Frontend Auth
 - [x] 8.1: Build login and register pages
 - [x] 8.2: Build email verification page
-- [ ] 8.3: Build forgot/reset password pages
+- [x] 8.3: Build forgot/reset password pages
 - [ ] 8.4: Build user settings page
 
 ## Phase 9: Frontend Collections
