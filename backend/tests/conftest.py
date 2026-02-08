@@ -1,0 +1,79 @@
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+import fastapi.concurrency
+import fastapi.dependencies.utils
+import fastapi.routing
+import pytest
+import starlette.concurrency
+from fastapi import FastAPI
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.api.auth import router as auth_router
+from app.core.exceptions import register_exception_handlers
+from app.core.settings import settings
+from app.db.base import Base
+from app.db.session import get_db
+from app.schemas.responses import DEFAULT_ERROR_RESPONSES
+
+
+@pytest.fixture()
+def db_session_factory():
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    Base.metadata.create_all(bind=engine)
+    try:
+        yield TestingSessionLocal
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
+@pytest.fixture()
+def app_with_db(db_session_factory, monkeypatch):
+    async def direct_run(func, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    @asynccontextmanager
+    async def direct_contextmanager(cm):
+        try:
+            yield cm.__enter__()
+        except Exception as exc:
+            ok = bool(cm.__exit__(type(exc), exc, exc.__traceback__))
+            if not ok:
+                raise
+        else:
+            cm.__exit__(None, None, None)
+
+    monkeypatch.setattr(starlette.concurrency, "run_in_threadpool", direct_run)
+    monkeypatch.setattr(fastapi.routing, "run_in_threadpool", direct_run)
+    monkeypatch.setattr(fastapi.dependencies.utils, "run_in_threadpool", direct_run)
+    monkeypatch.setattr(fastapi.concurrency, "contextmanager_in_threadpool", direct_contextmanager)
+    monkeypatch.setattr(
+        fastapi.dependencies.utils,
+        "contextmanager_in_threadpool",
+        direct_contextmanager,
+    )
+
+    app = FastAPI(title="Antique Catalogue API", responses=DEFAULT_ERROR_RESPONSES)
+    app.state.settings = settings
+    register_exception_handlers(app)
+    app.include_router(auth_router)
+
+    def override_get_db():
+        db = db_session_factory()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield app
+    app.dependency_overrides.clear()

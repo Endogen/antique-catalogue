@@ -16,7 +16,7 @@ STATUS: READY
 - [x] 2.4: Implement login/logout/refresh endpoints
 - [x] 2.5: Implement forgot/reset password endpoints
 - [x] 2.6: Implement /auth/me and DELETE /auth/me (account deletion)
-- [ ] 2.7: Add auth tests (unit + integration)
+- [x] 2.7: Add auth tests (unit + integration)
 
 ## Phase 3: Backend Collections
 - [ ] 3.1: Create Collection model with migrations

@@ -55,3 +55,4 @@ Run after each implementation:
 ## Learnings
 - Virtual environment at `backend/.venv` has all dependencies installed.
 - Verification emails are skipped (logged) when `SMTP_HOST` or `SMTP_FROM` is unset.
+- In tests, sync FastAPI endpoints may hang unless `run_in_threadpool` and `contextmanager_in_threadpool` are patched to run inline.
