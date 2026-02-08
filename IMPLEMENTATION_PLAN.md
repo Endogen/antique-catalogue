@@ -52,7 +52,7 @@ STATUS: READY
 - [x] 7.4: Implement auth context and route guards
 
 ## Phase 8: Frontend Auth
-- [ ] 8.1: Build login and register pages
+- [x] 8.1: Build login and register pages
 - [ ] 8.2: Build email verification page
 - [ ] 8.3: Build forgot/reset password pages
 - [ ] 8.4: Build user settings page
