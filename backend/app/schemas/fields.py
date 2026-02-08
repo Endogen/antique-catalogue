@@ -1,0 +1,118 @@
+from __future__ import annotations
+
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+ALLOWED_FIELD_TYPES = {"text", "number", "date", "timestamp", "checkbox", "select"}
+
+
+def _normalize_name(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("Field name cannot be blank")
+    return normalized
+
+
+def _normalize_field_type(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in ALLOWED_FIELD_TYPES:
+        raise ValueError("Invalid field type")
+    return normalized
+
+
+def _normalize_options(value: dict[str, object] | None) -> dict[str, list[str]] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("Options must be an object")
+    options = value.get("options")
+    if not isinstance(options, list):
+        raise ValueError("Options must include an options list")
+    normalized: list[str] = []
+    for option in options:
+        if not isinstance(option, str):
+            raise ValueError("Options values must be strings")
+        trimmed = option.strip()
+        if not trimmed:
+            raise ValueError("Options values cannot be blank")
+        normalized.append(trimmed)
+    if not normalized:
+        raise ValueError("Options values cannot be empty")
+    return {"options": normalized}
+
+
+class FieldDefinitionCreateRequest(BaseModel):
+    name: str = Field(..., examples=["Condition"])
+    field_type: str = Field(..., examples=["select"])
+    is_required: bool = Field(False)
+    options: dict[str, object] | None = Field(
+        None,
+        examples=[{"options": ["Excellent", "Good", "Fair", "Poor"]}],
+    )
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        return _normalize_name(value)
+
+    @field_validator("field_type")
+    @classmethod
+    def validate_field_type(cls, value: str) -> str:
+        return _normalize_field_type(value)
+
+    @field_validator("options")
+    @classmethod
+    def validate_options(cls, value: dict[str, object] | None) -> dict[str, list[str]] | None:
+        return _normalize_options(value)
+
+    @model_validator(mode="after")
+    def validate_select_options(self) -> "FieldDefinitionCreateRequest":
+        if self.field_type == "select" and self.options is None:
+            raise ValueError("Select fields require options")
+        if self.field_type != "select" and self.options is not None:
+            raise ValueError("Options are only allowed for select fields")
+        return self
+
+
+class FieldDefinitionUpdateRequest(BaseModel):
+    name: str | None = Field(None, examples=["Condition"])
+    field_type: str | None = Field(None, examples=["text"])
+    is_required: bool | None = Field(None)
+    options: dict[str, object] | None = Field(
+        None,
+        examples=[{"options": ["Excellent", "Good", "Fair", "Poor"]}],
+    )
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _normalize_name(value)
+
+    @field_validator("field_type")
+    @classmethod
+    def validate_field_type(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _normalize_field_type(value)
+
+    @field_validator("options")
+    @classmethod
+    def validate_options(cls, value: dict[str, object] | None) -> dict[str, list[str]] | None:
+        return _normalize_options(value)
+
+
+class FieldDefinitionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    collection_id: int
+    name: str
+    field_type: str
+    is_required: bool
+    options: dict[str, object] | None
+    position: int
+    created_at: datetime
+    updated_at: datetime
