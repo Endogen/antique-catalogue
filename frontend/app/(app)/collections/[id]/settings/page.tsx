@@ -16,6 +16,7 @@ import {
   CollectionForm,
   type CollectionFormValues
 } from "@/components/collection-form";
+import { SchemaBuilder } from "@/components/schema-builder";
 import { Button } from "@/components/ui/button";
 import {
   collectionApi,
@@ -177,45 +178,49 @@ export default function CollectionSettingsPage() {
         </div>
       ) : (
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-              Collection details
-            </p>
-            <h2 className="font-display mt-3 text-2xl text-stone-900">
-              Keep your catalogue organized.
-            </h2>
-            <p className="mt-3 text-sm text-stone-600">
-              These details appear throughout your workspace and in the public
-              directory if enabled.
-            </p>
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                Collection details
+              </p>
+              <h2 className="font-display mt-3 text-2xl text-stone-900">
+                Keep your catalogue organized.
+              </h2>
+              <p className="mt-3 text-sm text-stone-600">
+                These details appear throughout your workspace and in the public
+                directory if enabled.
+              </p>
 
-            {saveMessage ? (
-              <div
-                role="status"
-                className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-              >
-                {saveMessage}
+              {saveMessage ? (
+                <div
+                  role="status"
+                  className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+                >
+                  {saveMessage}
+                </div>
+              ) : null}
+
+              <div className="mt-6">
+                <CollectionForm
+                  initialValues={{
+                    name: state.data?.name ?? "",
+                    description: state.data?.description ?? "",
+                    is_public: state.data?.is_public ?? false
+                  }}
+                  onSubmit={handleSubmit}
+                  submitLabel="Save changes"
+                  submitPendingLabel="Saving changes..."
+                  secondaryAction={
+                    <Button variant="ghost" type="button" asChild>
+                      <Link href="/collections">Back to collections</Link>
+                    </Button>
+                  }
+                  formError={formError}
+                />
               </div>
-            ) : null}
-
-            <div className="mt-6">
-              <CollectionForm
-                initialValues={{
-                  name: state.data?.name ?? "",
-                  description: state.data?.description ?? "",
-                  is_public: state.data?.is_public ?? false
-                }}
-                onSubmit={handleSubmit}
-                submitLabel="Save changes"
-                submitPendingLabel="Saving changes..."
-                secondaryAction={
-                  <Button variant="ghost" type="button" asChild>
-                    <Link href="/collections">Back to collections</Link>
-                  </Button>
-                }
-                formError={formError}
-              />
             </div>
+
+            <SchemaBuilder collectionId={collectionId ?? ""} />
           </div>
 
           <aside className="space-y-6">

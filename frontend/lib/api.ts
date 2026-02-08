@@ -38,6 +38,36 @@ export type CollectionUpdatePayload = {
   is_public?: boolean;
 };
 
+export type FieldOptions = {
+  options: string[];
+};
+
+export type FieldDefinitionResponse = {
+  id: number;
+  collection_id: number;
+  name: string;
+  field_type: string;
+  is_required: boolean;
+  options: FieldOptions | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FieldDefinitionCreatePayload = {
+  name: string;
+  field_type: string;
+  is_required?: boolean;
+  options?: FieldOptions | null;
+};
+
+export type FieldDefinitionUpdatePayload = {
+  name?: string;
+  field_type?: string;
+  is_required?: boolean;
+  options?: FieldOptions | null;
+};
+
 export type ApiErrorPayload = {
   detail?: string;
   message?: string;
@@ -359,4 +389,49 @@ export const collectionApi = {
       method: "PATCH",
       body: payload
     })
+};
+
+export const fieldApi = {
+  list: (collectionId: number | string) =>
+    apiRequest<FieldDefinitionResponse[]>(
+      `/collections/${collectionId}/fields`
+    ),
+  create: (
+    collectionId: number | string,
+    payload: FieldDefinitionCreatePayload
+  ) =>
+    apiRequest<FieldDefinitionResponse>(
+      `/collections/${collectionId}/fields`,
+      {
+        method: "POST",
+        body: payload
+      }
+    ),
+  update: (
+    collectionId: number | string,
+    fieldId: number | string,
+    payload: FieldDefinitionUpdatePayload
+  ) =>
+    apiRequest<FieldDefinitionResponse>(
+      `/collections/${collectionId}/fields/${fieldId}`,
+      {
+        method: "PATCH",
+        body: payload
+      }
+    ),
+  delete: (collectionId: number | string, fieldId: number | string) =>
+    apiRequest<MessageResponse>(
+      `/collections/${collectionId}/fields/${fieldId}`,
+      {
+        method: "DELETE"
+      }
+    ),
+  reorder: (collectionId: number | string, fieldIds: number[]) =>
+    apiRequest<FieldDefinitionResponse[]>(
+      `/collections/${collectionId}/fields/reorder`,
+      {
+        method: "PATCH",
+        body: { field_ids: fieldIds }
+      }
+    )
 };
