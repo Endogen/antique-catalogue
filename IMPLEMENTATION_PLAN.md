@@ -55,7 +55,7 @@ STATUS: READY
 - [x] 8.1: Build login and register pages
 - [x] 8.2: Build email verification page
 - [x] 8.3: Build forgot/reset password pages
-- [ ] 8.4: Build user settings page
+- [x] 8.4: Build user settings page
 
 ## Phase 9: Frontend Collections
 - [ ] 9.1: Build collections list page
