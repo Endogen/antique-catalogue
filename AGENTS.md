@@ -59,4 +59,5 @@ Run after each implementation:
 - Request validation errors can include exception objects in `ctx`, so sanitize them before JSON serialization.
 - Starlette deprecates `HTTP_422_UNPROCESSABLE_ENTITY`; prefer `HTTP_422_UNPROCESSABLE_CONTENT` to avoid warnings.
 - Image processing helpers live in `backend/app/services/image_processing.py` and output JPG variants (original/medium/thumb).
+- E2E smoke test in `backend/tests/test_e2e_smoke.py` conditionally exercises image uploads only when Pillow and `python-multipart` are available.
 - Next.js route group folders use parentheses, so shell commands must quote paths like `frontend/app/(app)` to avoid glob/parse errors.
