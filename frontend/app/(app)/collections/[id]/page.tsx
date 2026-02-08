@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
+  Plus,
   RefreshCcw,
   Search,
   SlidersHorizontal,
@@ -451,6 +452,12 @@ export default function CollectionDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Button asChild>
+            <Link href={`/collections/${collectionId}/items/new`}>
+              <Plus className="h-4 w-4" />
+              Add item
+            </Link>
+          </Button>
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCcw className="h-4 w-4" />
             Refresh
@@ -801,6 +808,11 @@ export default function CollectionDetailPage() {
                   collection.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
+                  <Button asChild>
+                    <Link href={`/collections/${collectionId}/items/new`}>
+                      Add item
+                    </Link>
+                  </Button>
                   <Button variant="outline" onClick={handleRefresh}>
                     Refresh items
                   </Button>

@@ -65,7 +65,7 @@ STATUS: READY
 
 ## Phase 10: Frontend Items
 - [x] 10.1: Build items list with search/filter/sort
-- [ ] 10.2: Build dynamic item form (from schema)
+- [x] 10.2: Build dynamic item form (from schema)
 - [ ] 10.3: Build item detail page
 
 ## Phase 11: Frontend Images

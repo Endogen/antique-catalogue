@@ -78,6 +78,18 @@ export type ItemResponse = {
   updated_at: string;
 };
 
+export type ItemCreatePayload = {
+  name: string;
+  metadata?: Record<string, unknown> | null;
+  notes?: string | null;
+};
+
+export type ItemUpdatePayload = {
+  name?: string;
+  metadata?: Record<string, unknown> | null;
+  notes?: string | null;
+};
+
 export type ItemListOptions = {
   search?: string;
   sort?: string;
@@ -474,7 +486,27 @@ export const itemApi = {
   list: (collectionId: number | string, options?: ItemListOptions) =>
     apiRequest<ItemResponse[]>(
       `/collections/${collectionId}/items${buildItemListQuery(options)}`
-    )
+    ),
+  create: (collectionId: number | string, payload: ItemCreatePayload) =>
+    apiRequest<ItemResponse>(`/collections/${collectionId}/items`, {
+      method: "POST",
+      body: payload
+    }),
+  get: (collectionId: number | string, itemId: number | string) =>
+    apiRequest<ItemResponse>(`/collections/${collectionId}/items/${itemId}`),
+  update: (
+    collectionId: number | string,
+    itemId: number | string,
+    payload: ItemUpdatePayload
+  ) =>
+    apiRequest<ItemResponse>(`/collections/${collectionId}/items/${itemId}`, {
+      method: "PATCH",
+      body: payload
+    }),
+  delete: (collectionId: number | string, itemId: number | string) =>
+    apiRequest<MessageResponse>(`/collections/${collectionId}/items/${itemId}`, {
+      method: "DELETE"
+    })
 };
 
 export const fieldApi = {
