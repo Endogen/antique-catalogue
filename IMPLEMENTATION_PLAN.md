@@ -28,7 +28,7 @@ STATUS: READY
 - [x] 4.1: Create FieldDefinition model with migrations
 - [x] 4.2: Implement field CRUD endpoints
 - [x] 4.3: Implement field reorder endpoint
-- [ ] 4.4: Add schema tests
+- [x] 4.4: Add schema tests
 
 ## Phase 5: Backend Items
 - [ ] 5.1: Create Item model with migrations
