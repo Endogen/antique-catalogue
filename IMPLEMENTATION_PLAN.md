@@ -74,7 +74,7 @@ STATUS: READY
 - [x] 11.3: Build image delete flow
 
 ## Phase 12: Docker & Polish
-- [ ] 12.1: Create Dockerfile for backend
+- [x] 12.1: Create Dockerfile for backend
 - [ ] 12.2: Create Dockerfile for frontend
 - [ ] 12.3: Create docker-compose.yml
 - [ ] 12.4: Verify 80% backend test coverage
