@@ -206,12 +206,19 @@ npm run dev
 | `JWT_SECRET` | `change-me` | Secret for JWT signing (change in production!) |
 | `JWT_ALGORITHM` | `HS256` | JWT algorithm |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token expiry |
+| `AUTO_VERIFY_EMAIL` | `false` | Auto-verify accounts on registration (useful for local/dev) |
+| `REFRESH_TOKEN_COOKIE_PATH` | `/` | Path scope for the refresh token cookie |
 | `SMTP_HOST` | - | SMTP server hostname |
 | `SMTP_PORT` | `587` | SMTP server port |
 | `SMTP_USER` | - | SMTP username |
 | `SMTP_PASSWORD` | - | SMTP password |
 | `SMTP_FROM` | - | From address for emails |
 | `SMTP_USE_TLS` | `true` | Use STARTTLS |
+
+Note: When `DATABASE_URL` is not set and SQLite is used, the backend resolves
+relative SQLite paths against the backend directory (not the current working
+directory). The default database file lives at `backend/data/antique_catalogue.db`
+in this repository.
 
 ## Testing
 

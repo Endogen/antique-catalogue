@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.collection import Collection
 from app.models.field_definition import FieldDefinition
 from app.models.item import Item
+from app.models.item_image import ItemImage
 from app.models.user import User
 from app.schemas.items import ItemCreateRequest, ItemResponse, ItemUpdateRequest
 from app.schemas.responses import MessageResponse
@@ -291,6 +292,16 @@ def _validate_metadata_or_422(
         ) from exc
 
 
+def _primary_image_id_subquery():
+    return (
+        select(ItemImage.id)
+        .where(ItemImage.item_id == Item.id)
+        .order_by(ItemImage.position.asc(), ItemImage.id.asc())
+        .limit(1)
+        .scalar_subquery()
+    )
+
+
 @router.get("", response_model=list[ItemResponse])
 @router.get("/", response_model=list[ItemResponse], include_in_schema=False)
 def list_items(
@@ -324,7 +335,8 @@ def list_items(
         field_definitions = _get_field_definitions(db, collection_id)
         field_by_name = {field.name: field for field in field_definitions}
 
-    query = select(Item).where(Item.collection_id == collection_id)
+    primary_image_id = _primary_image_id_subquery().label("primary_image_id")
+    query = select(Item, primary_image_id).where(Item.collection_id == collection_id)
     if search_term:
         pattern = f"%{search_term}%"
         query = query.where(or_(Item.name.ilike(pattern), Item.notes.ilike(pattern)))
@@ -334,7 +346,11 @@ def list_items(
     query = _apply_item_sort(query, sort, field_by_name)
     query = query.offset(offset).limit(limit)
 
-    items = db.execute(query).scalars().all()
+    rows = db.execute(query).all()
+    items: list[Item] = []
+    for item, image_id in rows:
+        setattr(item, "primary_image_id", image_id)
+        items.append(item)
     return items
 
 
@@ -375,6 +391,16 @@ def get_item(
     db: Session = Depends(get_db),
 ) -> ItemResponse:
     item = _get_item_or_404(db, collection_id, item_id, current_user.id)
+    image_id = (
+        db.execute(
+            select(ItemImage.id)
+            .where(ItemImage.item_id == item.id)
+            .order_by(ItemImage.position.asc(), ItemImage.id.asc())
+            .limit(1)
+        )
+        .scalar_one_or_none()
+    )
+    setattr(item, "primary_image_id", image_id)
     return item
 
 
@@ -449,7 +475,8 @@ def list_public_items(
         field_definitions = _get_field_definitions(db, collection_id)
         field_by_name = {field.name: field for field in field_definitions}
 
-    query = select(Item).where(Item.collection_id == collection_id)
+    primary_image_id = _primary_image_id_subquery().label("primary_image_id")
+    query = select(Item, primary_image_id).where(Item.collection_id == collection_id)
     if search_term:
         pattern = f"%{search_term}%"
         query = query.where(or_(Item.name.ilike(pattern), Item.notes.ilike(pattern)))
@@ -459,7 +486,11 @@ def list_public_items(
     query = _apply_item_sort(query, sort, field_by_name)
     query = query.offset(offset).limit(limit)
 
-    items = db.execute(query).scalars().all()
+    rows = db.execute(query).all()
+    items: list[Item] = []
+    for item, image_id in rows:
+        setattr(item, "primary_image_id", image_id)
+        items.append(item)
     return items
 
 
@@ -470,4 +501,14 @@ def get_public_item(
     db: Session = Depends(get_db),
 ) -> ItemResponse:
     item = _get_public_item_or_404(db, collection_id, item_id)
+    image_id = (
+        db.execute(
+            select(ItemImage.id)
+            .where(ItemImage.item_id == item.id)
+            .order_by(ItemImage.position.asc(), ItemImage.id.asc())
+            .limit(1)
+        )
+        .scalar_one_or_none()
+    )
+    setattr(item, "primary_image_id", image_id)
     return item

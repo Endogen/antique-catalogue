@@ -152,7 +152,7 @@ def reorder_fields(
 
     if len(requested_ids) != len(existing_ids) or set(requested_ids) != existing_ids:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Field order must include all fields for the collection",
         )
 
@@ -199,13 +199,13 @@ def update_field(
     if new_field_type == "select":
         if new_options is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Select fields require options",
             )
     else:
         if options_provided and data["options"] is not None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Options are only allowed for select fields",
             )
         new_options = None

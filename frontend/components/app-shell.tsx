@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Compass,
+  Folder,
   LayoutGrid,
   Menu,
   Plus,
@@ -31,7 +32,14 @@ const primaryNav: NavItem[] = [
     href: "/dashboard",
     description: "Your private archive",
     icon: LayoutGrid,
-    match: ["/dashboard", "/collections"]
+    match: ["/dashboard"]
+  },
+  {
+    label: "Collections",
+    href: "/collections",
+    description: "Your saved collections",
+    icon: Folder,
+    match: ["/collections"]
   },
   {
     label: "Explore",
