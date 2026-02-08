@@ -39,7 +39,7 @@ STATUS: READY
 
 ## Phase 6: Backend Images
 - [x] 6.1: Create ItemImage model with migrations
-- [ ] 6.2: Implement image processing service (resize, convert to JPG)
+- [x] 6.2: Implement image processing service (resize, convert to JPG)
 - [ ] 6.3: Implement image upload endpoint
 - [ ] 6.4: Implement image list/delete/reorder endpoints
 - [ ] 6.5: Implement image serving endpoint
