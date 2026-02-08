@@ -78,6 +78,14 @@ export type ItemResponse = {
   updated_at: string;
 };
 
+export type ItemImageResponse = {
+  id: number;
+  item_id: number;
+  filename: string;
+  position: number;
+  created_at: string;
+};
+
 export type ItemCreatePayload = {
   name: string;
   metadata?: Record<string, unknown> | null;
@@ -88,6 +96,10 @@ export type ItemUpdatePayload = {
   name?: string;
   metadata?: Record<string, unknown> | null;
   notes?: string | null;
+};
+
+export type ItemImageUpdatePayload = {
+  position: number;
 };
 
 export type ItemListOptions = {
@@ -552,4 +564,32 @@ export const fieldApi = {
         body: { field_ids: fieldIds }
       }
     )
+};
+
+export const imageApi = {
+  upload: (itemId: number | string, file: File) => {
+    const payload = new FormData();
+    payload.append("file", file);
+    return apiRequest<ItemImageResponse>(`/items/${itemId}/images`, {
+      method: "POST",
+      body: payload
+    });
+  },
+  list: (itemId: number | string) =>
+    apiRequest<ItemImageResponse[]>(`/items/${itemId}/images`),
+  update: (
+    itemId: number | string,
+    imageId: number | string,
+    payload: ItemImageUpdatePayload
+  ) =>
+    apiRequest<ItemImageResponse>(`/items/${itemId}/images/${imageId}`, {
+      method: "PATCH",
+      body: payload
+    }),
+  delete: (itemId: number | string, imageId: number | string) =>
+    apiRequest<MessageResponse>(`/items/${itemId}/images/${imageId}`, {
+      method: "DELETE"
+    }),
+  url: (imageId: number | string, variant: "original" | "medium" | "thumb") =>
+    buildApiUrl(`/images/${imageId}/${variant}.jpg`)
 };

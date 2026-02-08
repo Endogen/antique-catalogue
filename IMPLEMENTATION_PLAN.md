@@ -69,7 +69,7 @@ STATUS: READY
 - [x] 10.3: Build item detail page
 
 ## Phase 11: Frontend Images
-- [ ] 11.1: Build image uploader (drag-drop + camera capture)
+- [x] 11.1: Build image uploader (drag-drop + camera capture)
 - [ ] 11.2: Build image gallery with reorder
 - [ ] 11.3: Build image delete flow
 

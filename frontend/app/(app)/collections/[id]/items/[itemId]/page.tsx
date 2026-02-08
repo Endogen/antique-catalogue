@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { ItemForm, type ItemFormValues } from "@/components/item-form";
+import { ImageUploader } from "@/components/image-uploader";
 import { Button } from "@/components/ui/button";
 import {
   collectionApi,
@@ -604,6 +605,11 @@ export default function ItemDetailPage() {
                 </div>
               </>
             )}
+
+            <ImageUploader
+              itemId={itemId ?? null}
+              disabled={itemState.status !== "ready"}
+            />
           </div>
 
           <aside className="space-y-6">
