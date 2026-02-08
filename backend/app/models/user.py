@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.collection import Collection
     from app.models.email_token import EmailToken
 
 
@@ -33,4 +34,7 @@ class User(Base):
 
     email_tokens: Mapped[list[EmailToken]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    collections: Mapped[list[Collection]] = relationship(
+        back_populates="owner", cascade="all, delete-orphan", passive_deletes=True
     )

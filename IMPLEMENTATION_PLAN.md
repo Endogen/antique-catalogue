@@ -19,7 +19,7 @@ STATUS: READY
 - [x] 2.7: Add auth tests (unit + integration)
 
 ## Phase 3: Backend Collections
-- [ ] 3.1: Create Collection model with migrations
+- [x] 3.1: Create Collection model with migrations
 - [ ] 3.2: Implement collection CRUD endpoints
 - [ ] 3.3: Implement public collections endpoints (no auth)
 - [ ] 3.4: Add collection tests
