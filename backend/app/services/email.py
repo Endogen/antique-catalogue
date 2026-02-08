@@ -17,8 +17,10 @@ def _smtp_login(smtp: smtplib.SMTP) -> None:
 
 def send_email(to_email: str, subject: str, body: str) -> None:
     if not settings.smtp_host or not settings.smtp_from:
-        logger.info("SMTP not configured; skipping email to %s", to_email)
+        logger.warning("SMTP not configured; skipping email to %s", to_email)
         return
+    
+    logger.info("Sending email to %s via %s", to_email, settings.smtp_host)
 
     message = EmailMessage()
     message["Subject"] = subject
@@ -37,8 +39,9 @@ def send_email(to_email: str, subject: str, body: str) -> None:
             with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as smtp:
                 _smtp_login(smtp)
                 smtp.send_message(message)
-    except Exception:
-        logger.exception("Failed to send email to %s", to_email)
+        logger.info("Email sent successfully to %s", to_email)
+    except Exception as e:
+        logger.error("Failed to send email to %s: %s", to_email, str(e))
 
 
 def send_verification_email(to_email: str, token: str) -> None:

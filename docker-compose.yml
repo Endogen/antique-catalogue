@@ -10,12 +10,12 @@ services:
       JWT_SECRET: "${JWT_SECRET:-change-me}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}"
-      SMTP_HOST: "${SMTP_HOST:-}"
-      SMTP_PORT: "${SMTP_PORT:-587}"
-      SMTP_USER: "${SMTP_USER:-}"
-      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
-      SMTP_FROM: "${SMTP_FROM:-}"
-      SMTP_USE_TLS: "${SMTP_USE_TLS:-true}"
+      SMTP_HOST: "mail.xian.technology"
+      SMTP_PORT: "587"
+      SMTP_USER: "info@xian.technology"
+      SMTP_PASSWORD: "***REMOVED***"
+      SMTP_FROM: "info@xian.technology"
+      SMTP_USE_TLS: "true"
     volumes:
       - backend-data:/app/data
       - backend-uploads:/app/uploads
@@ -26,9 +26,11 @@ services:
     build:
       context: ./frontend
     ports:
-      - "3000:3000"
+      - "3010:3000"
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+      # Uses /api by default (relative URL, works on any domain)
+      # Set NEXT_PUBLIC_API_URL for local dev: http://localhost:8000
+      NEXT_PUBLIC_API_URL: ""
     depends_on:
       - backend
 

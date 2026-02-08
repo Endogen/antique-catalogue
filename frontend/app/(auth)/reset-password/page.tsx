@@ -47,7 +47,7 @@ const tips = [
   }
 ];
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status } = useAuth();
@@ -294,5 +294,13 @@ export default function ResetPasswordPage() {
         </div>
       </aside>
     </>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <React.Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center text-sm text-stone-500">Loading...</div>}>
+      <ResetPasswordContent />
+    </React.Suspense>
   );
 }
