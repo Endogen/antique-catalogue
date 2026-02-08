@@ -54,3 +54,4 @@ Run after each implementation:
 
 ## Learnings
 - Virtual environment at `backend/.venv` has all dependencies installed.
+- Verification emails are skipped (logged) when `SMTP_HOST` or `SMTP_FROM` is unset.
