@@ -67,5 +67,6 @@ class ItemResponse(BaseModel):
     name: str
     metadata: dict[str, object] | None = Field(None, validation_alias="metadata_")
     notes: str | None
+    primary_image_id: int | None = None
     created_at: datetime
     updated_at: datetime

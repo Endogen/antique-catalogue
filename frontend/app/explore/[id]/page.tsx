@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   isApiError,
+  imageApi,
   publicCollectionApi,
   publicItemApi,
   type CollectionResponse,
@@ -100,6 +101,9 @@ export default function PublicCollectionPage() {
   });
   const [search, setSearch] = React.useState("");
   const [sort, setSort] = React.useState(sortOptions[0].value);
+  const [filterImages, setFilterImages] = React.useState(false);
+  const [filterNotes, setFilterNotes] = React.useState(false);
+  const [filterMetadata, setFilterMetadata] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
@@ -236,6 +240,20 @@ export default function PublicCollectionPage() {
   };
 
   const itemCount = itemsState.data.length;
+  const filteredItems = itemsState.data.filter((item) => {
+    if (filterNotes && !(item.notes ?? "").trim()) {
+      return false;
+    }
+    if (filterMetadata && Object.keys(item.metadata ?? {}).length === 0) {
+      return false;
+    }
+    if (filterImages) {
+      if (!item.primary_image_id) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-950">
@@ -423,6 +441,35 @@ export default function PublicCollectionPage() {
                 </option>
               ))}
             </select>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-amber-500"
+                  checked={filterImages}
+                  onChange={(event) => setFilterImages(event.target.checked)}
+                />
+                With images
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-amber-500"
+                  checked={filterNotes}
+                  onChange={(event) => setFilterNotes(event.target.checked)}
+                />
+                With notes
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-amber-500"
+                  checked={filterMetadata}
+                  onChange={(event) => setFilterMetadata(event.target.checked)}
+                />
+                With metadata
+              </label>
+            </div>
           </div>
         </div>
 
@@ -476,64 +523,112 @@ export default function PublicCollectionPage() {
           </div>
         ) : (
           <div className="mt-6 space-y-4">
-            <div className="grid gap-4 lg:grid-cols-2">
-              {itemsState.data.map((item) => {
-                const metadataEntries = Object.entries(item.metadata ?? {});
-                return (
-                  <div
-                    key={item.id}
-                    className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                          Item
-                        </p>
-                        <h3 className="mt-3 text-xl font-semibold text-stone-900">
-                          {item.name}
-                        </h3>
-                      </div>
-                      <span className="text-xs text-stone-500">
-                        Added {formatDate(item.created_at)}
-                      </span>
-                    </div>
-                    {item.notes ? (
-                      <p className="mt-3 text-sm text-stone-600">
-                        {truncate(item.notes, 160)}
-                      </p>
-                    ) : null}
-                    <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 text-sm text-stone-600">
-                      {metadataEntries.length === 0 ? (
-                        <p className="text-xs text-stone-500">
-                          No metadata shared.
-                        </p>
-                      ) : (
-                        <div className="space-y-2 text-xs">
-                          {metadataEntries.slice(0, 3).map(([key, value]) => (
-                            <div
-                              key={key}
-                              className="flex items-center justify-between gap-3"
-                            >
-                              <span className="font-medium text-stone-700">
-                                {key}
-                              </span>
-                              <span className="text-stone-500">
-                                {formatMetadataValue(value)}
-                              </span>
-                            </div>
-                          ))}
-                          {metadataEntries.length > 3 ? (
-                            <p className="text-xs text-stone-400">
-                              +{metadataEntries.length - 3} more fields
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
+            {filteredItems.length === 0 ? (
+              <div className="rounded-3xl border border-stone-200 bg-white/80 p-8">
+                <div className="flex flex-wrap items-start justify-between gap-6">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                      No matches
+                    </p>
+                    <h3 className="font-display mt-3 text-2xl text-stone-900">
+                      No items match these filters.
+                    </h3>
+                    <p className="mt-3 max-w-xl text-sm text-stone-600">
+                      Try adjusting your filters or clearing them to see more
+                      items.
+                    </p>
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setFilterImages(false);
+                          setFilterNotes(false);
+                          setFilterMetadata(false);
+                        }}
+                      >
+                        Clear filters
+                      </Button>
+                      <Button variant="ghost" onClick={() => setSearch("")}>
+                        Clear search
+                      </Button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                    <Globe2 className="h-8 w-8" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {filteredItems.map((item) => {
+                  const metadataEntries = Object.entries(item.metadata ?? {});
+                  const imageId = item.primary_image_id ?? null;
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm"
+                    >
+                      {imageId ? (
+                        <div className="mb-4 overflow-hidden rounded-2xl border border-stone-100 bg-stone-50">
+                          <img
+                            src={imageApi.url(imageId, "medium")}
+                            alt={item.name}
+                            className="h-48 w-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : null}
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+                            Item
+                          </p>
+                          <h3 className="mt-3 text-xl font-semibold text-stone-900">
+                            {item.name}
+                          </h3>
+                        </div>
+                        <span className="text-xs text-stone-500">
+                          Added {formatDate(item.created_at)}
+                        </span>
+                      </div>
+                      {item.notes ? (
+                        <p className="mt-3 text-sm text-stone-600">
+                          {truncate(item.notes, 160)}
+                        </p>
+                      ) : null}
+                      <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 text-sm text-stone-600">
+                        {metadataEntries.length === 0 ? (
+                          <p className="text-xs text-stone-500">
+                            No metadata shared.
+                          </p>
+                        ) : (
+                          <div className="space-y-2 text-xs">
+                            {metadataEntries.slice(0, 3).map(([key, value]) => (
+                              <div
+                                key={key}
+                                className="flex items-center justify-between gap-3"
+                              >
+                                <span className="font-medium text-stone-700">
+                                  {key}
+                                </span>
+                                <span className="text-stone-500">
+                                  {formatMetadataValue(value)}
+                                </span>
+                              </div>
+                            ))}
+                            {metadataEntries.length > 3 ? (
+                              <p className="text-xs text-stone-400">
+                                +{metadataEntries.length - 3} more fields
+                              </p>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex flex-col items-center gap-3">
               {loadMoreError ? (
                 <p className="text-xs text-rose-600">{loadMoreError}</p>

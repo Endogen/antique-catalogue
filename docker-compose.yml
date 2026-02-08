@@ -10,6 +10,8 @@ services:
       JWT_SECRET: "${JWT_SECRET:-change-me}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}"
+      AUTO_VERIFY_EMAIL: "${AUTO_VERIFY_EMAIL:-false}"
+      REFRESH_TOKEN_COOKIE_PATH: "${REFRESH_TOKEN_COOKIE_PATH:-/}"
       SMTP_HOST: "mail.xian.technology"
       SMTP_PORT: "587"
       SMTP_USER: "info@xian.technology"
@@ -30,7 +32,7 @@ services:
     environment:
       # Uses /api by default (relative URL, works on any domain)
       # Set NEXT_PUBLIC_API_URL for local dev: http://localhost:8000
-      NEXT_PUBLIC_API_URL: ""
+      NEXT_PUBLIC_API_URL: "/api"
     depends_on:
       - backend
 

@@ -67,17 +67,21 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)) -> Message
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
     user = User(email=request.email, password_hash=hash_password(request.password))
+    if settings.auto_verify_email:
+        user.is_verified = True
     db.add(user)
 
-    token = _generate_unique_token(db, "verification")
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=VERIFY_TOKEN_EXPIRE_HOURS)
-    email_token = EmailToken(
-        user=user,
-        token=token,
-        token_type="verify",
-        expires_at=expires_at,
-    )
-    db.add(email_token)
+    token: str | None = None
+    if not settings.auto_verify_email:
+        token = _generate_unique_token(db, "verification")
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=VERIFY_TOKEN_EXPIRE_HOURS)
+        email_token = EmailToken(
+            user=user,
+            token=token,
+            token_type="verify",
+            expires_at=expires_at,
+        )
+        db.add(email_token)
 
     try:
         db.commit()
@@ -85,7 +89,10 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)) -> Message
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
-    send_verification_email(request.email, token)
+    if settings.auto_verify_email:
+        return MessageResponse(message="Account created")
+
+    send_verification_email(request.email, token or "")
     return MessageResponse(message="Verification email sent")
 
 
@@ -103,12 +110,12 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         max_age=REFRESH_TOKEN_MAX_AGE,
         samesite="lax",
         secure=False,
-        path="/auth/refresh",
+        path=settings.refresh_token_cookie_path,
     )
 
 
 def _clear_refresh_cookie(response: Response) -> None:
-    response.delete_cookie(REFRESH_TOKEN_COOKIE, path="/auth/refresh")
+    response.delete_cookie(REFRESH_TOKEN_COOKIE, path=settings.refresh_token_cookie_path)
 
 
 @router.post("/verify", response_model=MessageResponse)

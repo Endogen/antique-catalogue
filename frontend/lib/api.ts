@@ -74,6 +74,7 @@ export type ItemResponse = {
   name: string;
   metadata: Record<string, unknown> | null;
   notes: string | null;
+  primary_image_id?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -116,10 +117,12 @@ export type ApiErrorPayload = {
   errors?: unknown;
 };
 
-const API_BASE_URL =
+const RAW_API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
-  "/api";
+  "";
+const API_BASE_URL =
+  RAW_API_BASE_URL && RAW_API_BASE_URL.trim() ? RAW_API_BASE_URL : "/api";
 
 const ACCESS_TOKEN_STORAGE_KEY = "antique_access_token";
 
@@ -251,7 +254,20 @@ const parseResponse = async <T>(response: Response): Promise<T> => {
     return (await response.json()) as T;
   }
 
-  return (await response.text()) as T;
+  const text = await response.text();
+  const trimmed = text.trim();
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    try {
+      return JSON.parse(trimmed) as T;
+    } catch {
+      // Fall through to return raw text.
+    }
+  }
+
+  return text as T;
 };
 
 const buildItemListQuery = (options?: ItemListOptions) => {

@@ -1,26 +1,90 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
+import { CalendarDays, Folder } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { collectionApi, isApiError, type CollectionResponse } from "@/lib/api";
 
-const insights = [
-  {
-    title: "Collections",
-    value: "0",
-    detail: "Drafted but unpublished"
-  },
-  {
-    title: "Items",
-    value: "0",
-    detail: "Awaiting first upload"
-  },
-  {
-    title: "Images",
-    value: "0",
-    detail: "Ready for camera capture"
+type LoadState = {
+  status: "loading" | "ready" | "error";
+  data: CollectionResponse[];
+  error?: string;
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) {
+    return "-";
   }
-];
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(parsed);
+};
 
 export default function DashboardPage() {
+  const [state, setState] = React.useState<LoadState>({
+    status: "loading",
+    data: []
+  });
+
+  const loadCollections = React.useCallback(async () => {
+    setState((prev) => ({
+      ...prev,
+      status: "loading",
+      error: undefined
+    }));
+    try {
+      const data = await collectionApi.list();
+      setState({
+        status: "ready",
+        data
+      });
+    } catch (error) {
+      setState((prev) => ({
+        status: "error",
+        data: prev.data,
+        error: isApiError(error)
+          ? error.detail
+          : "We couldn't load your collections."
+      }));
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadCollections();
+  }, [loadCollections]);
+
+  const totalCount = state.data.length;
+  const publicCount = state.data.filter((collection) => collection.is_public)
+    .length;
+  const privateCount = totalCount - publicCount;
+  const hasCollections = state.status === "ready" && totalCount > 0;
+
+  const insights = [
+    {
+      title: "Total collections",
+      value: state.status === "ready" ? String(totalCount) : "-",
+      detail: hasCollections ? "Active archives" : "Drafted but unpublished"
+    },
+    {
+      title: "Public collections",
+      value: state.status === "ready" ? String(publicCount) : "-",
+      detail: "Visible in the directory"
+    },
+    {
+      title: "Private collections",
+      value: state.status === "ready" ? String(privateCount) : "-",
+      detail: "Internal research"
+    }
+  ];
+
   return (
     <div className="space-y-8">
       <section className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
@@ -28,19 +92,35 @@ export default function DashboardPage() {
           Getting started
         </p>
         <h1 className="font-display mt-4 text-3xl text-stone-900">
-          Your archive is ready for its first collection.
+          {hasCollections
+            ? "Your archive is in motion."
+            : "Your archive is ready for its first collection."}
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-stone-600">
-          Create a collection to define your metadata schema, then begin adding
-          items and imagery. Everything stays organized in one place.
+          {hasCollections
+            ? "Pick up where you left off, refine metadata, and keep adding items and imagery."
+            : "Create a collection to define your metadata schema, then begin adding items and imagery. Everything stays organized in one place."}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button asChild>
-            <Link href="/collections/new">Create collection</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/explore">Browse public collections</Link>
-          </Button>
+          {hasCollections ? (
+            <>
+              <Button asChild>
+                <Link href="/collections">View collections</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/collections/new">New collection</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button asChild>
+                <Link href="/collections/new">Create collection</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/explore">Browse public collections</Link>
+              </Button>
+            </>
+          )}
         </div>
       </section>
 
@@ -64,21 +144,72 @@ export default function DashboardPage() {
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            Next steps
+            Your collections
           </p>
           <h2 className="font-display mt-3 text-2xl text-stone-900">
-            Shape your schema, then invite the team.
+            {hasCollections
+              ? "Continue your catalogue."
+              : "Start shaping your first collection."}
           </h2>
           <p className="mt-3 text-sm text-stone-600">
-            Define the fields that matter most for your collection. Once you are
-            ready, share access with collaborators and start capturing items.
+            {hasCollections
+              ? "Jump back into a collection to refine metadata, add items, and keep your archive up to date."
+              : "Define the fields that matter most for your collection. Once you are ready, share access with collaborators and start capturing items."}
           </p>
+
+          {state.status === "loading" ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/60 p-4 text-sm text-stone-500">
+              Loading your collections...
+            </div>
+          ) : state.status === "error" ? (
+            <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-sm text-rose-600">
+              {state.error ?? "We couldn't load your collections."}
+            </div>
+          ) : state.data.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 text-sm text-stone-600">
+              No collections yet. Create one to start cataloguing.
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {state.data.slice(0, 4).map((collection) => (
+                <div
+                  key={collection.id}
+                  className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm"
+                >
+                  <div className="flex items-center justify-between text-xs text-stone-500">
+                    <span className="inline-flex items-center gap-2">
+                      <Folder className="h-3.5 w-3.5 text-amber-600" />
+                      {collection.is_public ? "Public" : "Private"}
+                    </span>
+                    <span>Updated {formatDate(collection.updated_at)}</span>
+                  </div>
+                  <h3 className="mt-3 text-base font-semibold text-stone-900">
+                    {collection.name}
+                  </h3>
+                  <p className="mt-1 text-xs text-stone-600">
+                    {collection.description ??
+                      "Add a description to capture the story behind this collection."}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between text-xs text-stone-500">
+                    <span className="inline-flex items-center gap-2">
+                      <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
+                      Created {formatDate(collection.created_at)}
+                    </span>
+                    <Button size="sm" variant="secondary" asChild>
+                      <Link href={`/collections/${collection.id}`}>Open</Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="mt-6 flex flex-wrap gap-3">
             <Button variant="secondary" asChild>
-              <Link href="/collections/new">Build a schema</Link>
+              <Link href="/collections">View all collections</Link>
             </Button>
             <Button variant="ghost" asChild>
-              <Link href="/settings">Configure profile</Link>
+              <Link href="/collections/new">New collection</Link>
             </Button>
           </div>
         </div>
