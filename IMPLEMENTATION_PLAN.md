@@ -22,7 +22,7 @@ STATUS: READY
 - [x] 3.1: Create Collection model with migrations
 - [x] 3.2: Implement collection CRUD endpoints
 - [x] 3.3: Implement public collections endpoints (no auth)
-- [ ] 3.4: Add collection tests
+- [x] 3.4: Add collection tests
 
 ## Phase 4: Backend Schema
 - [ ] 4.1: Create FieldDefinition model with migrations

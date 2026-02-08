@@ -41,6 +41,16 @@ def _error_response(
     )
 
 
+def _stringify_exceptions(value: Any) -> Any:
+    if isinstance(value, Exception):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: _stringify_exceptions(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_stringify_exceptions(item) for item in value]
+    return value
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
@@ -59,7 +69,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         return _error_response(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Validation error",
-            errors=exc.errors(),
+            errors=_stringify_exceptions(exc.errors()),
         )
 
     @app.exception_handler(Exception)
