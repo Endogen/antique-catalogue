@@ -77,5 +77,5 @@ STATUS: READY
 - [x] 12.1: Create Dockerfile for backend
 - [x] 12.2: Create Dockerfile for frontend
 - [x] 12.3: Create docker-compose.yml
-- [ ] 12.4: Verify 80% backend test coverage
+- [x] 12.4: Verify 80% backend test coverage
 - [ ] 12.5: Final E2E smoke test
