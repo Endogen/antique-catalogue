@@ -78,7 +78,7 @@ export type ItemResponse = {
   updated_at: string;
 };
 
-export type PublicItemListOptions = {
+export type ItemListOptions = {
   search?: string;
   sort?: string;
   limit?: number;
@@ -230,7 +230,7 @@ const parseResponse = async <T>(response: Response): Promise<T> => {
   return (await response.text()) as T;
 };
 
-const buildPublicItemsQuery = (options?: PublicItemListOptions) => {
+const buildItemListQuery = (options?: ItemListOptions) => {
   if (!options) {
     return "";
   }
@@ -452,11 +452,9 @@ export const publicCollectionApi = {
 };
 
 export const publicItemApi = {
-  list: (collectionId: number | string, options?: PublicItemListOptions) =>
+  list: (collectionId: number | string, options?: ItemListOptions) =>
     apiRequest<ItemResponse[]>(
-      `/public/collections/${collectionId}/items${buildPublicItemsQuery(
-        options
-      )}`,
+      `/public/collections/${collectionId}/items${buildItemListQuery(options)}`,
       {
         skipAuth: true,
         skipRefresh: true
@@ -469,6 +467,13 @@ export const publicItemApi = {
         skipAuth: true,
         skipRefresh: true
       }
+    )
+};
+
+export const itemApi = {
+  list: (collectionId: number | string, options?: ItemListOptions) =>
+    apiRequest<ItemResponse[]>(
+      `/collections/${collectionId}/items${buildItemListQuery(options)}`
     )
 };
 

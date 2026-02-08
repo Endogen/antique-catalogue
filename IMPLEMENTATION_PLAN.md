@@ -64,7 +64,7 @@ STATUS: READY
 - [x] 9.4: Build public collections explorer
 
 ## Phase 10: Frontend Items
-- [ ] 10.1: Build items list with search/filter/sort
+- [x] 10.1: Build items list with search/filter/sort
 - [ ] 10.2: Build dynamic item form (from schema)
 - [ ] 10.3: Build item detail page
 
