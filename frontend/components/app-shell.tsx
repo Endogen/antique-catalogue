@@ -1,0 +1,307 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Compass,
+  LayoutGrid,
+  Menu,
+  Plus,
+  Search,
+  Settings2,
+  Sparkles,
+  X
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+type NavItem = {
+  label: string;
+  href: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  match: string[];
+};
+
+const primaryNav: NavItem[] = [
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    description: "Your private archive",
+    icon: LayoutGrid,
+    match: ["/dashboard", "/collections"]
+  },
+  {
+    label: "Explore",
+    href: "/explore",
+    description: "Public collections",
+    icon: Compass,
+    match: ["/explore"]
+  },
+  {
+    label: "Settings",
+    href: "/settings",
+    description: "Profile and security",
+    icon: Settings2,
+    match: ["/settings"]
+  }
+];
+
+type SidebarContentProps = {
+  onNavigate?: () => void;
+  onClose?: () => void;
+};
+
+const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
+  const pathname = usePathname();
+
+  return (
+    <div className="relative flex h-full flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3"
+          onClick={onNavigate}
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-200 text-sm font-semibold text-stone-900">
+            AC
+          </div>
+          <div>
+            <p className="font-display text-lg tracking-tight text-stone-100">
+              Antique Catalogue
+            </p>
+            <p className="text-xs uppercase tracking-[0.35em] text-stone-400">
+              Studio Archive
+            </p>
+          </div>
+        </Link>
+        {onClose ? (
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-700 text-stone-200 transition hover:border-stone-500 hover:text-stone-100"
+            onClick={onClose}
+            aria-label="Close menu"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+
+      <nav className="space-y-2">
+        {primaryNav.map((item) => {
+          const isActive = item.match.some((path) =>
+            pathname === path || pathname.startsWith(`${path}/`)
+          );
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={cn(
+                "group flex items-start gap-3 rounded-2xl px-3 py-3 transition",
+                isActive
+                  ? "bg-amber-100/10 text-amber-50 ring-1 ring-amber-200/30"
+                  : "text-stone-200 hover:bg-stone-900/60 hover:text-stone-100"
+              )}
+            >
+              <span
+                className={cn(
+                  "mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl transition",
+                  isActive
+                    ? "bg-amber-200/15 text-amber-200"
+                    : "bg-stone-900 text-stone-400 group-hover:text-stone-200"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+              </span>
+              <span>
+                <span className="text-sm font-medium">{item.label}</span>
+                <span
+                  className={cn(
+                    "mt-1 block text-xs",
+                    isActive ? "text-amber-200/80" : "text-stone-400"
+                  )}
+                >
+                  {item.description}
+                </span>
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="space-y-3">
+        <Button
+          size="sm"
+          className="w-full justify-start bg-amber-200 text-stone-900 hover:bg-amber-100"
+          asChild
+        >
+          <Link href="/collections/new" onClick={onNavigate}>
+            <Plus className="h-4 w-4" />
+            New collection
+          </Link>
+        </Button>
+        <div className="rounded-2xl border border-stone-800/70 bg-stone-900/60 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+              Archive pulse
+            </p>
+            <Sparkles className="h-4 w-4 text-amber-200" />
+          </div>
+          <p className="mt-3 text-lg font-semibold text-stone-100">
+            0 items catalogued
+          </p>
+          <p className="mt-1 text-xs text-stone-400">
+            Start your first collection to unlock insights.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-auto rounded-2xl border border-stone-800/70 bg-stone-950/60 p-4">
+        <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          Studio note
+        </p>
+        <p className="mt-2 text-sm text-stone-200">
+          Upload photos from any device and keep item stories in one place.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+type AppShellProps = {
+  children: React.ReactNode;
+};
+
+export const AppShell = ({ children }: AppShellProps) => {
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const pathname = usePathname();
+
+  React.useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  React.useEffect(() => {
+    if (!mobileOpen) {
+      document.body.style.overflow = "";
+      return;
+    }
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
+  React.useEffect(() => {
+    if (!mobileOpen) {
+      return;
+    }
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [mobileOpen]);
+
+  return (
+    <div className="relative min-h-screen bg-stone-50 text-stone-950">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 right-[-6rem] h-72 w-72 rounded-full bg-amber-200/30 blur-[140px]" />
+        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-stone-900/10 blur-[120px]" />
+        <div className="absolute top-1/3 right-1/4 h-40 w-40 rounded-full bg-amber-100/40 blur-[90px]" />
+      </div>
+
+      <div className="relative flex min-h-screen">
+        <aside className="relative hidden w-72 flex-col border-r border-stone-900/80 bg-stone-950 text-stone-100 lg:flex">
+          <div className="pointer-events-none absolute -top-24 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-[90px]" />
+          <div className="relative flex h-full flex-col p-6">
+            <SidebarContent />
+          </div>
+        </aside>
+
+        <div className="flex min-h-screen flex-1 flex-col">
+          <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+            <div className="flex items-center justify-between px-6 py-4 lg:px-10">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white/80 text-stone-700 shadow-sm transition hover:border-stone-300 hover:text-stone-900 lg:hidden"
+                  onClick={() => setMobileOpen(true)}
+                  aria-label="Open menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+                    Workspace
+                  </p>
+                  <p className="font-display text-xl text-stone-900">
+                    Catalogue Studio
+                  </p>
+                </div>
+              </div>
+              <div className="hidden items-center gap-3 md:flex">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="search"
+                    placeholder="Search items or collections"
+                    className="h-10 w-64 rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </div>
+                <Button size="sm" asChild>
+                  <Link href="/collections/new">
+                    <Plus className="h-4 w-4" />
+                    New collection
+                  </Link>
+                </Button>
+                <div className="hidden items-center gap-2 rounded-full border border-stone-200 bg-white/80 px-3 py-2 text-xs text-stone-600 lg:flex">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  All systems ready
+                </div>
+              </div>
+            </div>
+            <div className="px-6 pb-4 md:hidden">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="search"
+                    placeholder="Search items"
+                    className="h-10 w-full rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </div>
+                <Button size="sm" asChild>
+                  <Link href="/collections/new">New</Link>
+                </Button>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 px-6 pb-12 pt-8 lg:px-10">
+            {children}
+          </main>
+        </div>
+      </div>
+
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div
+            className="absolute inset-0 bg-stone-950/60"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] border-r border-stone-900 bg-stone-950 p-6 text-stone-100 shadow-2xl">
+            <SidebarContent
+              onNavigate={() => setMobileOpen(false)}
+              onClose={() => setMobileOpen(false)}
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
