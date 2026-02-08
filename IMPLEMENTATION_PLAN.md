@@ -61,7 +61,7 @@ STATUS: READY
 - [x] 9.1: Build collections list page
 - [x] 9.2: Build collection create/edit forms
 - [x] 9.3: Build schema builder component
-- [ ] 9.4: Build public collections explorer
+- [x] 9.4: Build public collections explorer
 
 ## Phase 10: Frontend Items
 - [ ] 10.1: Build items list with search/filter/sort

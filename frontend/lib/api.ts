@@ -68,6 +68,24 @@ export type FieldDefinitionUpdatePayload = {
   options?: FieldOptions | null;
 };
 
+export type ItemResponse = {
+  id: number;
+  collection_id: number;
+  name: string;
+  metadata: Record<string, unknown> | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PublicItemListOptions = {
+  search?: string;
+  sort?: string;
+  limit?: number;
+  offset?: number;
+  filters?: string[];
+};
+
 export type ApiErrorPayload = {
   detail?: string;
   message?: string;
@@ -210,6 +228,35 @@ const parseResponse = async <T>(response: Response): Promise<T> => {
   }
 
   return (await response.text()) as T;
+};
+
+const buildPublicItemsQuery = (options?: PublicItemListOptions) => {
+  if (!options) {
+    return "";
+  }
+
+  const params = new URLSearchParams();
+  if (options.search) {
+    params.set("search", options.search);
+  }
+  if (options.sort) {
+    params.set("sort", options.sort);
+  }
+  if (typeof options.offset === "number") {
+    params.set("offset", String(options.offset));
+  }
+  if (typeof options.limit === "number") {
+    params.set("limit", String(options.limit));
+  }
+  if (options.filters?.length) {
+    options.filters
+      .map((filter) => filter.trim())
+      .filter(Boolean)
+      .forEach((filter) => params.append("filter", filter));
+  }
+
+  const query = params.toString();
+  return query ? `?${query}` : "";
 };
 
 const refreshAccessToken = async (): Promise<string | null> => {
@@ -389,6 +436,40 @@ export const collectionApi = {
       method: "PATCH",
       body: payload
     })
+};
+
+export const publicCollectionApi = {
+  list: () =>
+    apiRequest<CollectionResponse[]>("/public/collections", {
+      skipAuth: true,
+      skipRefresh: true
+    }),
+  get: (collectionId: number | string) =>
+    apiRequest<CollectionResponse>(`/public/collections/${collectionId}`, {
+      skipAuth: true,
+      skipRefresh: true
+    })
+};
+
+export const publicItemApi = {
+  list: (collectionId: number | string, options?: PublicItemListOptions) =>
+    apiRequest<ItemResponse[]>(
+      `/public/collections/${collectionId}/items${buildPublicItemsQuery(
+        options
+      )}`,
+      {
+        skipAuth: true,
+        skipRefresh: true
+      }
+    ),
+  get: (collectionId: number | string, itemId: number | string) =>
+    apiRequest<ItemResponse>(
+      `/public/collections/${collectionId}/items/${itemId}`,
+      {
+        skipAuth: true,
+        skipRefresh: true
+      }
+    )
 };
 
 export const fieldApi = {
