@@ -40,10 +40,10 @@ STATUS: READY
 ## Phase 6: Backend Images
 - [x] 6.1: Create ItemImage model with migrations
 - [x] 6.2: Implement image processing service (resize, convert to JPG)
-- [ ] 6.3: Implement image upload endpoint
-- [ ] 6.4: Implement image list/delete/reorder endpoints
-- [ ] 6.5: Implement image serving endpoint
-- [ ] 6.6: Add image tests
+- [x] 6.3: Implement image upload endpoint
+- [x] 6.4: Implement image list/delete/reorder endpoints
+- [x] 6.5: Implement image serving endpoint
+- [x] 6.6: Add image tests
 
 ## Phase 7: Frontend Setup
 - [ ] 7.1: Initialize Next.js app with Tailwind and shadcn/ui

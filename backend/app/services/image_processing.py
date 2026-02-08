@@ -5,7 +5,16 @@ from io import BytesIO
 from pathlib import Path
 from typing import Mapping
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+try:
+    from PIL import Image, ImageOps, UnidentifiedImageError
+except ModuleNotFoundError:  # pragma: no cover - handled via runtime check
+    Image = None  # type: ignore[assignment]
+    ImageOps = None  # type: ignore[assignment]
+    UnidentifiedImageError = Exception  # type: ignore[misc,assignment]
+
+    PIL_AVAILABLE = False
+else:
+    PIL_AVAILABLE = True
 
 JPEG_QUALITY = 85
 MEDIUM_MAX_SIZE = 800
@@ -36,10 +45,14 @@ class ProcessedImageVariants:
 
 
 def _resample_filter():
+    if not PIL_AVAILABLE:  # pragma: no cover - guarded by callers
+        raise ImageProcessingError("Image processing requires Pillow")
     return getattr(Image, "Resampling", Image).LANCZOS
 
 
 def _open_image(data: bytes) -> Image.Image:
+    if not PIL_AVAILABLE:
+        raise ImageProcessingError("Image processing requires Pillow")
     if not data:
         raise ImageProcessingError("Image payload is empty")
     try:

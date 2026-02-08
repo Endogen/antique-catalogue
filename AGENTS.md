@@ -53,7 +53,7 @@ Run after each implementation:
 <!-- Decisions made by humans are recorded here -->
 
 ## Learnings
-- Virtual environment at `backend/.venv` has all dependencies installed.
+- Virtual environment at `backend/.venv` may lack Pillow/python-multipart in offline runs; image upload falls back to a 503 and image tests skip when Pillow is unavailable.
 - Verification emails are skipped (logged) when `SMTP_HOST` or `SMTP_FROM` is unset.
 - In tests, sync FastAPI endpoints may hang unless `run_in_threadpool` and `contextmanager_in_threadpool` are patched to run inline.
 - Request validation errors can include exception objects in `ctx`, so sanitize them before JSON serialization.
