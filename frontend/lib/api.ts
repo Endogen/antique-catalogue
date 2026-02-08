@@ -17,6 +17,15 @@ export type UserResponse = {
   updated_at: string;
 };
 
+export type CollectionResponse = {
+  id: number;
+  name: string;
+  description: string | null;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ApiErrorPayload = {
   detail?: string;
   message?: string;
@@ -322,4 +331,8 @@ export const authApi = {
     apiRequest<MessageResponse>("/auth/me", {
       method: "DELETE"
     })
+};
+
+export const collectionApi = {
+  list: () => apiRequest<CollectionResponse[]>("/collections")
 };

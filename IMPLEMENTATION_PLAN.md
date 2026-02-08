@@ -58,7 +58,7 @@ STATUS: READY
 - [x] 8.4: Build user settings page
 
 ## Phase 9: Frontend Collections
-- [ ] 9.1: Build collections list page
+- [x] 9.1: Build collections list page
 - [ ] 9.2: Build collection create/edit forms
 - [ ] 9.3: Build schema builder component
 - [ ] 9.4: Build public collections explorer
