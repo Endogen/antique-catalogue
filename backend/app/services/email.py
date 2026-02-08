@@ -48,3 +48,12 @@ def send_verification_email(to_email: str, token: str) -> None:
         f"Verification token: {token}\n"
     )
     send_email(to_email, subject, body)
+
+
+def send_password_reset_email(to_email: str, token: str) -> None:
+    subject = "Reset your Antique Catalogue password"
+    body = (
+        "Use the password reset token below to set a new password.\n\n"
+        f"Password reset token: {token}\n"
+    )
+    send_email(to_email, subject, body)

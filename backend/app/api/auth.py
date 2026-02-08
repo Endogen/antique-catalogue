@@ -20,11 +20,19 @@ from app.core.settings import settings
 from app.db.session import get_db
 from app.models.email_token import EmailToken
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, VerifyRequest
+from app.schemas.auth import (
+    ForgotPasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+    TokenResponse,
+    VerifyRequest,
+)
 from app.schemas.responses import MessageResponse
-from app.services.email import send_verification_email
+from app.services.email import send_password_reset_email, send_verification_email
 
 VERIFY_TOKEN_EXPIRE_HOURS = 24
+RESET_TOKEN_EXPIRE_HOURS = 2
 TOKEN_BYTES = 48
 TOKEN_MAX_ATTEMPTS = 5
 REFRESH_TOKEN_EXPIRE_DAYS = 7
@@ -34,7 +42,7 @@ REFRESH_TOKEN_MAX_AGE = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _generate_unique_token(db: Session) -> str:
+def _generate_unique_token(db: Session, label: str) -> str:
     for _ in range(TOKEN_MAX_ATTEMPTS):
         token = secrets.token_urlsafe(TOKEN_BYTES)
         exists = db.execute(select(EmailToken.id).where(EmailToken.token == token)).first()
@@ -42,7 +50,7 @@ def _generate_unique_token(db: Session) -> str:
             return token
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Unable to generate verification token",
+        detail=f"Unable to generate {label} token",
     )
 
 
@@ -59,7 +67,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)) -> Message
     user = User(email=request.email, password_hash=hash_password(request.password))
     db.add(user)
 
-    token = _generate_unique_token(db)
+    token = _generate_unique_token(db, "verification")
     expires_at = datetime.now(timezone.utc) + timedelta(hours=VERIFY_TOKEN_EXPIRE_HOURS)
     email_token = EmailToken(
         user=user,
@@ -238,3 +246,63 @@ def refresh_access_token(
 def logout(response: Response) -> MessageResponse:
     _clear_refresh_cookie(response)
     return MessageResponse(message="Logged out")
+
+
+@router.post("/forgot", response_model=MessageResponse)
+def forgot_password(
+    request: ForgotPasswordRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
+    user = db.execute(select(User).where(User.email == request.email)).scalar_one_or_none()
+    if not user or not user.is_active:
+        return MessageResponse(message="If the account exists, a reset email has been sent")
+
+    token = _generate_unique_token(db, "password reset")
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=RESET_TOKEN_EXPIRE_HOURS)
+    email_token = EmailToken(
+        user=user,
+        token=token,
+        token_type="reset",
+        expires_at=expires_at,
+    )
+    db.add(email_token)
+    db.commit()
+
+    send_password_reset_email(user.email, token)
+    return MessageResponse(message="If the account exists, a reset email has been sent")
+
+
+@router.post("/reset", response_model=MessageResponse)
+def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)) -> MessageResponse:
+    email_token = (
+        db.execute(
+            select(EmailToken).where(
+                EmailToken.token == request.token, EmailToken.token_type == "reset"
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not email_token:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token")
+
+    user = email_token.user
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token")
+
+    if email_token.used_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Reset token already used"
+        )
+
+    now = datetime.now(timezone.utc)
+    expires_at = _coerce_utc(email_token.expires_at)
+    if expires_at <= now:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reset token expired")
+
+    user.password_hash = hash_password(request.password)
+    email_token.used_at = now
+    db.add(user)
+    db.add(email_token)
+    db.commit()
+
+    return MessageResponse(message="Password reset successful")

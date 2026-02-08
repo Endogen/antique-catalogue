@@ -60,6 +60,32 @@ class VerifyRequest(BaseModel):
         return value
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., examples=["collector@example.com"])
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return _normalize_email(value)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., examples=["reset-token"])
+    password: str = Field(..., examples=["strong-password"])
+
+    @field_validator("token")
+    @classmethod
+    def validate_token(cls, value: str) -> str:
+        if value.strip() == "":
+            raise ValueError("Reset token cannot be blank")
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return _validate_password_strength(value)
+
+
 class TokenResponse(BaseModel):
     access_token: str = Field(..., examples=["jwt-access-token"])
     token_type: str = Field("bearer", examples=["bearer"])

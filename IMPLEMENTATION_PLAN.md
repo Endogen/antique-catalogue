@@ -14,7 +14,7 @@ STATUS: READY
 - [x] 2.2: Implement register endpoint with email verification token
 - [x] 2.3: Implement verify email endpoint
 - [x] 2.4: Implement login/logout/refresh endpoints
-- [ ] 2.5: Implement forgot/reset password endpoints
+- [x] 2.5: Implement forgot/reset password endpoints
 - [ ] 2.6: Implement /auth/me and DELETE /auth/me (account deletion)
 - [ ] 2.7: Add auth tests (unit + integration)
 
