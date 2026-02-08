@@ -37,7 +37,7 @@ type SearchParamsLike = { get: (key: string) => string | null };
 const getPrefillToken = (searchParams: SearchParamsLike) =>
   searchParams.get("token") ?? searchParams.get("t") ?? "";
 
-export default function VerifyPage() {
+function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status } = useAuth();
@@ -241,5 +241,13 @@ export default function VerifyPage() {
         </div>
       </aside>
     </>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <React.Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center text-sm text-stone-500">Loading...</div>}>
+      <VerifyContent />
+    </React.Suspense>
   );
 }

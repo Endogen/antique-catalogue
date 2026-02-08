@@ -43,7 +43,7 @@ const resolveRedirectPath = (raw: string | null) => {
   return "/dashboard";
 };
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status, login } = useAuth();
@@ -256,5 +256,13 @@ export default function LoginPage() {
         </div>
       </aside>
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center text-sm text-stone-500">Loading...</div>}>
+      <LoginContent />
+    </React.Suspense>
   );
 }

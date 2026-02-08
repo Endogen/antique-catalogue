@@ -316,7 +316,7 @@ export function ImageGallery({
         ) : status === "error" ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-6">
             <p className="text-sm font-medium text-rose-700">
-              We couldn't load the image gallery.
+              We couldn&apos;t load the image gallery.
             </p>
             <p className="mt-2 text-sm text-rose-600">
               {loadError ?? "Please try again."}
