@@ -884,6 +884,13 @@ export default function CollectionDetailPage() {
                         </div>
                       )}
                     </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <Button size="sm" variant="secondary" asChild>
+                        <Link href={`/collections/${collectionId}/items/${item.id}`}>
+                          View item
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
