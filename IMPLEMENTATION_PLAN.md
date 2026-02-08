@@ -21,7 +21,7 @@ STATUS: READY
 ## Phase 3: Backend Collections
 - [x] 3.1: Create Collection model with migrations
 - [x] 3.2: Implement collection CRUD endpoints
-- [ ] 3.3: Implement public collections endpoints (no auth)
+- [x] 3.3: Implement public collections endpoints (no auth)
 - [ ] 3.4: Add collection tests
 
 ## Phase 4: Backend Schema

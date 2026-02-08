@@ -16,6 +16,7 @@ from app.schemas.collections import (
 from app.schemas.responses import MessageResponse
 
 router = APIRouter(prefix="/collections", tags=["collections"])
+public_router = APIRouter(prefix="/public/collections", tags=["public collections"])
 
 
 def _get_collection_or_404(db: Session, collection_id: int, owner_id: int) -> Collection:
@@ -24,6 +25,19 @@ def _get_collection_or_404(db: Session, collection_id: int, owner_id: int) -> Co
             select(Collection).where(
                 Collection.id == collection_id, Collection.owner_id == owner_id
             )
+        )
+        .scalars()
+        .first()
+    )
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
+    return collection
+
+
+def _get_public_collection_or_404(db: Session, collection_id: int) -> Collection:
+    collection = (
+        db.execute(
+            select(Collection).where(Collection.id == collection_id, Collection.is_public.is_(True))
         )
         .scalars()
         .first()
@@ -118,3 +132,24 @@ def delete_collection(
     db.delete(collection)
     db.commit()
     return MessageResponse(message="Collection deleted")
+
+
+@public_router.get("", response_model=list[CollectionResponse])
+@public_router.get("/", response_model=list[CollectionResponse], include_in_schema=False)
+def list_public_collections(db: Session = Depends(get_db)) -> list[CollectionResponse]:
+    collections = (
+        db.execute(
+            select(Collection)
+            .where(Collection.is_public.is_(True))
+            .order_by(Collection.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+    return collections
+
+
+@public_router.get("/{collection_id}", response_model=CollectionResponse)
+def get_public_collection(collection_id: int, db: Session = Depends(get_db)) -> CollectionResponse:
+    collection = _get_public_collection_or_404(db, collection_id)
+    return collection
