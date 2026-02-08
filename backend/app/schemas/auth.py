@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def _normalize_email(value: str) -> str:
@@ -90,3 +92,14 @@ class TokenResponse(BaseModel):
     access_token: str = Field(..., examples=["jwt-access-token"])
     token_type: str = Field("bearer", examples=["bearer"])
     expires_in: int = Field(..., examples=[1800], description="Access token lifetime in seconds")
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str
+    is_active: bool
+    is_verified: bool
+    created_at: datetime
+    updated_at: datetime

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.core.security import (
     TokenError,
     create_access_token,
@@ -26,6 +27,7 @@ from app.schemas.auth import (
     RegisterRequest,
     ResetPasswordRequest,
     TokenResponse,
+    UserResponse,
     VerifyRequest,
 )
 from app.schemas.responses import MessageResponse
@@ -306,3 +308,20 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     db.commit()
 
     return MessageResponse(message="Password reset successful")
+
+
+@router.get("/me", response_model=UserResponse)
+def read_me(current_user: User = Depends(get_current_user)) -> UserResponse:
+    return current_user
+
+
+@router.delete("/me", response_model=MessageResponse)
+def delete_me(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    db.delete(current_user)
+    db.commit()
+    _clear_refresh_cookie(response)
+    return MessageResponse(message="Account deleted")
