@@ -135,6 +135,9 @@ export default function Home() {
             </div>
           </div>
           <nav className="hidden items-center gap-6 text-sm text-stone-600 md:flex">
+            <Link href="/" className="font-medium text-stone-900">
+              Home
+            </Link>
             <Link href="/explore" className="hover:text-stone-900">
               Explore
             </Link>
@@ -260,7 +263,7 @@ export default function Home() {
                             <img
                               src={imageApi.url(imageId, "medium")}
                               alt={item.name}
-                              className="h-full w-full object-cover"
+                              className="block h-full w-full object-cover"
                               loading="lazy"
                             />
                           ) : (

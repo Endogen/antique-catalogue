@@ -12,8 +12,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.api.auth import router as auth_router
 from app.api.admin import router as admin_router
+from app.api.auth import router as auth_router
 from app.api.collections import public_router as public_collections_router
 from app.api.collections import router as collections_router
 from app.api.fields import router as fields_router

@@ -391,7 +391,7 @@ export function ImageGallery({
                       <img
                         src={imageApi.url(image.id, "medium")}
                         alt={image.filename || "Item image"}
-                        className="h-36 w-full object-cover"
+                        className="block h-36 w-full object-cover"
                         loading="lazy"
                       />
                     </button>

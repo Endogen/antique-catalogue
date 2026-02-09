@@ -617,11 +617,13 @@ export default function ItemDetailPage() {
               disabled={itemState.status !== "ready"}
               refreshToken={imageRefreshToken}
             />
-            <ImageUploader
-              itemId={itemId ?? null}
-              disabled={itemState.status !== "ready"}
-              onUploaded={handleImageUploaded}
-            />
+            {isEditing ? (
+              <ImageUploader
+                itemId={itemId ?? null}
+                disabled={itemState.status !== "ready"}
+                onUploaded={handleImageUploaded}
+              />
+            ) : null}
           </div>
 
           <aside className="space-y-6">

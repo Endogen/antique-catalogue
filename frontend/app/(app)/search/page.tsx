@@ -194,7 +194,7 @@ export default function SearchPage() {
                         <img
                           src={imageApi.url(imageId, "thumb")}
                           alt={item.name}
-                          className="h-full w-full object-cover"
+                          className="block h-full w-full object-cover"
                         />
                       </div>
                     ) : (

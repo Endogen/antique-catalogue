@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth-provider";
 import {
   isApiError,
   publicCollectionApi,
@@ -56,11 +57,13 @@ const filterCollections = (
 };
 
 export default function ExplorePage() {
+  const { isAuthenticated, logout, status: authStatus } = useAuth();
   const [state, setState] = React.useState<LoadState>({
     status: "loading",
     data: []
   });
   const [search, setSearch] = React.useState("");
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   const loadCollections = React.useCallback(async () => {
     setState((prev) => ({
@@ -95,6 +98,20 @@ export default function ExplorePage() {
   );
 
   const totalCount = state.data.length;
+  const showAuthenticatedCtas =
+    authStatus === "authenticated" && isAuthenticated;
+
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-950">
@@ -128,12 +145,24 @@ export default function ExplorePage() {
             </Link>
           </nav>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="hidden sm:inline-flex" asChild>
-              <Link href="/login">Log in</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Create account</Link>
-            </Button>
+            {showAuthenticatedCtas ? (
+              <Button
+                variant="secondary"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" className="hidden sm:inline-flex" asChild>
+                  <Link href="/login">Log in</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">Create account</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>

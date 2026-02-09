@@ -29,9 +29,7 @@ def _primary_image_id_subquery():
 def search_items(
     q: str = Query(..., min_length=1, description="Search term for item name or notes"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    limit: int | None = Query(
-        None, ge=1, le=1000, description="Optional pagination limit"
-    ),
+    limit: int | None = Query(None, ge=1, le=1000, description="Optional pagination limit"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[ItemSearchResponse]:

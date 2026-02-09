@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AdminLoginRequest(BaseModel):
@@ -44,3 +44,28 @@ class AdminFeatureRequest(BaseModel):
         None,
         description="Collection to feature; omit or null to clear",
     )
+
+
+class AdminFeaturedItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    collection_id: int
+    name: str
+    notes: str | None
+    primary_image_id: int | None = None
+    is_featured: bool
+    created_at: datetime
+
+
+class AdminFeaturedItemsRequest(BaseModel):
+    item_ids: list[int] = Field(default_factory=list, description="Item ids to feature")
+
+    @field_validator("item_ids")
+    @classmethod
+    def validate_item_ids(cls, value: list[int]) -> list[int]:
+        if len(value) > 4:
+            raise ValueError("Select up to 4 featured items")
+        if len(set(value)) != len(value):
+            raise ValueError("Duplicate item ids are not allowed")
+        return value
