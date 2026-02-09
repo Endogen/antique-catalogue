@@ -22,6 +22,7 @@ import {
   type CollectionResponse,
   type ItemResponse
 } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type LoadState = {
   status: "loading" | "ready" | "error";
@@ -88,6 +89,9 @@ const truncate = (value: string, maxLength: number) => {
   }
   return `${value.slice(0, maxLength)}...`;
 };
+
+const highlightCardClass =
+  "border-amber-200/70 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_12px_32px_-22px_rgba(251,191,36,0.55)]";
 
 export default function PublicCollectionPage() {
   const { isAuthenticated, logout, status: authStatus } = useAuth();
@@ -600,7 +604,10 @@ export default function PublicCollectionPage() {
                   return (
                     <div
                       key={item.id}
-                      className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm"
+                      className={cn(
+                        "rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm",
+                        item.is_highlight ? highlightCardClass : null
+                      )}
                     >
                       {imageId ? (
                         <button

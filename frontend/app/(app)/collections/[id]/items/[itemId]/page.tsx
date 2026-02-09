@@ -295,7 +295,8 @@ export default function ItemDetailPage() {
       const updated = await itemApi.update(collectionId, itemId, {
         name: values.name,
         notes: values.notes,
-        metadata: values.metadata
+        metadata: values.metadata,
+        is_highlight: values.is_highlight
       });
       setItemState({
         status: "ready",
@@ -440,13 +441,14 @@ export default function ItemDetailPage() {
                       </Button>
                     </div>
                   ) : (
-                    <ItemForm
-                      fields={fieldsState.data}
-                      initialValues={{
-                        name: itemState.data?.name ?? "",
-                        notes: itemState.data?.notes ?? "",
-                        metadata: itemState.data?.metadata ?? null
-                      }}
+                      <ItemForm
+                        fields={fieldsState.data}
+                        initialValues={{
+                          name: itemState.data?.name ?? "",
+                          notes: itemState.data?.notes ?? "",
+                          metadata: itemState.data?.metadata ?? null,
+                          is_highlight: itemState.data?.is_highlight ?? false
+                        }}
                       onSubmit={handleSubmit}
                       submitLabel="Save changes"
                       submitPendingLabel="Saving changes..."

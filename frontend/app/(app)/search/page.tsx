@@ -12,6 +12,7 @@ import {
   searchApi,
   type ItemSearchResponse
 } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type LoadState = {
   status: "idle" | "loading" | "ready" | "error";
@@ -40,6 +41,9 @@ const truncate = (value: string, maxLength: number) => {
   }
   return `${value.slice(0, maxLength)}...`;
 };
+
+const highlightCardClass =
+  "border-amber-200/70 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_12px_32px_-22px_rgba(251,191,36,0.55)]";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -175,7 +179,10 @@ export default function SearchPage() {
               return (
                 <div
                   key={`${item.collection_id}-${item.id}`}
-                  className="rounded-3xl border border-stone-200 bg-white/80 p-5 shadow-sm"
+                  className={cn(
+                    "rounded-3xl border border-stone-200 bg-white/80 p-5 shadow-sm",
+                    item.is_highlight ? highlightCardClass : null
+                  )}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>

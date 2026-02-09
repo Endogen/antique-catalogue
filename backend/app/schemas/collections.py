@@ -61,5 +61,6 @@ class CollectionResponse(BaseModel):
     description: str | None
     is_public: bool
     is_featured: bool
+    item_count: int | None = None
     created_at: datetime
     updated_at: datetime

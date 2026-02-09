@@ -18,7 +18,8 @@ const itemSchema = z.object({
     .max(2000, "Keep the notes under 2000 characters")
     .optional()
     .or(z.literal("")),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.unknown()).optional(),
+  is_highlight: z.boolean().optional()
 });
 
 type ItemFormInput = z.infer<typeof itemSchema>;
@@ -27,6 +28,7 @@ export type ItemFormValues = {
   name: string;
   notes: string | null;
   metadata: Record<string, unknown> | null;
+  is_highlight: boolean;
 };
 
 type ItemFormProps = {
@@ -316,9 +318,16 @@ export function ItemForm({
     () => ({
       name: initialValues?.name ?? "",
       notes: initialValues?.notes ?? "",
-      metadata: buildMetadataDefaults(sortedFields, initialValues?.metadata)
+      metadata: buildMetadataDefaults(sortedFields, initialValues?.metadata),
+      is_highlight: initialValues?.is_highlight ?? false
     }),
-    [initialValues?.metadata, initialValues?.name, initialValues?.notes, sortedFields]
+    [
+      initialValues?.is_highlight,
+      initialValues?.metadata,
+      initialValues?.name,
+      initialValues?.notes,
+      sortedFields
+    ]
   );
 
   const {
@@ -374,7 +383,8 @@ export function ItemForm({
     await onSubmit({
       name: normalizedName,
       notes: normalizedNotes,
-      metadata: payload
+      metadata: payload,
+      is_highlight: Boolean(values.is_highlight)
     });
   };
 
@@ -428,6 +438,28 @@ export function ItemForm({
               Optional context, provenance, or acquisition details.
             </p>
           )}
+        </div>
+
+        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/40 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <label
+                className="text-sm font-medium text-stone-800"
+                htmlFor="is_highlight"
+              >
+                Highlight item
+              </label>
+              <p className="mt-1 text-xs text-stone-600">
+                Adds a warm glow to featured items across the catalogue.
+              </p>
+            </div>
+            <input
+              id="is_highlight"
+              type="checkbox"
+              className="mt-1 h-5 w-5 rounded border-amber-300 text-amber-600 focus:ring-amber-200"
+              {...register("is_highlight")}
+            />
+          </div>
         </div>
       </div>
 

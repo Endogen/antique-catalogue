@@ -13,4 +13,5 @@ class FeaturedItemResponse(BaseModel):
     name: str
     notes: str | None
     primary_image_id: int | None = None
+    is_highlight: bool
     created_at: datetime
