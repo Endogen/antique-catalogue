@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Compass,
   Folder,
@@ -186,6 +186,27 @@ type AppShellProps = {
 export const AppShell = ({ children }: AppShellProps) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchValue, setSearchValue] = React.useState(
+    searchParams.get("query") ?? ""
+  );
+
+  React.useEffect(() => {
+    setSearchValue(searchParams.get("query") ?? "");
+  }, [searchParams]);
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    const term = event.currentTarget.value.trim();
+    if (!term) {
+      return;
+    }
+    router.push(`/search?query=${encodeURIComponent(term)}`);
+  };
 
   React.useEffect(() => {
     setMobileOpen(false);
@@ -259,6 +280,9 @@ export const AppShell = ({ children }: AppShellProps) => {
                     type="search"
                     placeholder="Search items or collections"
                     className="h-10 w-64 rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    value={searchValue}
+                    onChange={(event) => setSearchValue(event.target.value)}
+                    onKeyDown={handleSearchKeyDown}
                   />
                 </div>
                 <Button size="sm" asChild>
@@ -267,10 +291,6 @@ export const AppShell = ({ children }: AppShellProps) => {
                     New collection
                   </Link>
                 </Button>
-                <div className="hidden items-center gap-2 rounded-full border border-stone-200 bg-white/80 px-3 py-2 text-xs text-stone-600 lg:flex">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  All systems ready
-                </div>
               </div>
             </div>
             <div className="px-6 pb-4 md:hidden">
@@ -281,6 +301,9 @@ export const AppShell = ({ children }: AppShellProps) => {
                     type="search"
                     placeholder="Search items"
                     className="h-10 w-full rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    value={searchValue}
+                    onChange={(event) => setSearchValue(event.target.value)}
+                    onKeyDown={handleSearchKeyDown}
                   />
                 </div>
                 <Button size="sm" asChild>

@@ -3,11 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 
+import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
+  imageApi,
   isApiError,
   publicCollectionApi,
-  type CollectionResponse
+  type CollectionResponse,
+  type FeaturedItemResponse
 } from "@/lib/api";
 
 const features = [
@@ -36,11 +39,18 @@ const highlights = [
 ];
 
 export default function Home() {
+  const { isAuthenticated, logout, status: authStatus } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [featuredState, setFeaturedState] = React.useState<{
     status: "loading" | "ready" | "error";
     data: CollectionResponse | null;
     error?: string;
   }>({ status: "loading", data: null });
+  const [featuredItemsState, setFeaturedItemsState] = React.useState<{
+    status: "loading" | "ready" | "error";
+    data: FeaturedItemResponse[];
+    error?: string;
+  }>({ status: "loading", data: [] });
 
   React.useEffect(() => {
     let isActive = true;
@@ -64,10 +74,48 @@ export default function Home() {
         });
       }
     })();
+    void (async () => {
+      try {
+        const items = await publicCollectionApi.featuredItems();
+        if (!isActive) {
+          return;
+        }
+        setFeaturedItemsState({ status: "ready", data: items });
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+        setFeaturedItemsState({
+          status: "error",
+          data: [],
+          error: isApiError(error)
+            ? error.detail
+            : "We couldn't load featured items."
+        });
+      }
+    })();
     return () => {
       isActive = false;
     };
   }, []);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const showAuthenticatedCtas =
+    authStatus === "authenticated" && isAuthenticated;
+  const featuredItems =
+    featuredItemsState.status === "ready" ? featuredItemsState.data : [];
+  const showFeaturedItems = featuredItems.length > 0;
 
   return (
     <main className="min-h-screen">
@@ -98,12 +146,24 @@ export default function Home() {
             </Link>
           </nav>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="hidden sm:inline-flex" asChild>
-              <Link href="/login">Log in</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Start free</Link>
-            </Button>
+            {showAuthenticatedCtas ? (
+              <Button
+                variant="secondary"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" className="hidden sm:inline-flex" asChild>
+                  <Link href="/login">Log in</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">Start free</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -165,26 +225,60 @@ export default function Home() {
                     "Select a public collection to highlight on the homepage."}
               </p>
               <div className="mt-6 grid grid-cols-2 gap-4">
-                {[0, 1, 2, 3].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-2xl border border-stone-100 bg-stone-50 p-4"
-                  >
-                    <div className="h-20 rounded-xl bg-gradient-to-br from-stone-200 via-stone-100 to-amber-100" />
-                    <p className="mt-3 text-sm font-medium text-stone-800">
-                      {featuredState.data
-                        ? "Featured item"
-                        : featuredState.status === "loading"
-                          ? "Loading preview"
-                          : "Collection preview"}
-                    </p>
-                    <p className="text-xs text-stone-500">
-                      {featuredState.data
-                        ? "Curated highlight"
-                        : "Select a collection to feature"}
-                    </p>
-                  </div>
-                ))}
+                {(showFeaturedItems ? featuredItems : [0, 1, 2, 3]).map(
+                  (item, index) => {
+                    if (typeof item === "number") {
+                      return (
+                        <div
+                          key={`placeholder-${item}`}
+                          className="rounded-2xl border border-stone-100 bg-stone-50 p-4"
+                        >
+                          <div className="h-20 rounded-xl bg-gradient-to-br from-stone-200 via-stone-100 to-amber-100" />
+                          <p className="mt-3 text-sm font-medium text-stone-800">
+                            {featuredState.data
+                              ? "Featured item"
+                              : featuredState.status === "loading"
+                                ? "Loading preview"
+                                : "Collection preview"}
+                          </p>
+                          <p className="text-xs text-stone-500">
+                            {featuredState.data
+                              ? "Curated highlight"
+                              : "Select a collection to feature"}
+                          </p>
+                        </div>
+                      );
+                    }
+                    const imageId = item.primary_image_id ?? null;
+                    return (
+                      <div
+                        key={`${item.id}-${index}`}
+                        className="rounded-2xl border border-stone-100 bg-stone-50 p-4"
+                      >
+                        <div className="h-20 overflow-hidden rounded-xl">
+                          {imageId ? (
+                            <img
+                              src={imageApi.url(imageId, "medium")}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-gradient-to-br from-stone-200 via-stone-100 to-amber-100" />
+                          )}
+                        </div>
+                        <p className="mt-3 text-sm font-medium text-stone-800">
+                          {item.name}
+                        </p>
+                        <p className="text-xs text-stone-500">
+                          {item.notes
+                            ? item.notes.slice(0, 50)
+                            : "Featured highlight"}
+                        </p>
+                      </div>
+                    );
+                  }
+                )}
               </div>
               <div className="mt-6 flex items-center justify-between rounded-2xl bg-stone-900 px-4 py-3 text-stone-100">
                 <div>
@@ -243,12 +337,30 @@ export default function Home() {
             </h2>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" variant="secondary" asChild>
-              <Link href="/register">Create an account</Link>
-            </Button>
-            <Button size="lg" variant="ghost" className="text-stone-100" asChild>
-              <Link href="/login">Sign in</Link>
-            </Button>
+            {showAuthenticatedCtas ? (
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </Button>
+            ) : (
+              <>
+                <Button size="lg" variant="secondary" asChild>
+                  <Link href="/register">Create an account</Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="text-stone-100"
+                  asChild
+                >
+                  <Link href="/login">Sign in</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>

@@ -11,6 +11,7 @@ from app.core.security import TokenError, create_admin_token, decode_token
 from app.core.settings import settings
 from app.db.session import get_db
 from app.models.collection import Collection
+from app.models.item import Item
 from app.models.user import User
 from app.schemas.admin import (
     AdminCollectionListResponse,
@@ -176,6 +177,7 @@ def set_featured_collection(
     _require_admin_config()
     if request.collection_id is None:
         db.execute(update(Collection).values(is_featured=False))
+        db.execute(update(Item).values(is_featured=False))
         db.commit()
         return MessageResponse(message="Featured collection cleared")
 
@@ -190,7 +192,21 @@ def set_featured_collection(
         )
 
     db.execute(update(Collection).values(is_featured=False))
+    db.execute(update(Item).values(is_featured=False))
     collection.is_featured = True
     db.add(collection)
+    featured_items = (
+        db.execute(
+            select(Item)
+            .where(Item.collection_id == collection.id)
+            .order_by(Item.created_at.desc(), Item.id.desc())
+            .limit(4)
+        )
+        .scalars()
+        .all()
+    )
+    for item in featured_items:
+        item.is_featured = True
+        db.add(item)
     db.commit()
     return MessageResponse(message="Featured collection updated")
