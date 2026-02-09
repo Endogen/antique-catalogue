@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -25,6 +25,10 @@ def _primary_image_id_subquery():
     )
 
 
+def _image_count_subquery():
+    return select(func.count(ItemImage.id)).where(ItemImage.item_id == Item.id).scalar_subquery()
+
+
 @router.get("/items", response_model=list[ItemSearchResponse])
 def search_items(
     q: str = Query(..., min_length=1, description="Search term for item name or notes"),
@@ -42,8 +46,9 @@ def search_items(
 
     pattern = f"%{term}%"
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
+    image_count = _image_count_subquery().label("image_count")
     query = (
-        select(Item, Collection.name, primary_image_id)
+        select(Item, Collection.name, primary_image_id, image_count)
         .join(Collection, Item.collection_id == Collection.id)
         .where(
             Collection.owner_id == current_user.id,
@@ -57,7 +62,7 @@ def search_items(
     rows = db.execute(query).all()
 
     results: list[ItemSearchResponse] = []
-    for item, collection_name, image_id in rows:
+    for item, collection_name, image_id, count in rows:
         results.append(
             ItemSearchResponse(
                 id=item.id,
@@ -66,6 +71,8 @@ def search_items(
                 name=item.name,
                 notes=item.notes,
                 primary_image_id=image_id,
+                image_count=count,
+                is_highlight=item.is_highlight,
                 created_at=item.created_at,
                 updated_at=item.updated_at,
             )

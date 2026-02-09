@@ -302,6 +302,10 @@ def _primary_image_id_subquery():
     )
 
 
+def _image_count_subquery():
+    return select(func.count(ItemImage.id)).where(ItemImage.item_id == Item.id).scalar_subquery()
+
+
 def _filter_public_metadata(
     metadata: dict[str, object] | None, public_fields: set[str]
 ) -> dict[str, object] | None:
@@ -345,7 +349,8 @@ def list_items(
         field_by_name = {field.name: field for field in field_definitions}
 
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
-    query = select(Item, primary_image_id).where(Item.collection_id == collection_id)
+    image_count = _image_count_subquery().label("image_count")
+    query = select(Item, primary_image_id, image_count).where(Item.collection_id == collection_id)
     if search_term:
         pattern = f"%{search_term}%"
         query = query.where(or_(Item.name.ilike(pattern), Item.notes.ilike(pattern)))
@@ -357,8 +362,9 @@ def list_items(
 
     rows = db.execute(query).all()
     items: list[Item] = []
-    for item, image_id in rows:
+    for item, image_id, count in rows:
         setattr(item, "primary_image_id", image_id)
+        setattr(item, "image_count", count)
         items.append(item)
     return items
 
@@ -385,6 +391,7 @@ def create_item(
         name=request.name,
         metadata_=metadata,
         notes=request.notes,
+        is_highlight=request.is_highlight,
     )
     db.add(item)
     db.commit()
@@ -406,7 +413,11 @@ def get_item(
         .order_by(ItemImage.position.asc(), ItemImage.id.asc())
         .limit(1)
     ).scalar_one_or_none()
+    image_count = db.execute(
+        select(func.count(ItemImage.id)).where(ItemImage.item_id == item.id)
+    ).scalar_one()
     setattr(item, "primary_image_id", image_id)
+    setattr(item, "image_count", image_count)
     return item
 
 
@@ -429,6 +440,8 @@ def update_item(
         field_definitions = _get_field_definitions(db, collection_id)
         metadata = _validate_metadata_or_422(field_definitions, data["metadata"])
         item.metadata_ = metadata
+    if "is_highlight" in data:
+        item.is_highlight = data["is_highlight"]
 
     db.add(item)
     db.commit()
@@ -483,7 +496,8 @@ def list_public_items(
         field_by_name = {field.name: field for field in field_definitions if not field.is_private}
 
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
-    query = select(Item, primary_image_id).where(Item.collection_id == collection_id)
+    image_count = _image_count_subquery().label("image_count")
+    query = select(Item, primary_image_id, image_count).where(Item.collection_id == collection_id)
     if search_term:
         pattern = f"%{search_term}%"
         query = query.where(or_(Item.name.ilike(pattern), Item.notes.ilike(pattern)))
@@ -495,8 +509,9 @@ def list_public_items(
 
     rows = db.execute(query).all()
     items: list[Item] = []
-    for item, image_id in rows:
+    for item, image_id, count in rows:
         setattr(item, "primary_image_id", image_id)
+        setattr(item, "image_count", count)
         item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
         items.append(item)
     return items
@@ -517,6 +532,10 @@ def get_public_item(
         .order_by(ItemImage.position.asc(), ItemImage.id.asc())
         .limit(1)
     ).scalar_one_or_none()
+    image_count = db.execute(
+        select(func.count(ItemImage.id)).where(ItemImage.item_id == item.id)
+    ).scalar_one()
     setattr(item, "primary_image_id", image_id)
+    setattr(item, "image_count", image_count)
     item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
     return item

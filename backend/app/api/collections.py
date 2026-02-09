@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -66,15 +66,24 @@ def list_collections(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[CollectionResponse]:
-    collections = (
-        db.execute(
-            select(Collection)
-            .where(Collection.owner_id == current_user.id)
-            .order_by(Collection.created_at.desc())
+    item_counts = (
+        select(
+            Item.collection_id,
+            func.count(Item.id).label("item_count"),
         )
-        .scalars()
-        .all()
+        .group_by(Item.collection_id)
+        .subquery()
     )
+    rows = db.execute(
+        select(Collection, func.coalesce(item_counts.c.item_count, 0))
+        .outerjoin(item_counts, item_counts.c.collection_id == Collection.id)
+        .where(Collection.owner_id == current_user.id)
+        .order_by(Collection.created_at.desc())
+    ).all()
+    collections: list[Collection] = []
+    for collection, count in rows:
+        setattr(collection, "item_count", count)
+        collections.append(collection)
     return collections
 
 
@@ -109,6 +118,10 @@ def get_collection(
     db: Session = Depends(get_db),
 ) -> CollectionResponse:
     collection = _get_collection_or_404(db, collection_id, current_user.id)
+    count = db.execute(
+        select(func.count(Item.id)).where(Item.collection_id == collection.id)
+    ).scalar_one()
+    setattr(collection, "item_count", count)
     return collection
 
 
@@ -150,15 +163,24 @@ def delete_collection(
 @public_router.get("", response_model=list[CollectionResponse])
 @public_router.get("/", response_model=list[CollectionResponse], include_in_schema=False)
 def list_public_collections(db: Session = Depends(get_db)) -> list[CollectionResponse]:
-    collections = (
-        db.execute(
-            select(Collection)
-            .where(Collection.is_public.is_(True))
-            .order_by(Collection.created_at.desc())
+    item_counts = (
+        select(
+            Item.collection_id,
+            func.count(Item.id).label("item_count"),
         )
-        .scalars()
-        .all()
+        .group_by(Item.collection_id)
+        .subquery()
     )
+    rows = db.execute(
+        select(Collection, func.coalesce(item_counts.c.item_count, 0))
+        .outerjoin(item_counts, item_counts.c.collection_id == Collection.id)
+        .where(Collection.is_public.is_(True))
+        .order_by(Collection.created_at.desc())
+    ).all()
+    collections: list[Collection] = []
+    for collection, count in rows:
+        setattr(collection, "item_count", count)
+        collections.append(collection)
     return collections
 
 
@@ -203,4 +225,8 @@ def get_featured_collection_items(db: Session = Depends(get_db)) -> list[Feature
 @public_router.get("/{collection_id}", response_model=CollectionResponse)
 def get_public_collection(collection_id: int, db: Session = Depends(get_db)) -> CollectionResponse:
     collection = _get_public_collection_or_404(db, collection_id)
+    count = db.execute(
+        select(func.count(Item.id)).where(Item.collection_id == collection.id)
+    ).scalar_one()
+    setattr(collection, "item_count", count)
     return collection

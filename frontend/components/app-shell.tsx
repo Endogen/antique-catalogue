@@ -6,10 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Compass,
   Folder,
+  Home,
   LayoutGrid,
   LogOut,
   Menu,
-  Plus,
   Search,
   Settings2,
   Sparkles,
@@ -44,18 +44,28 @@ const primaryNav: NavItem[] = [
     match: ["/collections"]
   },
   {
-    label: "Explore",
-    href: "/explore",
-    description: "Public collections",
-    icon: Compass,
-    match: ["/explore"]
-  },
-  {
     label: "Settings",
     href: "/settings",
     description: "Profile and security",
     icon: Settings2,
     match: ["/settings"]
+  }
+];
+
+const secondaryNav: NavItem[] = [
+  {
+    label: "Home",
+    href: "/",
+    description: "Return to the homepage",
+    icon: Home,
+    match: ["/"]
+  },
+  {
+    label: "Explore",
+    href: "/explore",
+    description: "Public collections",
+    icon: Compass,
+    match: ["/explore"]
   }
 ];
 
@@ -142,17 +152,52 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
         })}
       </nav>
 
+      <div className="my-2 border-t border-stone-800/70" />
+
+      <nav className="space-y-2">
+        {secondaryNav.map((item) => {
+          const isActive = item.match.some((path) =>
+            pathname === path || pathname.startsWith(`${path}/`)
+          );
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={cn(
+                "group flex items-start gap-3 rounded-2xl px-3 py-3 transition",
+                isActive
+                  ? "bg-amber-100/10 text-amber-50 ring-1 ring-amber-200/30"
+                  : "text-stone-200 hover:bg-stone-900/60 hover:text-stone-100"
+              )}
+            >
+              <span
+                className={cn(
+                  "mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl transition",
+                  isActive
+                    ? "bg-amber-200/15 text-amber-200"
+                    : "bg-stone-900 text-stone-400 group-hover:text-stone-200"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+              </span>
+              <span>
+                <span className="text-sm font-medium">{item.label}</span>
+                <span
+                  className={cn(
+                    "mt-1 block text-xs",
+                    isActive ? "text-amber-200/80" : "text-stone-400"
+                  )}
+                >
+                  {item.description}
+                </span>
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
       <div className="space-y-3">
-        <Button
-          size="sm"
-          className="w-full justify-start bg-amber-200 text-stone-900 hover:bg-amber-100"
-          asChild
-        >
-          <Link href="/collections/new" onClick={onNavigate}>
-            <Plus className="h-4 w-4" />
-            New collection
-          </Link>
-        </Button>
         <div className="rounded-2xl border border-stone-800/70 bg-stone-900/60 p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
@@ -167,15 +212,6 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
             Start your first collection to unlock insights.
           </p>
         </div>
-      </div>
-
-      <div className="mt-auto rounded-2xl border border-stone-800/70 bg-stone-950/60 p-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-          Studio note
-        </p>
-        <p className="mt-2 text-sm text-stone-200">
-          Upload photos from any device and keep item stories in one place.
-        </p>
       </div>
     </div>
   );

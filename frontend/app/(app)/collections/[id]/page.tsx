@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
+  Image as ImageIcon,
   Plus,
   RefreshCcw,
   Search,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   collectionApi,
   fieldApi,
@@ -112,6 +114,9 @@ const truncate = (value: string, maxLength: number) => {
   }
   return `${value.slice(0, maxLength)}...`;
 };
+
+const highlightCardClass =
+  "border-amber-200/70 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_12px_32px_-22px_rgba(251,191,36,0.55)]";
 
 const sortFields = (items: FieldDefinitionResponse[]) =>
   [...items].sort((a, b) => a.position - b.position || a.id - b.id);
@@ -833,10 +838,14 @@ export default function CollectionDetailPage() {
             <div className="grid gap-4 lg:grid-cols-2">
               {itemsState.data.map((item) => {
                 const metadataEntries = Object.entries(item.metadata ?? {});
+                const imageCount = item.image_count ?? 0;
                 return (
                   <div
                     key={item.id}
-                    className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm"
+                    className={cn(
+                      "rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm",
+                      item.is_highlight ? highlightCardClass : null
+                    )}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
@@ -847,9 +856,15 @@ export default function CollectionDetailPage() {
                           {item.name}
                         </h3>
                       </div>
-                      <span className="text-xs text-stone-500">
-                        Added {formatDate(item.created_at)}
-                      </span>
+                      <div className="flex flex-col items-end gap-2 text-xs text-stone-500">
+                        <span>Added {formatDate(item.created_at)}</span>
+                        {imageCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
+                            <ImageIcon className="h-3 w-3 text-amber-600" />
+                            {imageCount} image{imageCount === 1 ? "" : "s"}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     {item.notes ? (
                       <p className="mt-3 text-sm text-stone-600">

@@ -23,6 +23,7 @@ export type CollectionResponse = {
   description: string | null;
   is_public: boolean;
   is_featured?: boolean;
+  item_count?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -79,6 +80,8 @@ export type ItemResponse = {
   metadata: Record<string, unknown> | null;
   notes: string | null;
   primary_image_id?: number | null;
+  image_count?: number | null;
+  is_highlight: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -89,6 +92,7 @@ export type FeaturedItemResponse = {
   name: string;
   notes: string | null;
   primary_image_id?: number | null;
+  is_highlight: boolean;
   created_at: string;
 };
 
@@ -104,12 +108,14 @@ export type ItemCreatePayload = {
   name: string;
   metadata?: Record<string, unknown> | null;
   notes?: string | null;
+  is_highlight?: boolean;
 };
 
 export type ItemUpdatePayload = {
   name?: string;
   metadata?: Record<string, unknown> | null;
   notes?: string | null;
+  is_highlight?: boolean;
 };
 
 export type ItemImageUpdatePayload = {
@@ -131,6 +137,8 @@ export type ItemSearchResponse = {
   name: string;
   notes: string | null;
   primary_image_id?: number | null;
+  image_count?: number | null;
+  is_highlight: boolean;
   created_at: string;
   updated_at: string;
 };

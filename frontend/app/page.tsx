@@ -12,6 +12,7 @@ import {
   type CollectionResponse,
   type FeaturedItemResponse
 } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const features = [
   {
@@ -37,6 +38,9 @@ const highlights = [
   "Image variants for fast browsing on any device",
   "Designed for historians, curators, and dealers"
 ];
+
+const highlightCardClass =
+  "border-amber-200/70 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_12px_32px_-22px_rgba(251,191,36,0.55)]";
 
 export default function Home() {
   const { isAuthenticated, logout, status: authStatus } = useAuth();
@@ -143,9 +147,6 @@ export default function Home() {
             </Link>
             <Link href="/dashboard" className="hover:text-stone-900">
               Dashboard
-            </Link>
-            <Link href="/settings" className="hover:text-stone-900">
-              Settings
             </Link>
           </nav>
           <div className="flex items-center gap-3">
@@ -256,7 +257,10 @@ export default function Home() {
                     return (
                       <div
                         key={`${item.id}-${index}`}
-                        className="rounded-2xl border border-stone-100 bg-stone-50 p-4"
+                        className={cn(
+                          "rounded-2xl border border-stone-100 bg-stone-50 p-4",
+                          item.is_highlight ? highlightCardClass : null
+                        )}
                       >
                         <div className="h-20 overflow-hidden rounded-xl">
                           {imageId ? (

@@ -108,7 +108,8 @@ export default function NewItemPage() {
       const created = await itemApi.create(collectionId, {
         name: values.name,
         notes: values.notes,
-        metadata: values.metadata
+        metadata: values.metadata,
+        is_highlight: values.is_highlight
       });
       router.push(`/collections/${collectionId}/items/${created.id}`);
     } catch (error) {

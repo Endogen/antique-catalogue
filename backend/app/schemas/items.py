@@ -26,6 +26,7 @@ class ItemCreateRequest(BaseModel):
         description="Metadata values keyed by field name",
     )
     notes: str | None = Field(None, examples=["Purchased at estate sale"])
+    is_highlight: bool = Field(False, description="Whether the item is highlighted")
 
     @field_validator("name")
     @classmethod
@@ -45,6 +46,7 @@ class ItemUpdateRequest(BaseModel):
         description="Metadata values keyed by field name",
     )
     notes: str | None = Field(None, examples=["Updated notes"])
+    is_highlight: bool | None = Field(None, description="Whether the item is highlighted")
 
     @field_validator("name")
     @classmethod
@@ -68,5 +70,7 @@ class ItemResponse(BaseModel):
     metadata: dict[str, object] | None = Field(None, validation_alias="metadata_")
     notes: str | None
     primary_image_id: int | None = None
+    image_count: int | None = None
+    is_highlight: bool
     created_at: datetime
     updated_at: datetime
