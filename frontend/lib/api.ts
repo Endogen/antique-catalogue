@@ -22,6 +22,7 @@ export type CollectionResponse = {
   name: string;
   description: string | null;
   is_public: boolean;
+  is_featured?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -48,6 +49,7 @@ export type FieldDefinitionResponse = {
   name: string;
   field_type: string;
   is_required: boolean;
+  is_private: boolean;
   options: FieldOptions | null;
   position: number;
   created_at: string;
@@ -58,6 +60,7 @@ export type FieldDefinitionCreatePayload = {
   name: string;
   field_type: string;
   is_required?: boolean;
+  is_private?: boolean;
   options?: FieldOptions | null;
 };
 
@@ -65,6 +68,7 @@ export type FieldDefinitionUpdatePayload = {
   name?: string;
   field_type?: string;
   is_required?: boolean;
+  is_private?: boolean;
   options?: FieldOptions | null;
 };
 
@@ -117,6 +121,35 @@ export type ApiErrorPayload = {
   errors?: unknown;
 };
 
+export type AdminTokenResponse = {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+};
+
+export type AdminStatsResponse = {
+  total_users: number;
+  total_collections: number;
+  featured_collection_id: number | null;
+};
+
+export type AdminCollectionResponse = {
+  id: number;
+  owner_id: number;
+  owner_email: string;
+  name: string;
+  description: string | null;
+  is_public: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminCollectionListResponse = {
+  total_count: number;
+  items: AdminCollectionResponse[];
+};
+
 const RAW_API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -125,6 +158,7 @@ const API_BASE_URL =
   RAW_API_BASE_URL && RAW_API_BASE_URL.trim() ? RAW_API_BASE_URL : "/api";
 
 const ACCESS_TOKEN_STORAGE_KEY = "antique_access_token";
+const ADMIN_TOKEN_STORAGE_KEY = "antique_admin_token";
 
 let inMemoryAccessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
@@ -207,6 +241,12 @@ export const getAccessToken = (): string | null => {
 export const setAccessToken = (token: string | null) => {
   inMemoryAccessToken = token;
   storageSet(ACCESS_TOKEN_STORAGE_KEY, token);
+};
+
+export const getAdminToken = (): string | null => storageGet(ADMIN_TOKEN_STORAGE_KEY);
+
+export const setAdminToken = (token: string | null) => {
+  storageSet(ADMIN_TOKEN_STORAGE_KEY, token);
 };
 
 export const buildApiUrl = (path: string) => {
@@ -400,6 +440,24 @@ export const apiRequest = async <T>(
   return parseResponse<T>(response);
 };
 
+const adminRequest = async <T>(
+  path: string,
+  options: ApiRequestOptions = {}
+): Promise<T> => {
+  const token = getAdminToken();
+  if (!token) {
+    throw new ApiError(401, "Admin not authenticated");
+  }
+  const requestHeaders = new Headers(options.headers ?? {});
+  requestHeaders.set("Authorization", `Bearer ${token}`);
+  return apiRequest<T>(path, {
+    ...options,
+    headers: requestHeaders,
+    skipAuth: true,
+    skipRefresh: true
+  });
+};
+
 export const authApi = {
   register: (payload: { email: string; password: string }) =>
     apiRequest<MessageResponse>("/auth/register", {
@@ -462,6 +520,41 @@ export const authApi = {
     })
 };
 
+export const adminApi = {
+  login: async (payload: { email: string; password: string }) => {
+    const data = await apiRequest<AdminTokenResponse>("/admin/login", {
+      method: "POST",
+      body: payload,
+      skipAuth: true,
+      skipRefresh: true
+    });
+    setAdminToken(data.access_token);
+    return data;
+  },
+  logout: () => {
+    setAdminToken(null);
+  },
+  stats: () => adminRequest<AdminStatsResponse>("/admin/stats"),
+  collections: (options: { offset?: number; limit?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (typeof options.offset === "number") {
+      params.set("offset", String(options.offset));
+    }
+    if (typeof options.limit === "number") {
+      params.set("limit", String(options.limit));
+    }
+    const query = params.toString();
+    return adminRequest<AdminCollectionListResponse>(
+      `/admin/collections${query ? `?${query}` : ""}`
+    );
+  },
+  feature: (collectionId: number | null) =>
+    adminRequest<MessageResponse>("/admin/featured", {
+      method: "POST",
+      body: { collection_id: collectionId }
+    })
+};
+
 export const collectionApi = {
   list: () => apiRequest<CollectionResponse[]>("/collections"),
   create: (payload: CollectionCreatePayload) =>
@@ -481,6 +574,11 @@ export const collectionApi = {
 export const publicCollectionApi = {
   list: () =>
     apiRequest<CollectionResponse[]>("/public/collections", {
+      skipAuth: true,
+      skipRefresh: true
+    }),
+  featured: () =>
+    apiRequest<CollectionResponse | null>("/public/collections/featured", {
       skipAuth: true,
       skipRefresh: true
     }),

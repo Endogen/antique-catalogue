@@ -302,6 +302,15 @@ def _primary_image_id_subquery():
     )
 
 
+def _filter_public_metadata(
+    metadata: dict[str, object] | None, public_fields: set[str]
+) -> dict[str, object] | None:
+    if not metadata:
+        return None
+    filtered = {key: value for key, value in metadata.items() if key in public_fields}
+    return filtered or None
+
+
 @router.get("", response_model=list[ItemResponse])
 @router.get("/", response_model=list[ItemResponse], include_in_schema=False)
 def list_items(
@@ -470,10 +479,15 @@ def list_public_items(
     filters = filters or []
     search_term = _parse_search_term(search)
 
+    field_definitions = _get_field_definitions(db, collection_id)
+    public_fields = {field.name for field in field_definitions if not field.is_private}
     field_by_name: dict[str, FieldDefinition] | None = None
     if filters or _sort_requires_field_definitions(sort):
-        field_definitions = _get_field_definitions(db, collection_id)
-        field_by_name = {field.name: field for field in field_definitions}
+        field_by_name = {
+            field.name: field
+            for field in field_definitions
+            if not field.is_private
+        }
 
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
     query = select(Item, primary_image_id).where(Item.collection_id == collection_id)
@@ -490,6 +504,7 @@ def list_public_items(
     items: list[Item] = []
     for item, image_id in rows:
         setattr(item, "primary_image_id", image_id)
+        item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
         items.append(item)
     return items
 
@@ -501,6 +516,8 @@ def get_public_item(
     db: Session = Depends(get_db),
 ) -> ItemResponse:
     item = _get_public_item_or_404(db, collection_id, item_id)
+    field_definitions = _get_field_definitions(db, collection_id)
+    public_fields = {field.name for field in field_definitions if not field.is_private}
     image_id = (
         db.execute(
             select(ItemImage.id)
@@ -511,4 +528,5 @@ def get_public_item(
         .scalar_one_or_none()
     )
     setattr(item, "primary_image_id", image_id)
+    item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
     return item

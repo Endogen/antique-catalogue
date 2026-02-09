@@ -69,7 +69,7 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
     <div className="relative flex h-full flex-col gap-6">
       <div className="flex items-center justify-between">
         <Link
-          href="/dashboard"
+          href="/"
           className="flex items-center gap-3"
           onClick={onNavigate}
         >

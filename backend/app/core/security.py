@@ -105,6 +105,15 @@ def create_refresh_token(
     return _jwt_encode(payload)
 
 
+def create_admin_token(
+    subject: str,
+    expires_delta: timedelta | None = None,
+    additional_claims: dict[str, Any] | None = None,
+) -> str:
+    payload = _build_token_payload(subject, "admin", expires_delta, additional_claims)
+    return _jwt_encode(payload)
+
+
 def decode_token(token: str) -> dict[str, Any]:
     try:
         header_b64, payload_b64, signature_b64 = token.split(".")

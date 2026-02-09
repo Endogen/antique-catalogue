@@ -37,7 +37,8 @@ const fieldSchema = z.object({
     "checkbox",
     "select"
   ]),
-  is_required: z.boolean()
+  is_required: z.boolean(),
+  is_private: z.boolean()
 });
 
 type FieldFormValues = z.infer<typeof fieldSchema>;
@@ -59,7 +60,8 @@ const fieldTypes: {
 const defaultValues: FieldFormValues = {
   name: "",
   field_type: "text",
-  is_required: false
+  is_required: false,
+  is_private: false
 };
 
 const normalizeOptions = (values: string[]) => {
@@ -168,7 +170,8 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
       reset({
         name: activeField.name,
         field_type: activeField.field_type as FieldType,
-        is_required: activeField.is_required
+        is_required: activeField.is_required,
+        is_private: activeField.is_private
       });
       setOptions(extractOptions(activeField.options));
     } else {
@@ -219,6 +222,7 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
       name: normalizedName,
       field_type: values.field_type,
       is_required: values.is_required,
+      is_private: values.is_private,
       options:
         values.field_type === "select"
           ? { options: normalizedOptions }
@@ -493,6 +497,11 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
                                   Required
                                 </span>
                               ) : null}
+                              {field.is_private ? (
+                                <span className="rounded-full border border-stone-200 bg-stone-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-600">
+                                  Private
+                                </span>
+                              ) : null}
                             </div>
                             <p className="mt-1 text-xs text-stone-500">
                               {typeMeta.label} · {typeMeta.helper}
@@ -635,6 +644,15 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
                   {...register("is_required")}
                 />
                 Required field
+              </label>
+
+              <label className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2 text-xs text-stone-600">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-amber-600"
+                  {...register("is_private")}
+                />
+                Private field (hidden from public collections)
               </label>
 
               {fieldType === "select" ? (

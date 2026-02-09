@@ -208,6 +208,9 @@ npm run dev
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token expiry |
 | `AUTO_VERIFY_EMAIL` | `false` | Auto-verify accounts on registration (useful for local/dev) |
 | `REFRESH_TOKEN_COOKIE_PATH` | `/` | Path scope for the refresh token cookie |
+| `ADMIN_EMAIL` | - | Admin login email for /admin |
+| `ADMIN_PASSWORD` | - | Admin login password for /admin |
+| `ADMIN_TOKEN_EXPIRE_MINUTES` | `60` | Admin token expiry |
 | `SMTP_HOST` | - | SMTP server hostname |
 | `SMTP_PORT` | `587` | SMTP server port |
 | `SMTP_USER` | - | SMTP username |

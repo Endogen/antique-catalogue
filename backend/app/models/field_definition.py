@@ -42,6 +42,9 @@ class FieldDefinition(Base):
     is_required: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=false(), nullable=False
     )
+    is_private: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
     options: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
