@@ -7,12 +7,15 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.collection import Collection
+from app.models.item import Item
+from app.models.item_image import ItemImage
 from app.models.user import User
 from app.schemas.collections import (
     CollectionCreateRequest,
     CollectionResponse,
     CollectionUpdateRequest,
 )
+from app.schemas.featured import FeaturedItemResponse
 from app.schemas.responses import MessageResponse
 
 router = APIRouter(prefix="/collections", tags=["collections"])
@@ -45,6 +48,16 @@ def _get_public_collection_or_404(db: Session, collection_id: int) -> Collection
     if not collection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
     return collection
+
+
+def _primary_image_id_subquery():
+    return (
+        select(ItemImage.id)
+        .where(ItemImage.item_id == Item.id)
+        .order_by(ItemImage.position.asc(), ItemImage.id.asc())
+        .limit(1)
+        .scalar_subquery()
+    )
 
 
 @router.get("", response_model=list[CollectionResponse])
@@ -161,6 +174,36 @@ def get_featured_collection(db: Session = Depends(get_db)) -> CollectionResponse
         .first()
     )
     return collection
+
+
+@public_router.get("/featured/items", response_model=list[FeaturedItemResponse])
+def get_featured_collection_items(db: Session = Depends(get_db)) -> list[FeaturedItemResponse]:
+    collection_id = (
+        db.execute(
+            select(Collection.id)
+            .where(Collection.is_public.is_(True), Collection.is_featured.is_(True))
+            .order_by(Collection.updated_at.desc(), Collection.id.desc())
+        )
+        .scalar_one_or_none()
+    )
+    if not collection_id:
+        return []
+
+    primary_image_id = _primary_image_id_subquery().label("primary_image_id")
+    rows = (
+        db.execute(
+            select(Item, primary_image_id)
+            .where(Item.collection_id == collection_id, Item.is_featured.is_(True))
+            .order_by(Item.created_at.desc(), Item.id.desc())
+            .limit(4)
+        )
+        .all()
+    )
+    items: list[Item] = []
+    for item, image_id in rows:
+        setattr(item, "primary_image_id", image_id)
+        items.append(item)
+    return items
 
 
 @public_router.get("/{collection_id}", response_model=CollectionResponse)

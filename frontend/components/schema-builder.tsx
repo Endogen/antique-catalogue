@@ -637,22 +637,34 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
                 </p>
               </div>
 
-              <label className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2 text-xs text-stone-600">
+              <label
+                className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2 text-xs text-stone-600"
+                title="This field must be set to save an item."
+              >
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-amber-600"
                   {...register("is_required")}
                 />
                 Required field
+                <span className="text-stone-400">
+                  ?
+                </span>
               </label>
 
-              <label className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2 text-xs text-stone-600">
+              <label
+                className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2 text-xs text-stone-600"
+                title="Hidden from public collections"
+              >
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-amber-600"
                   {...register("is_private")}
                 />
-                Private field (hidden from public collections)
+                Private field
+                <span className="text-stone-400">
+                  ?
+                </span>
               </label>
 
               {fieldType === "select" ? (

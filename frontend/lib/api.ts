@@ -83,6 +83,15 @@ export type ItemResponse = {
   updated_at: string;
 };
 
+export type FeaturedItemResponse = {
+  id: number;
+  collection_id: number;
+  name: string;
+  notes: string | null;
+  primary_image_id?: number | null;
+  created_at: string;
+};
+
 export type ItemImageResponse = {
   id: number;
   item_id: number;
@@ -113,6 +122,17 @@ export type ItemListOptions = {
   limit?: number;
   offset?: number;
   filters?: string[];
+};
+
+export type ItemSearchResponse = {
+  id: number;
+  collection_id: number;
+  collection_name: string;
+  name: string;
+  notes: string | null;
+  primary_image_id?: number | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ApiErrorPayload = {
@@ -582,11 +602,32 @@ export const publicCollectionApi = {
       skipAuth: true,
       skipRefresh: true
     }),
+  featuredItems: () =>
+    apiRequest<FeaturedItemResponse[]>("/public/collections/featured/items", {
+      skipAuth: true,
+      skipRefresh: true
+    }),
   get: (collectionId: number | string) =>
     apiRequest<CollectionResponse>(`/public/collections/${collectionId}`, {
       skipAuth: true,
       skipRefresh: true
     })
+};
+
+export const searchApi = {
+  items: (
+    query: string,
+    options: { offset?: number; limit?: number } = {}
+  ) => {
+    const params = new URLSearchParams({ q: query });
+    if (typeof options.offset === "number") {
+      params.set("offset", String(options.offset));
+    }
+    if (typeof options.limit === "number") {
+      params.set("limit", String(options.limit));
+    }
+    return apiRequest<ItemSearchResponse[]>(`/search/items?${params.toString()}`);
+  }
 };
 
 export const publicItemApi = {
