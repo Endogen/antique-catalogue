@@ -15,10 +15,12 @@ import {
   getAdminToken,
   isApiError,
   type AdminCollectionResponse,
+  type AdminFeaturedItemResponse,
   type AdminStatsResponse
 } from "@/lib/api";
 
 const PAGE_SIZE = 10;
+const MAX_FEATURED_ITEMS = 4;
 
 const formatDate = (value?: string | null) => {
   if (!value) {
@@ -45,6 +47,21 @@ export default function AdminPage() {
   const [collections, setCollections] = React.useState<
     AdminCollectionResponse[]
   >([]);
+  const [featuredItemsState, setFeaturedItemsState] = React.useState<{
+    status: "idle" | "loading" | "ready" | "error";
+    data: AdminFeaturedItemResponse[];
+    error?: string;
+  }>({ status: "idle", data: [] });
+  const [featuredItemSelection, setFeaturedItemSelection] = React.useState<
+    number[]
+  >([]);
+  const [featuredItemsMessage, setFeaturedItemsMessage] = React.useState<
+    string | null
+  >(null);
+  const [featuredItemsError, setFeaturedItemsError] = React.useState<
+    string | null
+  >(null);
+  const [featuredItemsPending, setFeaturedItemsPending] = React.useState(false);
   const [totalCollections, setTotalCollections] = React.useState(0);
   const [page, setPage] = React.useState(0);
   const [status, setStatus] = React.useState<"idle" | "loading" | "error">(
@@ -62,7 +79,8 @@ export default function AdminPage() {
           adminApi.stats(),
           adminApi.collections({
             offset: pageIndex * PAGE_SIZE,
-            limit: PAGE_SIZE
+            limit: PAGE_SIZE,
+            publicOnly: true
           })
         ]);
         setStats(statsResponse);
@@ -118,6 +136,10 @@ export default function AdminPage() {
     setStats(null);
     setCollections([]);
     setTotalCollections(0);
+    setFeaturedItemsState({ status: "idle", data: [] });
+    setFeaturedItemSelection([]);
+    setFeaturedItemsMessage(null);
+    setFeaturedItemsError(null);
   };
 
   const handleFeature = async (collectionId: number | null) => {
@@ -131,6 +153,84 @@ export default function AdminPage() {
       );
     } finally {
       setFeaturePending(null);
+    }
+  };
+
+  const loadFeaturedItems = React.useCallback(
+    async (collectionId: number | null | undefined) => {
+      if (!collectionId) {
+        setFeaturedItemsState({ status: "ready", data: [] });
+        setFeaturedItemSelection([]);
+        setFeaturedItemsMessage(null);
+        return;
+      }
+      setFeaturedItemsState((prev) => ({
+        ...prev,
+        status: "loading",
+        error: undefined
+      }));
+      setFeaturedItemsError(null);
+      setFeaturedItemsMessage(null);
+      try {
+        const items = await adminApi.featuredItems();
+        setFeaturedItemsState({ status: "ready", data: items });
+        setFeaturedItemSelection(
+          items.filter((item) => item.is_featured).map((item) => item.id)
+        );
+      } catch (error) {
+        setFeaturedItemsState((prev) => ({
+          status: "error",
+          data: prev.data,
+          error: isApiError(error)
+            ? error.detail
+            : "Unable to load featured items."
+        }));
+      }
+    },
+    []
+  );
+
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+    void loadFeaturedItems(stats?.featured_collection_id ?? null);
+  }, [isAuthenticated, stats?.featured_collection_id, loadFeaturedItems]);
+
+  const selectionCount = featuredItemSelection.length;
+  const selectionFull = selectionCount >= MAX_FEATURED_ITEMS;
+
+  const toggleFeaturedItem = (itemId: number) => {
+    setFeaturedItemsMessage(null);
+    setFeaturedItemsError(null);
+    setFeaturedItemSelection((prev) => {
+      if (prev.includes(itemId)) {
+        return prev.filter((id) => id !== itemId);
+      }
+      if (prev.length >= MAX_FEATURED_ITEMS) {
+        return prev;
+      }
+      return [...prev, itemId];
+    });
+  };
+
+  const handleSaveFeaturedItems = async () => {
+    if (!stats?.featured_collection_id || featuredItemsPending) {
+      return;
+    }
+    setFeaturedItemsPending(true);
+    setFeaturedItemsMessage(null);
+    setFeaturedItemsError(null);
+    try {
+      await adminApi.setFeaturedItems(featuredItemSelection);
+      await loadFeaturedItems(stats.featured_collection_id);
+      setFeaturedItemsMessage("Featured items updated.");
+    } catch (error) {
+      setFeaturedItemsError(
+        isApiError(error) ? error.detail : "Unable to update featured items."
+      );
+    } finally {
+      setFeaturedItemsPending(false);
     }
   };
 
@@ -383,6 +483,105 @@ export default function AdminPage() {
                   </Button>
                 </div>
               </div>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                Featured items
+              </p>
+              <h2 className="font-display mt-3 text-2xl text-stone-900">
+                Curate highlights from the featured collection.
+              </h2>
+              <p className="mt-2 text-sm text-stone-600">
+                Select up to {MAX_FEATURED_ITEMS} items to spotlight on the
+                homepage.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
+              <span>
+                {selectionCount} of {MAX_FEATURED_ITEMS} selected
+              </span>
+              <Button
+                variant="outline"
+                onClick={handleSaveFeaturedItems}
+                disabled={
+                  !stats?.featured_collection_id ||
+                  featuredItemsPending ||
+                  featuredItemsState.status !== "ready"
+                }
+              >
+                <Crown className="h-4 w-4" />
+                {featuredItemsPending ? "Saving..." : "Save featured"}
+              </Button>
+            </div>
+          </div>
+
+          {featuredItemsMessage ? (
+            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {featuredItemsMessage}
+            </div>
+          ) : null}
+
+          {featuredItemsError ? (
+            <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {featuredItemsError}
+            </div>
+          ) : null}
+
+          {!stats?.featured_collection_id ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              Choose a featured collection to manage highlighted items.
+            </div>
+          ) : featuredItemsState.status === "loading" ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              Loading featured items...
+            </div>
+          ) : featuredItemsState.status === "error" ? (
+            <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {featuredItemsState.error ?? "Unable to load featured items."}
+            </div>
+          ) : featuredItemsState.data.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              No items yet in this collection.
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {featuredItemsState.data.map((item) => {
+                const isSelected = featuredItemSelection.includes(item.id);
+                const disableSelect = !isSelected && selectionFull;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white/80 p-4"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-stone-900">
+                        {item.name}
+                      </p>
+                      <p className="mt-1 text-xs text-stone-500">
+                        Added {formatDate(item.created_at)}
+                      </p>
+                      {item.notes ? (
+                        <p className="mt-2 text-xs text-stone-500">
+                          {item.notes}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={isSelected ? "secondary" : "outline"}
+                      onClick={() => toggleFeaturedItem(item.id)}
+                      disabled={featuredItemsPending || disableSelect}
+                    >
+                      {isSelected ? "Featured" : "Feature"}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>

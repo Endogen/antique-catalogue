@@ -13,6 +13,8 @@ const buildRedirectPath = (pathname: string | null) => {
   return `/login?next=${encoded}`;
 };
 
+const LOGOUT_REDIRECT_KEY = "antique_logout_redirect";
+
 export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { status } = useAuth();
   const router = useRouter();
@@ -20,6 +22,14 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   React.useEffect(() => {
     if (status === "unauthenticated") {
+      if (typeof window !== "undefined") {
+        const redirect = window.sessionStorage.getItem(LOGOUT_REDIRECT_KEY);
+        if (redirect === "home") {
+          window.sessionStorage.removeItem(LOGOUT_REDIRECT_KEY);
+          router.replace("/");
+          return;
+        }
+      }
       router.replace(buildRedirectPath(pathname));
     }
   }, [status, pathname, router]);

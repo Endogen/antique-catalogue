@@ -13,6 +13,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Lightbox } from "@/components/lightbox";
+import { useAuth } from "@/components/auth-provider";
 import {
   isApiError,
   imageApi,
@@ -89,6 +90,7 @@ const truncate = (value: string, maxLength: number) => {
 };
 
 export default function PublicCollectionPage() {
+  const { isAuthenticated, logout, status: authStatus } = useAuth();
   const params = useParams();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
@@ -112,6 +114,7 @@ export default function PublicCollectionPage() {
     src: string;
     alt: string;
   } | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   const loadCollection = React.useCallback(async () => {
     if (!collectionId) {
@@ -259,6 +262,20 @@ export default function PublicCollectionPage() {
     }
     return true;
   });
+  const showAuthenticatedCtas =
+    authStatus === "authenticated" && isAuthenticated;
+
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-950">
@@ -289,12 +306,24 @@ export default function PublicCollectionPage() {
             </Link>
           </nav>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="hidden sm:inline-flex" asChild>
-              <Link href="/login">Log in</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Create account</Link>
-            </Button>
+            {showAuthenticatedCtas ? (
+              <Button
+                variant="secondary"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" className="hidden sm:inline-flex" asChild>
+                  <Link href="/login">Log in</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">Create account</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -587,7 +616,7 @@ export default function PublicCollectionPage() {
                           <img
                             src={imageApi.url(imageId, "medium")}
                             alt={item.name}
-                            className="h-48 w-full object-cover"
+                            className="block h-48 w-full object-cover"
                             loading="lazy"
                           />
                         </button>

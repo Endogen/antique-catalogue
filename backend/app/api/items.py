@@ -400,15 +400,12 @@ def get_item(
     db: Session = Depends(get_db),
 ) -> ItemResponse:
     item = _get_item_or_404(db, collection_id, item_id, current_user.id)
-    image_id = (
-        db.execute(
-            select(ItemImage.id)
-            .where(ItemImage.item_id == item.id)
-            .order_by(ItemImage.position.asc(), ItemImage.id.asc())
-            .limit(1)
-        )
-        .scalar_one_or_none()
-    )
+    image_id = db.execute(
+        select(ItemImage.id)
+        .where(ItemImage.item_id == item.id)
+        .order_by(ItemImage.position.asc(), ItemImage.id.asc())
+        .limit(1)
+    ).scalar_one_or_none()
     setattr(item, "primary_image_id", image_id)
     return item
 
@@ -483,11 +480,7 @@ def list_public_items(
     public_fields = {field.name for field in field_definitions if not field.is_private}
     field_by_name: dict[str, FieldDefinition] | None = None
     if filters or _sort_requires_field_definitions(sort):
-        field_by_name = {
-            field.name: field
-            for field in field_definitions
-            if not field.is_private
-        }
+        field_by_name = {field.name: field for field in field_definitions if not field.is_private}
 
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
     query = select(Item, primary_image_id).where(Item.collection_id == collection_id)
@@ -518,15 +511,12 @@ def get_public_item(
     item = _get_public_item_or_404(db, collection_id, item_id)
     field_definitions = _get_field_definitions(db, collection_id)
     public_fields = {field.name for field in field_definitions if not field.is_private}
-    image_id = (
-        db.execute(
-            select(ItemImage.id)
-            .where(ItemImage.item_id == item.id)
-            .order_by(ItemImage.position.asc(), ItemImage.id.asc())
-            .limit(1)
-        )
-        .scalar_one_or_none()
-    )
+    image_id = db.execute(
+        select(ItemImage.id)
+        .where(ItemImage.item_id == item.id)
+        .order_by(ItemImage.position.asc(), ItemImage.id.asc())
+        .limit(1)
+    ).scalar_one_or_none()
     setattr(item, "primary_image_id", image_id)
     item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
     return item

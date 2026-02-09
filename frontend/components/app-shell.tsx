@@ -7,6 +7,7 @@ import {
   Compass,
   Folder,
   LayoutGrid,
+  LogOut,
   Menu,
   Plus,
   Search,
@@ -15,6 +16,7 @@ import {
   X
 } from "lucide-react";
 
+import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -188,6 +190,8 @@ export const AppShell = ({ children }: AppShellProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState(
     searchParams.get("query") ?? ""
   );
@@ -206,6 +210,21 @@ export const AppShell = ({ children }: AppShellProps) => {
       return;
     }
     router.push(`/search?query=${encodeURIComponent(term)}`);
+  };
+
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+    setIsLoggingOut(true);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("antique_logout_redirect", "home");
+    }
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   React.useEffect(() => {
@@ -278,18 +297,21 @@ export const AppShell = ({ children }: AppShellProps) => {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                   <input
                     type="search"
-                    placeholder="Search items or collections"
+                    placeholder="Search items"
                     className="h-10 w-64 rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
                     onKeyDown={handleSearchKeyDown}
                   />
                 </div>
-                <Button size="sm" asChild>
-                  <Link href="/collections/new">
-                    <Plus className="h-4 w-4" />
-                    New collection
-                  </Link>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  {isLoggingOut ? "Logging out..." : "Log out"}
                 </Button>
               </div>
             </div>
@@ -306,8 +328,13 @@ export const AppShell = ({ children }: AppShellProps) => {
                     onKeyDown={handleSearchKeyDown}
                   />
                 </div>
-                <Button size="sm" asChild>
-                  <Link href="/collections/new">New</Link>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "Logging out..." : "Log out"}
                 </Button>
               </div>
             </div>

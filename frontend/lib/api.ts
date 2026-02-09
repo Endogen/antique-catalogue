@@ -170,6 +170,16 @@ export type AdminCollectionListResponse = {
   items: AdminCollectionResponse[];
 };
 
+export type AdminFeaturedItemResponse = {
+  id: number;
+  collection_id: number;
+  name: string;
+  notes: string | null;
+  primary_image_id?: number | null;
+  is_featured: boolean;
+  created_at: string;
+};
+
 const RAW_API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -555,13 +565,18 @@ export const adminApi = {
     setAdminToken(null);
   },
   stats: () => adminRequest<AdminStatsResponse>("/admin/stats"),
-  collections: (options: { offset?: number; limit?: number } = {}) => {
+  collections: (
+    options: { offset?: number; limit?: number; publicOnly?: boolean } = {}
+  ) => {
     const params = new URLSearchParams();
     if (typeof options.offset === "number") {
       params.set("offset", String(options.offset));
     }
     if (typeof options.limit === "number") {
       params.set("limit", String(options.limit));
+    }
+    if (options.publicOnly) {
+      params.set("public_only", "true");
     }
     const query = params.toString();
     return adminRequest<AdminCollectionListResponse>(
@@ -572,6 +587,13 @@ export const adminApi = {
     adminRequest<MessageResponse>("/admin/featured", {
       method: "POST",
       body: { collection_id: collectionId }
+    }),
+  featuredItems: () =>
+    adminRequest<AdminFeaturedItemResponse[]>("/admin/featured/items"),
+  setFeaturedItems: (itemIds: number[]) =>
+    adminRequest<MessageResponse>("/admin/featured/items", {
+      method: "POST",
+      body: { item_ids: itemIds }
     })
 };
 

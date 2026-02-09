@@ -166,6 +166,7 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
   }, [loadFields]);
 
   React.useEffect(() => {
+    setActionMessage(null);
     if (activeField) {
       reset({
         name: activeField.name,

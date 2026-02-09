@@ -178,27 +178,21 @@ def get_featured_collection(db: Session = Depends(get_db)) -> CollectionResponse
 
 @public_router.get("/featured/items", response_model=list[FeaturedItemResponse])
 def get_featured_collection_items(db: Session = Depends(get_db)) -> list[FeaturedItemResponse]:
-    collection_id = (
-        db.execute(
-            select(Collection.id)
-            .where(Collection.is_public.is_(True), Collection.is_featured.is_(True))
-            .order_by(Collection.updated_at.desc(), Collection.id.desc())
-        )
-        .scalar_one_or_none()
-    )
+    collection_id = db.execute(
+        select(Collection.id)
+        .where(Collection.is_public.is_(True), Collection.is_featured.is_(True))
+        .order_by(Collection.updated_at.desc(), Collection.id.desc())
+    ).scalar_one_or_none()
     if not collection_id:
         return []
 
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
-    rows = (
-        db.execute(
-            select(Item, primary_image_id)
-            .where(Item.collection_id == collection_id, Item.is_featured.is_(True))
-            .order_by(Item.created_at.desc(), Item.id.desc())
-            .limit(4)
-        )
-        .all()
-    )
+    rows = db.execute(
+        select(Item, primary_image_id)
+        .where(Item.collection_id == collection_id, Item.is_featured.is_(True))
+        .order_by(Item.created_at.desc(), Item.id.desc())
+        .limit(4)
+    ).all()
     items: list[Item] = []
     for item, image_id in rows:
         setattr(item, "primary_image_id", image_id)
