@@ -84,6 +84,9 @@ class Settings:
     jwt_access_token_expire_minutes: int
     refresh_token_cookie_path: str
     auto_verify_email: bool
+    admin_email: str | None
+    admin_password: str | None
+    admin_token_expire_minutes: int
     smtp_host: str | None
     smtp_port: int
     smtp_user: str | None
@@ -118,6 +121,9 @@ def get_settings() -> Settings:
         )
         or "/",
         auto_verify_email=_get_bool_env("AUTO_VERIFY_EMAIL", False),
+        admin_email=os.environ.get("ADMIN_EMAIL"),
+        admin_password=os.environ.get("ADMIN_PASSWORD"),
+        admin_token_expire_minutes=_get_int_env("ADMIN_TOKEN_EXPIRE_MINUTES", 60),
         smtp_host=os.environ.get("SMTP_HOST"),
         smtp_port=_get_int_env("SMTP_PORT", 587),
         smtp_user=os.environ.get("SMTP_USER"),

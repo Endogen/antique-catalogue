@@ -46,6 +46,7 @@ class FieldDefinitionCreateRequest(BaseModel):
     name: str = Field(..., examples=["Condition"])
     field_type: str = Field(..., examples=["select"])
     is_required: bool = Field(False)
+    is_private: bool = Field(False)
     options: dict[str, object] | None = Field(
         None,
         examples=[{"options": ["Excellent", "Good", "Fair", "Poor"]}],
@@ -79,6 +80,7 @@ class FieldDefinitionUpdateRequest(BaseModel):
     name: str | None = Field(None, examples=["Condition"])
     field_type: str | None = Field(None, examples=["text"])
     is_required: bool | None = Field(None)
+    is_private: bool | None = Field(None)
     options: dict[str, object] | None = Field(
         None,
         examples=[{"options": ["Excellent", "Good", "Fair", "Poor"]}],
@@ -127,6 +129,7 @@ class FieldDefinitionResponse(BaseModel):
     name: str
     field_type: str
     is_required: bool
+    is_private: bool
     options: dict[str, object] | None
     position: int
     created_at: datetime

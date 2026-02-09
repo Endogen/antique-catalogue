@@ -149,6 +149,20 @@ def list_public_collections(db: Session = Depends(get_db)) -> list[CollectionRes
     return collections
 
 
+@public_router.get("/featured", response_model=CollectionResponse | None)
+def get_featured_collection(db: Session = Depends(get_db)) -> CollectionResponse | None:
+    collection = (
+        db.execute(
+            select(Collection)
+            .where(Collection.is_public.is_(True), Collection.is_featured.is_(True))
+            .order_by(Collection.updated_at.desc(), Collection.id.desc())
+        )
+        .scalars()
+        .first()
+    )
+    return collection
+
+
 @public_router.get("/{collection_id}", response_model=CollectionResponse)
 def get_public_collection(collection_id: int, db: Session = Depends(get_db)) -> CollectionResponse:
     collection = _get_public_collection_or_404(db, collection_id)

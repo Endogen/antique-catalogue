@@ -1,6 +1,14 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import {
+  isApiError,
+  publicCollectionApi,
+  type CollectionResponse
+} from "@/lib/api";
 
 const features = [
   {
@@ -28,6 +36,39 @@ const highlights = [
 ];
 
 export default function Home() {
+  const [featuredState, setFeaturedState] = React.useState<{
+    status: "loading" | "ready" | "error";
+    data: CollectionResponse | null;
+    error?: string;
+  }>({ status: "loading", data: null });
+
+  React.useEffect(() => {
+    let isActive = true;
+    void (async () => {
+      try {
+        const data = await publicCollectionApi.featured();
+        if (!isActive) {
+          return;
+        }
+        setFeaturedState({ status: "ready", data });
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+        setFeaturedState({
+          status: "error",
+          data: null,
+          error: isApiError(error)
+            ? error.detail
+            : "We couldn't load the featured collection."
+        });
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   return (
     <main className="min-h-screen">
       <header className="px-6 py-6 lg:px-12">
@@ -106,32 +147,42 @@ export default function Home() {
                 <p className="text-sm uppercase tracking-[0.3em] text-stone-400">
                   Featured collection
                 </p>
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                  Public
-                </span>
+                {featuredState.data ? (
+                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                    Public
+                  </span>
+                ) : null}
               </div>
               <h2 className="font-display mt-4 text-2xl text-stone-900">
-                Brass & Bronze Studies
+                {featuredState.status === "loading"
+                  ? "Loading featured collection..."
+                  : featuredState.data?.name ?? "No featured collection yet"}
               </h2>
               <p className="mt-3 text-sm text-stone-600">
-                48 items · 12th–19th century · London & Paris
+                {featuredState.status === "error"
+                  ? featuredState.error ?? "We couldn't load the featured collection."
+                  : featuredState.data?.description ??
+                    "Select a public collection to highlight on the homepage."}
               </p>
               <div className="mt-6 grid grid-cols-2 gap-4">
-                {[
-                  "Bell-shaped Mortar",
-                  "Art Nouveau Ewer",
-                  "Guilded Candlestick",
-                  "Etched Tea Caddy"
-                ].map((item) => (
+                {[0, 1, 2, 3].map((item) => (
                   <div
                     key={item}
                     className="rounded-2xl border border-stone-100 bg-stone-50 p-4"
                   >
                     <div className="h-20 rounded-xl bg-gradient-to-br from-stone-200 via-stone-100 to-amber-100" />
                     <p className="mt-3 text-sm font-medium text-stone-800">
-                      {item}
+                      {featuredState.data
+                        ? "Featured item"
+                        : featuredState.status === "loading"
+                          ? "Loading preview"
+                          : "Collection preview"}
                     </p>
-                    <p className="text-xs text-stone-500">Condition: Studio grade</p>
+                    <p className="text-xs text-stone-500">
+                      {featuredState.data
+                        ? "Curated highlight"
+                        : "Select a collection to feature"}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -140,10 +191,22 @@ export default function Home() {
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
                     Next intake
                   </p>
-                  <p className="text-sm font-medium">12 new pieces queued</p>
+                  <p className="text-sm font-medium">
+                    {featuredState.data
+                      ? "View the featured collection"
+                      : "Feature a public collection"}
+                  </p>
                 </div>
                 <Button size="sm" variant="secondary" asChild>
-                  <Link href="/collections/new">Create collection</Link>
+                  <Link
+                    href={
+                      featuredState.data
+                        ? `/explore/${featuredState.data.id}`
+                        : "/explore"
+                    }
+                  >
+                    {featuredState.data ? "View collection" : "Browse public"}
+                  </Link>
                 </Button>
               </div>
             </div>

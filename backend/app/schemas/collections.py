@@ -60,5 +60,6 @@ class CollectionResponse(BaseModel):
     name: str
     description: str | None
     is_public: bool
+    is_featured: bool
     created_at: datetime
     updated_at: datetime

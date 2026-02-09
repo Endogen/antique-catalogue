@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Lightbox } from "@/components/lightbox";
 import {
   isApiError,
   imageApi,
@@ -107,6 +108,10 @@ export default function PublicCollectionPage() {
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
+  const [lightboxImage, setLightboxImage] = React.useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
 
   const loadCollection = React.useCallback(async () => {
     if (!collectionId) {
@@ -569,14 +574,23 @@ export default function PublicCollectionPage() {
                       className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm"
                     >
                       {imageId ? (
-                        <div className="mb-4 overflow-hidden rounded-2xl border border-stone-100 bg-stone-50">
+                        <button
+                          type="button"
+                          className="mb-4 w-full overflow-hidden rounded-2xl border border-stone-100 bg-stone-50"
+                          onClick={() =>
+                            setLightboxImage({
+                              src: imageApi.url(imageId, "original"),
+                              alt: item.name
+                            })
+                          }
+                        >
                           <img
                             src={imageApi.url(imageId, "medium")}
                             alt={item.name}
                             className="h-48 w-full object-cover"
                             loading="lazy"
                           />
-                        </div>
+                        </button>
                       ) : null}
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
@@ -650,6 +664,13 @@ export default function PublicCollectionPage() {
           </div>
         )}
       </section>
+
+      <Lightbox
+        open={Boolean(lightboxImage)}
+        src={lightboxImage?.src ?? null}
+        alt={lightboxImage?.alt}
+        onClose={() => setLightboxImage(null)}
+      />
     </main>
   );
 }

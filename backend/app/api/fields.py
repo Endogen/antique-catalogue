@@ -119,6 +119,7 @@ def create_field(
         name=request.name,
         field_type=request.field_type,
         is_required=request.is_required,
+        is_private=request.is_private,
         options=request.options,
         position=position,
     )
@@ -216,6 +217,8 @@ def update_field(
         field.field_type = data["field_type"]
     if "is_required" in data:
         field.is_required = data["is_required"]
+    if "is_private" in data:
+        field.is_private = data["is_private"]
 
     field.options = new_options
 

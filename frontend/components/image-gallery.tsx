@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Lightbox } from "@/components/lightbox";
 import {
   imageApi,
   isApiError,
@@ -68,6 +69,10 @@ export function ImageGallery({
   const [draggingId, setDraggingId] = React.useState<number | null>(null);
   const [dragOverId, setDragOverId] = React.useState<number | null>(null);
   const hasLoadedRef = React.useRef(false);
+  const [lightboxImage, setLightboxImage] = React.useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
 
   const canInteract = Boolean(itemId) && !disabled;
   const isBusy = isReordering || deletePendingId !== null;
@@ -373,12 +378,23 @@ export function ImageGallery({
                   </div>
 
                   <div className="mt-3 overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
-                    <img
-                      src={imageApi.url(image.id, "medium")}
-                      alt={image.filename || "Item image"}
-                      className="h-36 w-full object-cover"
-                      loading="lazy"
-                    />
+                    <button
+                      type="button"
+                      className="w-full"
+                      onClick={() =>
+                        setLightboxImage({
+                          src: imageApi.url(image.id, "original"),
+                          alt: image.filename || "Item image"
+                        })
+                      }
+                    >
+                      <img
+                        src={imageApi.url(image.id, "medium")}
+                        alt={image.filename || "Item image"}
+                        className="h-36 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </button>
                   </div>
 
                   <div className="mt-3">
@@ -426,6 +442,13 @@ export function ImageGallery({
           </div>
         )}
       </div>
+
+      <Lightbox
+        open={Boolean(lightboxImage)}
+        src={lightboxImage?.src ?? null}
+        alt={lightboxImage?.alt}
+        onClose={() => setLightboxImage(null)}
+      />
     </div>
   );
 }
