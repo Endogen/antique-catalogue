@@ -110,8 +110,6 @@ export default function PublicCollectionPage() {
   const [search, setSearch] = React.useState("");
   const [sort, setSort] = React.useState(sortOptions[0].value);
   const [filterImages, setFilterImages] = React.useState(false);
-  const [filterNotes, setFilterNotes] = React.useState(false);
-  const [filterMetadata, setFilterMetadata] = React.useState(false);
   const [filterHighlight, setFilterHighlight] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
@@ -255,12 +253,6 @@ export default function PublicCollectionPage() {
 
   const itemCount = itemsState.data.length;
   const filteredItems = itemsState.data.filter((item) => {
-    if (filterNotes && !(item.notes ?? "").trim()) {
-      return false;
-    }
-    if (filterMetadata && Object.keys(item.metadata ?? {}).length === 0) {
-      return false;
-    }
     if (filterImages) {
       if (!item.primary_image_id) {
         return false;
@@ -463,8 +455,8 @@ export default function PublicCollectionPage() {
               Collection items
             </h2>
           </div>
-          <div className="flex w-full flex-col gap-3">
-            <div className="relative w-full max-w-none">
+          <div className="flex w-full flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center">
+            <div className="relative w-full lg:flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
               <input
                 type="search"
@@ -474,7 +466,7 @@ export default function PublicCollectionPage() {
                 onChange={(event) => setSearch(event.target.value)}
               />
             </div>
-            <div className="flex w-full flex-wrap items-center gap-3">
+            <div className="flex w-full flex-wrap items-center gap-3 lg:ml-auto lg:w-auto lg:justify-end">
               <select
                 className="h-10 rounded-full border border-stone-200 bg-white/90 px-3 text-sm text-stone-700 shadow-sm focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                 value={sort}
@@ -495,24 +487,6 @@ export default function PublicCollectionPage() {
                     onChange={(event) => setFilterImages(event.target.checked)}
                   />
                   With images
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
-                  <input
-                    type="checkbox"
-                    className="h-3.5 w-3.5 accent-amber-500"
-                    checked={filterNotes}
-                    onChange={(event) => setFilterNotes(event.target.checked)}
-                  />
-                  With notes
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
-                  <input
-                    type="checkbox"
-                    className="h-3.5 w-3.5 accent-amber-500"
-                    checked={filterMetadata}
-                    onChange={(event) => setFilterMetadata(event.target.checked)}
-                  />
-                  With metadata
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 rounded-full border border-amber-200/60 bg-amber-50/70 px-3 py-2 text-amber-700 shadow-sm">
                   <input
@@ -597,8 +571,7 @@ export default function PublicCollectionPage() {
                         variant="outline"
                         onClick={() => {
                           setFilterImages(false);
-                          setFilterNotes(false);
-                          setFilterMetadata(false);
+                          setFilterHighlight(false);
                         }}
                       >
                         Clear filters
