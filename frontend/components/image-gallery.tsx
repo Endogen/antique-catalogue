@@ -383,7 +383,7 @@ export function ImageGallery({
                   <div className="mt-3 overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
                     <button
                       type="button"
-                      className="w-full"
+                      className="block w-full p-0"
                       onClick={() =>
                         setLightboxImage({
                           src: imageApi.url(image.id, "original"),

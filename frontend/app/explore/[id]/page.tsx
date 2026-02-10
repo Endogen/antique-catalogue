@@ -454,7 +454,7 @@ export default function PublicCollectionPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-16 lg:px-12">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="space-y-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
               Items
@@ -463,65 +463,67 @@ export default function PublicCollectionPage() {
               Collection items
             </h2>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
+          <div className="flex w-full flex-col gap-3">
+            <div className="relative w-full max-w-none">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
               <input
                 type="search"
                 placeholder="Search items"
-                className="h-10 w-56 rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="h-10 w-full rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
             </div>
-            <select
-              className="h-10 rounded-full border border-stone-200 bg-white/90 px-3 text-sm text-stone-700 shadow-sm focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
-              value={sort}
-              onChange={(event) => setSort(event.target.value)}
-            >
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 accent-amber-500"
-                  checked={filterImages}
-                  onChange={(event) => setFilterImages(event.target.checked)}
-                />
-                With images
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 accent-amber-500"
-                  checked={filterNotes}
-                  onChange={(event) => setFilterNotes(event.target.checked)}
-                />
-                With notes
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 accent-amber-500"
-                  checked={filterMetadata}
-                  onChange={(event) => setFilterMetadata(event.target.checked)}
-                />
-                With metadata
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-amber-200/60 bg-amber-50/70 px-3 py-2 text-amber-700 shadow-sm">
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 accent-amber-500"
-                  checked={filterHighlight}
-                  onChange={(event) => setFilterHighlight(event.target.checked)}
-                />
-                Highlight
-              </label>
+            <div className="flex w-full flex-wrap items-center gap-3">
+              <select
+                className="h-10 rounded-full border border-stone-200 bg-white/90 px-3 text-sm text-stone-700 shadow-sm focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                value={sort}
+                onChange={(event) => setSort(event.target.value)}
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 accent-amber-500"
+                    checked={filterImages}
+                    onChange={(event) => setFilterImages(event.target.checked)}
+                  />
+                  With images
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 accent-amber-500"
+                    checked={filterNotes}
+                    onChange={(event) => setFilterNotes(event.target.checked)}
+                  />
+                  With notes
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-stone-600 shadow-sm">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 accent-amber-500"
+                    checked={filterMetadata}
+                    onChange={(event) => setFilterMetadata(event.target.checked)}
+                  />
+                  With metadata
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-amber-200/60 bg-amber-50/70 px-3 py-2 text-amber-700 shadow-sm">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 accent-amber-500"
+                    checked={filterHighlight}
+                    onChange={(event) => setFilterHighlight(event.target.checked)}
+                  />
+                  Highlight
+                </label>
+              </div>
             </div>
           </div>
         </div>
