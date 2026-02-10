@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   CalendarDays,
   Globe2,
+  LogOut,
   RefreshCcw,
   Search
 } from "lucide-react";
@@ -111,6 +112,7 @@ export default function PublicCollectionPage() {
   const [filterImages, setFilterImages] = React.useState(false);
   const [filterNotes, setFilterNotes] = React.useState(false);
   const [filterMetadata, setFilterMetadata] = React.useState(false);
+  const [filterHighlight, setFilterHighlight] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
@@ -264,6 +266,9 @@ export default function PublicCollectionPage() {
         return false;
       }
     }
+    if (filterHighlight && !item.is_highlight) {
+      return false;
+    }
     return true;
   });
   const showAuthenticatedCtas =
@@ -316,6 +321,7 @@ export default function PublicCollectionPage() {
                 onClick={handleLogout}
                 disabled={isLoggingOut}
               >
+                <LogOut className="h-4 w-4" />
                 {isLoggingOut ? "Logging out..." : "Logout"}
               </Button>
             ) : (
@@ -506,6 +512,15 @@ export default function PublicCollectionPage() {
                   onChange={(event) => setFilterMetadata(event.target.checked)}
                 />
                 With metadata
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-amber-200/60 bg-amber-50/70 px-3 py-2 text-amber-700 shadow-sm">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-amber-500"
+                  checked={filterHighlight}
+                  onChange={(event) => setFilterHighlight(event.target.checked)}
+                />
+                Highlight
               </label>
             </div>
           </div>

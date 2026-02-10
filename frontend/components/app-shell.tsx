@@ -300,7 +300,7 @@ export const AppShell = ({ children }: AppShellProps) => {
       </div>
 
       <div className="relative flex min-h-screen">
-        <aside className="relative hidden w-72 flex-col border-r border-stone-900/80 bg-stone-950 text-stone-100 lg:flex">
+        <aside className="relative hidden h-screen w-72 flex-col border-r border-stone-900/80 bg-stone-950 text-stone-100 lg:sticky lg:top-0 lg:flex">
           <div className="pointer-events-none absolute -top-24 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-[90px]" />
           <div className="relative flex h-full flex-col p-6">
             <SidebarContent />
@@ -333,7 +333,7 @@ export const AppShell = ({ children }: AppShellProps) => {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                   <input
                     type="search"
-                    placeholder="Search items"
+                    placeholder="Search all items"
                     className="h-10 w-64 rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
@@ -357,7 +357,7 @@ export const AppShell = ({ children }: AppShellProps) => {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                   <input
                     type="search"
-                    placeholder="Search items"
+                    placeholder="Search all items"
                     className="h-10 w-full rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { LogOut } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -156,6 +157,7 @@ export default function Home() {
                 onClick={handleLogout}
                 disabled={isLoggingOut}
               >
+                <LogOut className="h-4 w-4" />
                 {isLoggingOut ? "Logging out..." : "Logout"}
               </Button>
             ) : (
@@ -164,7 +166,7 @@ export default function Home() {
                   <Link href="/login">Log in</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/register">Start free</Link>
+                  <Link href="/register">Create account</Link>
                 </Button>
               </>
             )}

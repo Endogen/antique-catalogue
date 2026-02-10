@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import {
-  ArrowDown,
-  ArrowUp,
+  ArrowLeft,
+  ArrowRight,
   GripVertical,
   Image as ImageIcon,
   RefreshCcw,
@@ -47,12 +47,14 @@ const formatDate = (value?: string | null) => {
 type ImageGalleryProps = {
   itemId?: number | string | null;
   disabled?: boolean;
+  editable?: boolean;
   refreshToken?: number;
 };
 
 export function ImageGallery({
   itemId,
   disabled = false,
+  editable = true,
   refreshToken
 }: ImageGalleryProps) {
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
@@ -75,6 +77,7 @@ export function ImageGallery({
   } | null>(null);
 
   const canInteract = Boolean(itemId) && !disabled;
+  const canEdit = canInteract && editable;
   const isBusy = isReordering || deletePendingId !== null;
 
   const loadImages = React.useCallback(
@@ -413,8 +416,8 @@ export function ImageGallery({
                       onClick={() => moveImage(index, index - 1)}
                       disabled={!canInteract || isBusy || isFirst}
                     >
-                      <ArrowUp className="h-4 w-4" />
-                      Move up
+                      <ArrowLeft className="h-4 w-4" />
+                      Move left
                     </Button>
                     <Button
                       size="sm"
@@ -422,19 +425,21 @@ export function ImageGallery({
                       onClick={() => moveImage(index, index + 1)}
                       disabled={!canInteract || isBusy || isLast}
                     >
-                      <ArrowDown className="h-4 w-4" />
-                      Move down
+                      <ArrowRight className="h-4 w-4" />
+                      Move right
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                      onClick={() => handleDelete(image)}
-                      disabled={!canInteract || isBusy}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {deletePendingId === image.id ? "Deleting..." : "Delete"}
-                    </Button>
+                    {editable ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                        onClick={() => handleDelete(image)}
+                        disabled={!canEdit || isBusy}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deletePendingId === image.id ? "Deleting..." : "Delete"}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               );
