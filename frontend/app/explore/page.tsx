@@ -6,6 +6,7 @@ import {
   ArrowRight,
   CalendarDays,
   Globe2,
+  LogOut,
   RefreshCcw,
   Search
 } from "lucide-react";
@@ -151,6 +152,7 @@ export default function ExplorePage() {
                 onClick={handleLogout}
                 disabled={isLoggingOut}
               >
+                <LogOut className="h-4 w-4" />
                 {isLoggingOut ? "Logging out..." : "Logout"}
               </Button>
             ) : (

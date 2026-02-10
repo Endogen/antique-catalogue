@@ -129,17 +129,6 @@ export default function CollectionsPage() {
       <section className="grid gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-            Total collections
-          </p>
-          <p className="mt-4 text-3xl font-semibold text-stone-900">
-            {totalCount}
-          </p>
-          <p className="mt-2 text-sm text-stone-500">
-            All archives in your studio.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
             Total items
           </p>
           <p className="mt-4 text-3xl font-semibold text-stone-900">
@@ -147,6 +136,17 @@ export default function CollectionsPage() {
           </p>
           <p className="mt-2 text-sm text-stone-500">
             Catalogued across your collections.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-sm">
+          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+            Total collections
+          </p>
+          <p className="mt-4 text-3xl font-semibold text-stone-900">
+            {totalCount}
+          </p>
+          <p className="mt-2 text-sm text-stone-500">
+            All archives in your studio.
           </p>
         </div>
         <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-sm">
