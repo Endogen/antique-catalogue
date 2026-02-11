@@ -123,11 +123,12 @@ export default function Home() {
   const showFeaturedItems = featuredItems.length > 0;
 
   return (
-    <main className="min-h-screen">
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-32 right-0 h-72 w-72 rounded-full bg-amber-300/20 blur-[100px]" />
-        <div className="pointer-events-none absolute bottom-0 left-10 h-64 w-64 rounded-full bg-stone-900/10 blur-[120px]" />
-        <header className="relative z-10 px-6 py-6 lg:px-12">
+    <main className="relative min-h-screen overflow-hidden bg-stone-50 text-stone-950">
+      <div className="pointer-events-none absolute -top-32 right-0 h-72 w-72 rounded-full bg-amber-300/20 blur-[100px]" />
+      <div className="pointer-events-none absolute top-[35%] left-[-8%] h-72 w-72 rounded-full bg-amber-200/25 blur-[140px]" />
+      <div className="pointer-events-none absolute bottom-[-15%] right-[-8%] h-80 w-80 rounded-full bg-stone-900/10 blur-[160px]" />
+      <div className="relative z-10">
+        <header className="px-6 py-6 lg:px-12">
           <div className="mx-auto flex max-w-6xl items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-stone-900 text-sm font-semibold text-stone-50">
@@ -181,7 +182,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="relative z-10">
+        <section>
           <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6 pb-16 pt-10 lg:flex-row lg:items-center lg:px-12 lg:pt-20">
             <div className="flex-1 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
@@ -323,64 +324,64 @@ export default function Home() {
             </div>
           </div>
         </section>
-      </div>
 
-      <section className="mx-auto max-w-6xl px-6 pb-16 lg:px-12">
-        <div className="grid gap-6 md:grid-cols-3">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-            >
-              <h3 className="font-display text-xl text-stone-900">
-                {feature.title}
-              </h3>
-              <p className="mt-3 text-sm text-stone-600">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-t border-stone-200 bg-stone-950">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 text-stone-100 lg:flex-row lg:items-center lg:justify-between lg:px-12">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-stone-400">
-              Ready to start
-            </p>
-            <h2 className="font-display mt-4 text-3xl">
-              Turn your archive into a living collection.
-            </h2>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            {showAuthenticatedCtas ? (
-              <Button
-                size="lg"
-                variant="secondary"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
+        <section className="mx-auto max-w-6xl px-6 pb-16 lg:px-12">
+          <div className="grid gap-6 md:grid-cols-3">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
-                {isLoggingOut ? "Logging out..." : "Logout"}
-              </Button>
-            ) : (
-              <>
-                <Button size="lg" variant="secondary" asChild>
-                  <Link href="/register">Create an account</Link>
-                </Button>
+                <h3 className="font-display text-xl text-stone-900">
+                  {feature.title}
+                </h3>
+                <p className="mt-3 text-sm text-stone-600">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-t border-stone-200 bg-stone-950">
+          <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 text-stone-100 lg:flex-row lg:items-center lg:justify-between lg:px-12">
+            <div>
+              <p className="text-xs uppercase tracking-[0.4em] text-stone-400">
+                Ready to start
+              </p>
+              <h2 className="font-display mt-4 text-3xl">
+                Turn your archive into a living collection.
+              </h2>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {showAuthenticatedCtas ? (
                 <Button
                   size="lg"
-                  variant="ghost"
-                  className="text-stone-100"
-                  asChild
+                  variant="secondary"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
                 >
-                  <Link href="/login">Sign in</Link>
+                  {isLoggingOut ? "Logging out..." : "Logout"}
                 </Button>
-              </>
-            )}
+              ) : (
+                <>
+                  <Button size="lg" variant="secondary" asChild>
+                    <Link href="/register">Create an account</Link>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="ghost"
+                    className="text-stone-100"
+                    asChild
+                  >
+                    <Link href="/login">Sign in</Link>
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }
