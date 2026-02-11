@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { setRoundedDragPreview } from "@/lib/drag-preview";
 import { cn } from "@/lib/utils";
 import {
   fieldApi,
@@ -338,6 +339,7 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
   ) => {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", String(fieldId));
+    setRoundedDragPreview(event);
     setDraggingId(fieldId);
   };
 

@@ -247,6 +247,8 @@ export default function CollectionsPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             {state.data.map((collection) => {
               const meta = getVisibilityMeta(collection);
+              const itemCount = collection.item_count ?? 0;
+              const itemLabel = itemCount === 1 ? "item" : "items";
               return (
                 <div
                   key={collection.id}
@@ -271,9 +273,15 @@ export default function CollectionsPage() {
                       "Add a description to capture the story behind this collection."}
                   </p>
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 text-xs text-stone-500">
-                      <CalendarDays className="h-4 w-4 text-amber-600" />
-                      Created {formatDate(collection.created_at)}
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-stone-500">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-amber-600" />
+                        Created {formatDate(collection.created_at)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Folder className="h-4 w-4 text-amber-600" />
+                        {itemCount} {itemLabel}
+                      </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button size="sm" variant="secondary" asChild>
