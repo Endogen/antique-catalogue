@@ -541,9 +541,9 @@ export default function ItemDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-              <div className="space-y-6">
-                <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
+              <div className="contents lg:block lg:space-y-6">
+                <div className="order-2 rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm lg:order-none">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
                     Item overview
                   </p>
@@ -596,13 +596,16 @@ export default function ItemDetailPage() {
                   </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="order-4 lg:order-none">
                   <ImageGallery
                     itemId={itemId ?? null}
                     disabled={itemState.status !== "ready"}
                     refreshToken={imageRefreshToken}
                     editable={false}
                   />
+                </div>
+
+                <div className="order-5 lg:order-none">
                   <ImageUploader
                     itemId={itemId ?? null}
                     disabled={itemState.status !== "ready"}
@@ -611,8 +614,8 @@ export default function ItemDetailPage() {
                 </div>
               </div>
 
-              <aside className="space-y-6">
-                <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
+              <div className="contents lg:block lg:space-y-6">
+                <div className="order-1 rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm lg:order-none">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
                     Item snapshot
                   </p>
@@ -652,7 +655,7 @@ export default function ItemDetailPage() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+                <div className="order-3 rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm lg:order-none">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
                     Metadata
                   </p>
@@ -744,7 +747,7 @@ export default function ItemDetailPage() {
                     </div>
                   ) : null}
                 </div>
-              </aside>
+              </div>
             </div>
           )}
         </section>
