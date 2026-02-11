@@ -548,21 +548,11 @@ export default function ItemDetailPage() {
                     Item overview
                   </p>
                   <div className="mt-6 space-y-6">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <h2 className="font-display text-2xl text-stone-900">
-                          {itemState.data?.name}
-                        </h2>
-                        <p className="mt-2 text-sm text-stone-600">
-                          {collectionName
-                            ? `Collection: ${collectionName}`
-                            : "Collection details unavailable."}
-                        </p>
-                      </div>
-                      <span className="text-xs text-stone-500">
-                        Updated {formatDate(itemState.data?.updated_at)}
-                      </span>
-                    </div>
+                    <p className="text-sm text-stone-600">
+                      {collectionName
+                        ? `Collection: ${collectionName}`
+                        : "Collection details unavailable."}
+                    </p>
 
                     {saveMessage ? (
                       <div
