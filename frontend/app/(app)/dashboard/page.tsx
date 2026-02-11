@@ -62,28 +62,16 @@ export default function DashboardPage() {
   }, [loadCollections]);
 
   const totalCount = state.data.length;
-  const publicCount = state.data.filter((collection) => collection.is_public)
-    .length;
-  const privateCount = totalCount - publicCount;
   const hasCollections = state.status === "ready" && totalCount > 0;
-
-  const insights = [
-    {
-      title: "Total collections",
-      value: state.status === "ready" ? String(totalCount) : "-",
-      detail: hasCollections ? "Active archives" : "Drafted but unpublished"
-    },
-    {
-      title: "Public collections",
-      value: state.status === "ready" ? String(publicCount) : "-",
-      detail: "Visible in the directory"
-    },
-    {
-      title: "Private collections",
-      value: state.status === "ready" ? String(privateCount) : "-",
-      detail: "Internal research"
-    }
-  ];
+  const recentCollections = React.useMemo(() => {
+    return [...state.data]
+      .sort((a, b) => {
+        const aDate = new Date(a.updated_at ?? a.created_at ?? 0).getTime();
+        const bDate = new Date(b.updated_at ?? b.created_at ?? 0).getTime();
+        return bDate - aDate;
+      })
+      .slice(0, 2);
+  }, [state.data]);
 
   return (
     <div className="space-y-8">
@@ -124,23 +112,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        {insights.map((item) => (
-          <div
-            key={item.title}
-            className="rounded-2xl border border-stone-200 bg-white/70 p-5 shadow-sm"
-          >
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-              {item.title}
-            </p>
-            <p className="mt-4 text-3xl font-semibold text-stone-900">
-              {item.value}
-            </p>
-            <p className="mt-2 text-sm text-stone-500">{item.detail}</p>
-          </div>
-        ))}
-      </section>
-
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
@@ -171,7 +142,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {state.data.slice(0, 4).map((collection) => (
+              {recentCollections.map((collection) => (
                 <div
                   key={collection.id}
                   className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm"
