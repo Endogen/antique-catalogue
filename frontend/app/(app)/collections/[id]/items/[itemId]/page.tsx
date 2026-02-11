@@ -411,8 +411,8 @@ export default function ItemDetailPage() {
         </div>
       ) : (
         <section className="space-y-6">
-          <div className="space-y-6">
-            {isEditing ? (
+          {isEditing ? (
+            <div className="space-y-6">
               <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
                 <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
                   Edit item
@@ -466,98 +466,187 @@ export default function ItemDetailPage() {
                   )}
                 </div>
               </div>
-            ) : (
-              <>
+
+              <ImageGallery
+                itemId={itemId ?? null}
+                disabled={itemState.status !== "ready"}
+                refreshToken={imageRefreshToken}
+                editable={isEditing}
+              />
+
+              <ImageUploader
+                itemId={itemId ?? null}
+                disabled={itemState.status !== "ready"}
+                onUploaded={handleImageUploaded}
+              />
+
+              <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
+                      Danger zone
+                    </p>
+                    <h3 className="font-display mt-3 text-2xl text-stone-900">
+                      Permanently delete this item.
+                    </h3>
+                    <p className="mt-3 text-sm text-rose-700">
+                      This removes the item and any attached imagery. Type DELETE
+                      to confirm.
+                    </p>
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+                    <ShieldAlert className="h-6 w-6" />
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4">
+                  <div>
+                    <label
+                      className="text-sm font-medium text-rose-700"
+                      htmlFor="delete-confirm"
+                    >
+                      Confirmation phrase
+                    </label>
+                    <input
+                      id="delete-confirm"
+                      type="text"
+                      className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                      value={deletePhrase}
+                      onChange={(event) => setDeletePhrase(event.target.value)}
+                      placeholder="Type DELETE to confirm"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-rose-200 text-rose-700 hover:bg-rose-100"
+                    disabled={!confirmDeleteMatches || deleteState.status === "working"}
+                    onClick={handleDelete}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleteState.status === "working"
+                      ? "Deleting..."
+                      : "Delete item"}
+                  </Button>
+                </div>
+
+                {deleteState.status === "error" && deleteState.message ? (
+                  <div
+                    role="alert"
+                    className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
+                  >
+                    {deleteState.message}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+              <div className="space-y-6">
                 <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
                     Item overview
                   </p>
-                  <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-                    <div className="space-y-6">
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                          <h2 className="font-display text-2xl text-stone-900">
-                            {itemState.data?.name}
-                          </h2>
-                          <p className="mt-2 text-sm text-stone-600">
-                            {collectionName
-                              ? `Collection: ${collectionName}`
-                              : "Collection details unavailable."}
-                          </p>
-                        </div>
-                        <span className="text-xs text-stone-500">
-                          Updated {formatDate(itemState.data?.updated_at)}
-                        </span>
+                  <div className="mt-6 space-y-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <h2 className="font-display text-2xl text-stone-900">
+                          {itemState.data?.name}
+                        </h2>
+                        <p className="mt-2 text-sm text-stone-600">
+                          {collectionName
+                            ? `Collection: ${collectionName}`
+                            : "Collection details unavailable."}
+                        </p>
                       </div>
-
-                      {saveMessage ? (
-                        <div
-                          role="status"
-                          className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-                        >
-                          {saveMessage}
-                        </div>
-                      ) : null}
-
-                      <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                              Notes
-                            </p>
-                            <p className="mt-2 text-sm text-stone-600">
-                              {itemState.data?.notes ? "" : "No notes added yet."}
-                            </p>
-                          </div>
-                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-600">
-                            <ClipboardList className="h-5 w-5" />
-                          </div>
-                        </div>
-                        {itemState.data?.notes ? (
-                          <p className="mt-3 whitespace-pre-wrap text-sm text-stone-700">
-                            {itemState.data.notes}
-                          </p>
-                        ) : null}
-                      </div>
+                      <span className="text-xs text-stone-500">
+                        Updated {formatDate(itemState.data?.updated_at)}
+                      </span>
                     </div>
 
+                    {saveMessage ? (
+                      <div
+                        role="status"
+                        className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+                      >
+                        {saveMessage}
+                      </div>
+                    ) : null}
+
                     <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                      <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                        Item snapshot
-                      </p>
-                      <h3 className="font-display mt-3 text-xl text-stone-900">
-                        Quick overview
-                      </h3>
-                      <div className="mt-4 space-y-4 text-sm text-stone-600">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
-                            <CalendarDays className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-stone-900">Created</p>
-                            <p>{formatDate(itemState.data?.created_at)}</p>
-                          </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                            Notes
+                          </p>
+                          <p className="mt-2 text-sm text-stone-600">
+                            {itemState.data?.notes ? "" : "No notes added yet."}
+                          </p>
                         </div>
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
-                            <RefreshCcw className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-stone-900">Updated</p>
-                            <p>{formatDate(itemState.data?.updated_at)}</p>
-                          </div>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-600">
+                          <ClipboardList className="h-5 w-5" />
                         </div>
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
-                            <Tag className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-stone-900">
-                              Metadata fields
-                            </p>
-                            <p>{sortedFields.length} schema fields</p>
-                          </div>
-                        </div>
+                      </div>
+                      {itemState.data?.notes ? (
+                        <p className="mt-3 whitespace-pre-wrap text-sm text-stone-700">
+                          {itemState.data.notes}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <ImageGallery
+                    itemId={itemId ?? null}
+                    disabled={itemState.status !== "ready"}
+                    refreshToken={imageRefreshToken}
+                    editable={false}
+                  />
+                  <ImageUploader
+                    itemId={itemId ?? null}
+                    disabled={itemState.status !== "ready"}
+                    onUploaded={handleImageUploaded}
+                  />
+                </div>
+              </div>
+
+              <aside className="space-y-6">
+                <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                    Item snapshot
+                  </p>
+                  <h3 className="font-display mt-3 text-2xl text-stone-900">
+                    Quick overview
+                  </h3>
+                  <div className="mt-6 space-y-4 text-sm text-stone-600">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                        <CalendarDays className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-stone-900">Created</p>
+                        <p>{formatDate(itemState.data?.created_at)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                        <RefreshCcw className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-stone-900">Updated</p>
+                        <p>{formatDate(itemState.data?.updated_at)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                        <Tag className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-stone-900">
+                          Metadata fields
+                        </p>
+                        <p>{sortedFields.length} schema fields</p>
                       </div>
                     </div>
                   </div>
@@ -590,7 +679,7 @@ export default function ItemDetailPage() {
                         metadata for this item.
                       </div>
                     ) : (
-                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid gap-4">
                         {sortedFields.map((field) => {
                           const rawValue = metadataMap[field.name];
                           const isMissing =
@@ -655,85 +744,9 @@ export default function ItemDetailPage() {
                     </div>
                   ) : null}
                 </div>
-              </>
-            )}
-
-            <ImageGallery
-              itemId={itemId ?? null}
-              disabled={itemState.status !== "ready"}
-              refreshToken={imageRefreshToken}
-              editable={isEditing}
-            />
-            {isEditing ? (
-              <ImageUploader
-                itemId={itemId ?? null}
-                disabled={itemState.status !== "ready"}
-                onUploaded={handleImageUploaded}
-              />
-            ) : null}
-
-            {isEditing ? (
-              <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
-                      Danger zone
-                    </p>
-                    <h3 className="font-display mt-3 text-2xl text-stone-900">
-                      Permanently delete this item.
-                    </h3>
-                    <p className="mt-3 text-sm text-rose-700">
-                      This removes the item and any attached imagery. Type DELETE
-                      to confirm.
-                    </p>
-                  </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
-                    <ShieldAlert className="h-6 w-6" />
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-4">
-                  <div>
-                    <label
-                      className="text-sm font-medium text-rose-700"
-                      htmlFor="delete-confirm"
-                    >
-                      Confirmation phrase
-                    </label>
-                    <input
-                      id="delete-confirm"
-                      type="text"
-                      className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
-                      value={deletePhrase}
-                      onChange={(event) => setDeletePhrase(event.target.value)}
-                      placeholder="Type DELETE to confirm"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-rose-200 text-rose-700 hover:bg-rose-100"
-                    disabled={!confirmDeleteMatches || deleteState.status === "working"}
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {deleteState.status === "working"
-                      ? "Deleting..."
-                      : "Delete item"}
-                  </Button>
-                </div>
-
-                {deleteState.status === "error" && deleteState.message ? (
-                  <div
-                    role="alert"
-                    className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
-                  >
-                    {deleteState.message}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+              </aside>
+            </div>
+          )}
         </section>
       )}
     </div>

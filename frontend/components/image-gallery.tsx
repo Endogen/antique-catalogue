@@ -17,6 +17,7 @@ import {
   isApiError,
   type ItemImageResponse
 } from "@/lib/api";
+import { setRoundedDragPreview } from "@/lib/drag-preview";
 import { cn } from "@/lib/utils";
 
 const sortImages = (items: ItemImageResponse[]) =>
@@ -178,6 +179,7 @@ export function ImageGallery({
     }
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", String(imageId));
+    setRoundedDragPreview(event);
     setDraggingId(imageId);
   };
 
