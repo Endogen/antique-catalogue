@@ -118,10 +118,6 @@ export default function SettingsPage() {
             <RefreshCcw className="h-4 w-4" />
             Refresh profile
           </Button>
-          <Button variant="ghost" onClick={() => logout()}>
-            <LogOut className="h-4 w-4" />
-            Log out
-          </Button>
         </div>
       </header>
 
