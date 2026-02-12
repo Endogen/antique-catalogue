@@ -15,6 +15,7 @@ import {
   X
 } from "lucide-react";
 
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -55,58 +56,21 @@ type FilterEntry = {
 
 const PAGE_SIZE = 12;
 
-const baseSortOptions = [
-  { label: "Newest first", value: "-created_at" },
-  { label: "Oldest first", value: "created_at" },
-  { label: "Name A to Z", value: "name" },
-  { label: "Name Z to A", value: "-name" }
+const buildBaseSortOptions = (t: (key: string) => string) => [
+  { label: t("Newest first"), value: "-created_at" },
+  { label: t("Oldest first"), value: "created_at" },
+  { label: t("Name A to Z"), value: "name" },
+  { label: t("Name Z to A"), value: "-name" }
 ];
 
-const fieldTypeLabels: Record<string, string> = {
-  text: "Text",
-  number: "Number",
-  date: "Date",
-  timestamp: "Timestamp",
-  checkbox: "Checkbox",
-  select: "Select"
-};
-
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  }).format(parsed);
-};
-
-const formatMetadataValue = (value: unknown) => {
-  if (value === null || value === undefined) {
-    return "-";
-  }
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number") {
-    return value.toLocaleString("en-US");
-  }
-  if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
-  }
-  if (Array.isArray(value)) {
-    return value.join(", ");
-  }
-  if (typeof value === "object") {
-    return "Details";
-  }
-  return String(value);
-};
+const buildFieldTypeLabels = (t: (key: string) => string): Record<string, string> => ({
+  text: t("Text"),
+  number: t("Number"),
+  date: t("Date"),
+  timestamp: t("Timestamp"),
+  checkbox: t("Checkbox"),
+  select: t("Select")
+});
 
 const truncate = (value: string, maxLength: number) => {
   if (value.length <= maxLength) {
@@ -147,7 +111,11 @@ const extractOptions = (options?: { options?: unknown } | null) => {
 
 export default function CollectionDetailPage() {
   const params = useParams();
+  const { t, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+
+  const baseSortOptions = React.useMemo(() => buildBaseSortOptions(t), [t]);
+  const fieldTypeLabels = React.useMemo(() => buildFieldTypeLabels(t), [t]);
 
   const [collectionState, setCollectionState] = React.useState<LoadState>({
     status: "loading"
@@ -162,7 +130,7 @@ export default function CollectionDetailPage() {
     hasMore: false
   });
   const [search, setSearch] = React.useState("");
-  const [sort, setSort] = React.useState(baseSortOptions[0].value);
+  const [sort, setSort] = React.useState("-created_at");
   const [filters, setFilters] = React.useState<FilterEntry[]>([]);
   const [filterFieldId, setFilterFieldId] = React.useState("");
   const [filterValue, setFilterValue] = React.useState("");
@@ -172,6 +140,49 @@ export default function CollectionDetailPage() {
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
   const filterIdRef = React.useRef(0);
 
+  const formatDate = React.useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return "-";
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return value;
+      }
+      return new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }).format(parsed);
+    },
+    [locale]
+  );
+
+  const formatMetadataValue = React.useCallback(
+    (value: unknown) => {
+      if (value === null || value === undefined) {
+        return "-";
+      }
+      if (typeof value === "string") {
+        return value;
+      }
+      if (typeof value === "number") {
+        return new Intl.NumberFormat(locale).format(value);
+      }
+      if (typeof value === "boolean") {
+        return value ? t("Yes") : t("No");
+      }
+      if (Array.isArray(value)) {
+        return value.join(", ");
+      }
+      if (typeof value === "object") {
+        return t("Details");
+      }
+      return String(value);
+    },
+    [locale, t]
+  );
+
   const sortedFields = React.useMemo(
     () => sortFields(fieldsState.data),
     [fieldsState.data]
@@ -180,16 +191,16 @@ export default function CollectionDetailPage() {
   const sortOptions = React.useMemo(() => {
     const metadataOptions = sortedFields.flatMap((field) => [
       {
-        label: `Metadata: ${field.name} (asc)`,
+        label: t("Metadata: {field} (asc)", { field: field.name }),
         value: `metadata:${field.name}`
       },
       {
-        label: `Metadata: ${field.name} (desc)`,
+        label: t("Metadata: {field} (desc)", { field: field.name }),
         value: `-metadata:${field.name}`
       }
     ]);
     return [...baseSortOptions, ...metadataOptions];
-  }, [sortedFields]);
+  }, [baseSortOptions, sortedFields, t]);
 
   const selectedField = React.useMemo(
     () =>
@@ -294,8 +305,7 @@ export default function CollectionDetailPage() {
   }, [loadCollection, loadFields]);
 
   const filterParams = React.useMemo(
-    () =>
-      filters.map((filter) => `${filter.fieldName}=${filter.value}`),
+    () => filters.map((filter) => `${filter.fieldName}=${filter.value}`),
     [filters]
   );
 
@@ -439,20 +449,20 @@ export default function CollectionDetailPage() {
           <Button variant="ghost" size="sm" asChild>
             <Link href="/collections">
               <ArrowLeft className="h-4 w-4" />
-              Back to collections
+              {t("Back to collections")}
             </Link>
           </Button>
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-              Collection overview
+              {t("Collection overview")}
             </p>
             <h1 className="font-display mt-4 text-3xl text-stone-900">
               {collectionState.status === "ready" && collectionState.data
                 ? collectionState.data.name
-                : "Review collection items"}
+                : t("Review collection items")}
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-stone-600">
-              Search, filter, and organize the items in this collection.
+              {t("Search, filter, and organize the items in this collection.")}
             </p>
           </div>
         </div>
@@ -460,12 +470,12 @@ export default function CollectionDetailPage() {
           <Button asChild>
             <Link href={`/collections/${collectionId}/items/new`}>
               <Plus className="h-4 w-4" />
-              Add item
+              {t("Add item")}
             </Link>
           </Button>
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCcw className="h-4 w-4" />
-            Refresh
+            {t("Refresh")}
           </Button>
         </div>
       </header>
@@ -475,22 +485,22 @@ export default function CollectionDetailPage() {
           className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
           aria-busy="true"
         >
-          Loading collection details...
+          {t("Loading collection details...")}
         </div>
       ) : collectionState.status === "error" ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
           <p className="text-sm font-medium text-rose-700">
-            We hit a snag loading this collection.
+            {t("We hit a snag loading this collection.")}
           </p>
           <p className="mt-2 text-sm text-rose-600">
-            {collectionState.error ?? "Please try again."}
+            {t(collectionState.error ?? "Please try again.")}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Button variant="outline" onClick={handleRefresh}>
-              Try again
+              {t("Try again")}
             </Button>
             <Button variant="ghost" asChild>
-              <Link href="/collections">Back to collections</Link>
+              <Link href="/collections">{t("Back to collections")}</Link>
             </Button>
           </div>
         </div>
@@ -498,14 +508,16 @@ export default function CollectionDetailPage() {
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-              Collection details
+              {t("Collection details")}
             </p>
             <h2 className="font-display mt-3 text-2xl text-stone-900">
               {collectionState.data?.name}
             </h2>
             <p className="mt-3 text-sm text-stone-600">
               {collectionState.data?.description ??
-                "Add a description to capture the story behind this collection."}
+                t(
+                  "Add a description to capture the story behind this collection."
+                )}
             </p>
             <div className="mt-6 flex flex-wrap gap-3 text-xs">
               <span
@@ -515,48 +527,52 @@ export default function CollectionDetailPage() {
                     : "border-amber-200 bg-amber-50 text-amber-700"
                 }`}
               >
-                {collectionState.data?.is_public ? "Public" : "Private"}
+                {collectionState.data?.is_public ? t("Public") : t("Private")}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-stone-600">
-                {itemCount} items loaded
+                {t("{count} items loaded", { count: itemCount })}
               </span>
             </div>
             <div className="mt-6 flex flex-wrap gap-4 text-sm text-stone-600">
               <span className="inline-flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-amber-600" />
-                Created {formatDate(collectionState.data?.created_at)}
+                {t("Created {date}", {
+                  date: formatDate(collectionState.data?.created_at)
+                })}
               </span>
               <span className="inline-flex items-center gap-2">
                 <RefreshCcw className="h-4 w-4 text-amber-600" />
-                Updated {formatDate(collectionState.data?.updated_at)}
+                {t("Updated {date}", {
+                  date: formatDate(collectionState.data?.updated_at)
+                })}
               </span>
             </div>
           </div>
 
           <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-              Schema snapshot
+              {t("Schema snapshot")}
             </p>
             {fieldsState.status === "loading" ? (
               <p className="mt-4 text-sm text-stone-500">
-                Loading schema fields...
+                {t("Loading schema fields...")}
               </p>
             ) : fieldsState.status === "error" ? (
               <p className="mt-4 text-sm text-rose-600">
-                {fieldsState.error ?? "We couldn't load schema fields."}
+                {t(fieldsState.error ?? "We couldn't load schema fields.")}
               </p>
             ) : fieldsState.data.length === 0 ? (
               <div className="mt-4 space-y-3 text-sm text-stone-600">
-                <p>No schema fields yet.</p>
+                <p>{t("No schema fields yet.")}</p>
                 <Button size="sm" variant="secondary" asChild>
                   <Link href={`/collections/${collectionId}/settings`}>
-                    Define schema
+                    {t("Define schema")}
                   </Link>
                 </Button>
               </div>
             ) : (
               <div className="mt-4 space-y-3 text-sm text-stone-600">
-                <p>{fieldsState.data.length} fields defined.</p>
+                <p>{t("{count} fields defined.", { count: fieldsState.data.length })}</p>
                 <div className="space-y-2">
                   {sortedFields.slice(0, 4).map((field) => (
                     <div
@@ -573,13 +589,15 @@ export default function CollectionDetailPage() {
                   ))}
                   {sortedFields.length > 4 ? (
                     <p className="text-xs text-stone-400">
-                      +{sortedFields.length - 4} more fields
+                      {t("+{count} more fields", {
+                        count: sortedFields.length - 4
+                      })}
                     </p>
                   ) : null}
                 </div>
                 <Button size="sm" variant="ghost" asChild>
                   <Link href={`/collections/${collectionId}/settings`}>
-                    Edit schema
+                    {t("Edit schema")}
                   </Link>
                 </Button>
               </div>
@@ -592,10 +610,10 @@ export default function CollectionDetailPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-              Items
+              {t("Items")}
             </p>
             <h2 className="font-display mt-3 text-2xl text-stone-900">
-              Collection items
+              {t("Collection items")}
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -603,7 +621,7 @@ export default function CollectionDetailPage() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
               <input
                 type="search"
-                placeholder="Search items"
+                placeholder={t("Search items")}
                 className="h-10 w-56 rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -627,37 +645,36 @@ export default function CollectionDetailPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                Filters
+                {t("Filters")}
               </p>
               <h3 className="mt-3 text-lg font-semibold text-stone-900">
-                Refine by metadata
+                {t("Refine by metadata")}
               </h3>
               <p className="mt-2 text-sm text-stone-600">
-                Add filters using your schema field names and values.
+                {t("Add filters using your schema field names and values.")}
               </p>
             </div>
             {filters.length > 0 ? (
               <Button size="sm" variant="ghost" onClick={handleClearFilters}>
-                Clear filters
+                {t("Clear filters")}
               </Button>
             ) : null}
           </div>
 
           {fieldsState.status === "loading" ? (
             <p className="mt-4 text-sm text-stone-500">
-              Loading available fields...
+              {t("Loading available fields...")}
             </p>
           ) : fieldsState.status === "error" ? (
             <p className="mt-4 text-sm text-rose-600">
-              {fieldsState.error ??
-                "We couldn't load fields for filtering."}
+              {t(fieldsState.error ?? "We couldn't load fields for filtering.")}
             </p>
           ) : fieldsState.data.length === 0 ? (
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-stone-600">
-              <p>Define schema fields before filtering items.</p>
+              <p>{t("Define schema fields before filtering items.")}</p>
               <Button size="sm" variant="secondary" asChild>
                 <Link href={`/collections/${collectionId}/settings`}>
-                  Define schema
+                  {t("Define schema")}
                 </Link>
               </Button>
             </div>
@@ -666,14 +683,14 @@ export default function CollectionDetailPage() {
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex min-w-[200px] flex-1 flex-col gap-2">
                   <label className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                    Field
+                    {t("Field")}
                   </label>
                   <select
                     className="h-10 rounded-2xl border border-stone-200 bg-white/90 px-3 text-sm text-stone-700 shadow-sm focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                     value={filterFieldId}
                     onChange={(event) => setFilterFieldId(event.target.value)}
                   >
-                    <option value="">Select a field</option>
+                    <option value="">{t("Select a field")}</option>
                     {sortedFields.map((field) => (
                       <option key={field.id} value={field.id}>
                         {field.name}
@@ -683,7 +700,7 @@ export default function CollectionDetailPage() {
                 </div>
                 <div className="flex min-w-[200px] flex-1 flex-col gap-2">
                   <label className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                    Value
+                    {t("Value")}
                   </label>
                   {selectedField?.field_type === "select" ? (
                     <select
@@ -692,7 +709,7 @@ export default function CollectionDetailPage() {
                       onChange={(event) => setFilterValue(event.target.value)}
                       disabled={selectedFieldOptions.length === 0}
                     >
-                      <option value="">Select a value</option>
+                      <option value="">{t("Select a value")}</option>
                       {selectedFieldOptions.map((option) => (
                         <option key={option} value={option}>
                           {option}
@@ -705,8 +722,8 @@ export default function CollectionDetailPage() {
                       value={filterValue}
                       onChange={(event) => setFilterValue(event.target.value)}
                     >
-                      <option value="true">True</option>
-                      <option value="false">False</option>
+                      <option value="true">{t("True")}</option>
+                      <option value="false">{t("False")}</option>
                     </select>
                   ) : (
                     <input
@@ -723,7 +740,7 @@ export default function CollectionDetailPage() {
                         selectedField?.field_type === "number" ? "any" : undefined
                       }
                       className="h-10 rounded-2xl border border-stone-200 bg-white/90 px-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
-                      placeholder="Enter value"
+                      placeholder={t("Enter value")}
                       value={filterValue}
                       onChange={(event) => setFilterValue(event.target.value)}
                       disabled={!selectedField}
@@ -736,12 +753,12 @@ export default function CollectionDetailPage() {
                   onClick={handleAddFilter}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
-                  Add filter
+                  {t("Add filter")}
                 </Button>
               </div>
 
               {filterError ? (
-                <p className="text-sm text-rose-600">{filterError}</p>
+                <p className="text-sm text-rose-600">{t(filterError)}</p>
               ) : null}
 
               {filters.length > 0 ? (
@@ -761,7 +778,9 @@ export default function CollectionDetailPage() {
                         type="button"
                         className="text-stone-400 transition hover:text-stone-700"
                         onClick={() => handleRemoveFilter(filter.id)}
-                        aria-label={`Remove filter ${filter.fieldName}`}
+                        aria-label={t("Remove filter {name}", {
+                          name: filter.fieldName
+                        })}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -770,7 +789,7 @@ export default function CollectionDetailPage() {
                 </div>
               ) : (
                 <p className="text-sm text-stone-500">
-                  No filters applied. Use the controls above to narrow the list.
+                  {t("No filters applied. Use the controls above to narrow the list.")}
                 </p>
               )}
             </div>
@@ -782,19 +801,19 @@ export default function CollectionDetailPage() {
             className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
             aria-busy="true"
           >
-            Loading items...
+            {t("Loading items...")}
           </div>
         ) : itemsState.status === "error" ? (
           <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
             <p className="text-sm font-medium text-rose-700">
-              We hit a snag loading items.
+              {t("We hit a snag loading items.")}
             </p>
             <p className="mt-2 text-sm text-rose-600">
-              {itemsState.error ?? "Please try again."}
+              {t(itemsState.error ?? "Please try again.")}
             </p>
             <div className="mt-4">
               <Button variant="outline" onClick={handleRefresh}>
-                Try again
+                {t("Try again")}
               </Button>
             </div>
           </div>
@@ -803,27 +822,28 @@ export default function CollectionDetailPage() {
             <div className="flex flex-wrap items-start justify-between gap-6">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                  No items yet
+                  {t("No items yet")}
                 </p>
                 <h3 className="font-display mt-3 text-2xl text-stone-900">
-                  Start capturing your first item.
+                  {t("Start capturing your first item.")}
                 </h3>
                 <p className="mt-3 max-w-xl text-sm text-stone-600">
-                  Add an item to begin cataloguing metadata and imagery for this
-                  collection.
+                  {t(
+                    "Add an item to begin cataloguing metadata and imagery for this collection."
+                  )}
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild>
                     <Link href={`/collections/${collectionId}/items/new`}>
-                      Add item
+                      {t("Add item")}
                     </Link>
                   </Button>
                   <Button variant="outline" onClick={handleRefresh}>
-                    Refresh items
+                    {t("Refresh items")}
                   </Button>
                   <Button variant="ghost" asChild>
                     <Link href={`/collections/${collectionId}/settings`}>
-                      Review schema
+                      {t("Review schema")}
                     </Link>
                   </Button>
                 </div>
@@ -839,6 +859,7 @@ export default function CollectionDetailPage() {
               {itemsState.data.map((item) => {
                 const metadataEntries = Object.entries(item.metadata ?? {});
                 const imageCount = item.image_count ?? 0;
+                const imageLabel = imageCount === 1 ? t("image") : t("images");
                 return (
                   <div
                     key={item.id}
@@ -850,18 +871,20 @@ export default function CollectionDetailPage() {
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
                         <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                          Item
+                          {t("Item")}
                         </p>
                         <h3 className="mt-3 text-xl font-semibold text-stone-900">
                           {item.name}
                         </h3>
                       </div>
                       <div className="flex flex-col items-end gap-2 text-xs text-stone-500">
-                        <span>Added {formatDate(item.created_at)}</span>
+                        <span>
+                          {t("Added {date}", { date: formatDate(item.created_at) })}
+                        </span>
                         {imageCount > 0 ? (
                           <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
                             <ImageIcon className="h-3 w-3 text-amber-600" />
-                            {imageCount} image{imageCount === 1 ? "" : "s"}
+                            {imageCount} {imageLabel}
                           </span>
                         ) : null}
                       </div>
@@ -874,7 +897,7 @@ export default function CollectionDetailPage() {
                     <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 text-sm text-stone-600">
                       {metadataEntries.length === 0 ? (
                         <p className="text-xs text-stone-500">
-                          No metadata captured yet.
+                          {t("No metadata captured yet.")}
                         </p>
                       ) : (
                         <div className="space-y-2 text-xs">
@@ -893,7 +916,9 @@ export default function CollectionDetailPage() {
                           ))}
                           {metadataEntries.length > 3 ? (
                             <p className="text-xs text-stone-400">
-                              +{metadataEntries.length - 3} more fields
+                              {t("+{count} more fields", {
+                                count: metadataEntries.length - 3
+                              })}
                             </p>
                           ) : null}
                         </div>
@@ -902,7 +927,7 @@ export default function CollectionDetailPage() {
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <Button size="sm" variant="secondary" asChild>
                         <Link href={`/collections/${collectionId}/items/${item.id}`}>
-                          View item
+                          {t("View item")}
                         </Link>
                       </Button>
                     </div>
@@ -912,7 +937,7 @@ export default function CollectionDetailPage() {
             </div>
             <div className="flex flex-col items-center gap-3">
               {loadMoreError ? (
-                <p className="text-xs text-rose-600">{loadMoreError}</p>
+                <p className="text-xs text-rose-600">{t(loadMoreError)}</p>
               ) : null}
               {itemsState.hasMore ? (
                 <Button
@@ -920,11 +945,13 @@ export default function CollectionDetailPage() {
                   disabled={isLoadingMore}
                   onClick={handleLoadMore}
                 >
-                  {isLoadingMore ? "Loading more..." : "Load more items"}
+                  {isLoadingMore
+                    ? t("Loading more...")
+                    : t("Load more items")}
                 </Button>
               ) : (
                 <p className="text-xs text-stone-500">
-                  You have reached the end of the list.
+                  {t("You have reached the end of the list.")}
                 </p>
               )}
             </div>

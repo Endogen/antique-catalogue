@@ -3,6 +3,7 @@
 import * as React from "react";
 import { X } from "lucide-react";
 
+import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
 type LightboxProps = {
@@ -13,6 +14,7 @@ type LightboxProps = {
 };
 
 export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
+  const { t } = useI18n();
   React.useEffect(() => {
     if (!open) {
       return;
@@ -46,7 +48,7 @@ export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
         type="button"
         className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
         onClick={onClose}
-        aria-label="Close image"
+        aria-label={t("Close image")}
       >
         <X className="h-5 w-5" />
       </button>
@@ -59,7 +61,7 @@ export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
       >
         <img
           src={src}
-          alt={alt ?? "Expanded image"}
+          alt={alt ?? t("Expanded image")}
           className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain"
         />
         {alt ? (

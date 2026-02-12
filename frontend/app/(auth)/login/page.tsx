@@ -8,24 +8,37 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { isApiError } from "@/lib/api";
 
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters")
-});
+const createLoginSchema = (t: (key: string) => string) =>
+  z.object({
+    email: z
+      .string()
+      .min(1, t("Email is required"))
+      .email(t("Enter a valid email address")),
+    password: z.string().min(8, t("Password must be at least 8 characters"))
+  });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type LoginFormValues = z.infer<ReturnType<typeof createLoginSchema>>;
 
 const highlights = [
   "Create structured collection schemas in minutes",
   "Capture item photos from any device",
   "Surface provenance, condition, and notes fast",
   "Publish public collections when ready"
+];
+
+const quickCards = [
+  {
+    title: "Capture",
+    detail: "Upload from mobile or desktop."
+  },
+  {
+    title: "Curate",
+    detail: "Publish collections with confidence."
+  }
 ];
 
 const resolveRedirectPath = (raw: string | null) => {
@@ -47,12 +60,15 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status, login } = useAuth();
+  const { t } = useI18n();
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const redirectPath = React.useMemo(
     () => resolveRedirectPath(searchParams.get("next")),
     [searchParams]
   );
+
+  const loginSchema = React.useMemo(() => createLoginSchema(t), [t]);
 
   const {
     register,
@@ -88,7 +104,7 @@ function LoginContent() {
   if (status === "authenticated") {
     return (
       <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
-        Redirecting to your workspace...
+        {t("Redirecting to your workspace...")}
       </div>
     );
   }
@@ -103,30 +119,30 @@ function LoginContent() {
             </div>
             <div>
               <p className="font-display text-lg tracking-tight">
-                Antique Catalogue
+                {t("Antique Catalogue")}
               </p>
               <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
-                Studio Archive
+                {t("Studio Archive")}
               </p>
             </div>
           </Link>
           <div className="flex items-center gap-3 text-sm text-stone-600">
-            <span className="hidden sm:inline">New here?</span>
+            <span className="hidden sm:inline">{t("New here?")}</span>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/register">Create account</Link>
+              <Link href="/register">{t("Create account")}</Link>
             </Button>
           </div>
         </header>
 
         <section className="mt-10 rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
           <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-            Welcome back
+            {t("Welcome back")}
           </p>
           <h1 className="font-display mt-4 text-3xl text-stone-900">
-            Sign in to your archive.
+            {t("Sign in to your archive.")}
           </h1>
           <p className="mt-3 text-sm text-stone-600">
-            Keep your collections, schema, and imagery in one focused workspace.
+            {t("Keep your collections, schema, and imagery in one focused workspace.")}
           </p>
 
           {formError ? (
@@ -134,14 +150,14 @@ function LoginContent() {
               role="alert"
               className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
             >
-              {formError}
+              {t(formError)}
             </div>
           ) : null}
 
           <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
               <label className="text-sm font-medium text-stone-700" htmlFor="email">
-                Email address
+                {t("Email address")}
               </label>
               <input
                 id="email"
@@ -164,13 +180,13 @@ function LoginContent() {
                   className="text-sm font-medium text-stone-700"
                   htmlFor="password"
                 >
-                  Password
+                  {t("Password")}
                 </label>
                 <Link
                   href="/forgot-password"
                   className="text-xs font-medium text-amber-700 hover:text-amber-800"
                 >
-                  Forgot password?
+                  {t("Forgot password?")}
                 </Link>
               </div>
               <input
@@ -194,17 +210,17 @@ function LoginContent() {
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Signing in..." : "Sign in"}
+              {isSubmitting ? t("Signing in...") : t("Sign in")}
             </Button>
           </form>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
-            <span>Need to verify your email first?</span>
+            <span>{t("Need to verify your email first?")}</span>
             <Link
               href="/verify"
               className="font-medium text-amber-700 hover:text-amber-800"
             >
-              Enter verification token
+              {t("Enter verification token")}
             </Link>
           </div>
         </section>
@@ -213,44 +229,36 @@ function LoginContent() {
       <aside className="order-first lg:order-none">
         <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-8 text-stone-100 shadow-sm">
           <p className="text-xs uppercase tracking-[0.4em] text-stone-400">
-            Archive overview
+            {t("Archive overview")}
           </p>
           <h2 className="font-display mt-4 text-3xl">
-            Keep provenance close at hand.
+            {t("Keep provenance close at hand.")}
           </h2>
           <p className="mt-3 text-sm text-stone-300">
-            Your catalogue becomes a living reference for every acquisition, with
-            structured fields and curated imagery.
+            {t(
+              "Your catalogue becomes a living reference for every acquisition, with structured fields and curated imagery."
+            )}
           </p>
           <ul className="mt-6 space-y-3 text-sm">
             {highlights.map((item) => (
               <li key={item} className="flex items-start gap-3">
                 <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-                <span className="text-stone-200">{item}</span>
+                <span className="text-stone-200">{t(item)}</span>
               </li>
             ))}
           </ul>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {[
-            {
-              title: "Capture",
-              detail: "Upload from mobile or desktop."
-            },
-            {
-              title: "Curate",
-              detail: "Publish collections with confidence."
-            }
-          ].map((item) => (
+          {quickCards.map((item) => (
             <div
               key={item.title}
               className="rounded-2xl border border-stone-200 bg-white/80 p-4 shadow-sm"
             >
               <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                {item.title}
+                {t(item.title)}
               </p>
-              <p className="mt-2 text-sm text-stone-700">{item.detail}</p>
+              <p className="mt-2 text-sm text-stone-700">{t(item.detail)}</p>
             </div>
           ))}
         </div>
@@ -259,9 +267,18 @@ function LoginContent() {
   );
 }
 
+function LoginFallback() {
+  const { t } = useI18n();
+  return (
+    <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+      {t("Loading...")}
+    </div>
+  );
+}
+
 export default function LoginPage() {
   return (
-    <React.Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center text-sm text-stone-500">Loading...</div>}>
+    <React.Suspense fallback={<LoginFallback />}>
       <LoginContent />
     </React.Suspense>
   );

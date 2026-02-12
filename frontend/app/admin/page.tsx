@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/i18n-provider";
 import {
   adminApi,
   getAdminToken,
@@ -22,7 +23,7 @@ import {
 const PAGE_SIZE = 10;
 const MAX_FEATURED_ITEMS = 4;
 
-const formatDate = (value?: string | null) => {
+const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
     return "-";
   }
@@ -30,7 +31,7 @@ const formatDate = (value?: string | null) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -38,6 +39,7 @@ const formatDate = (value?: string | null) => {
 };
 
 export default function AdminPage() {
+  const { t, locale } = useI18n();
   const [isReady, setIsReady] = React.useState(false);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [email, setEmail] = React.useState("");
@@ -237,7 +239,7 @@ export default function AdminPage() {
   if (!isReady) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-stone-500">
-        Loading admin console...
+        {t("Loading admin console...")}
       </div>
     );
   }
@@ -252,27 +254,27 @@ export default function AdminPage() {
             </div>
             <div>
               <p className="font-display text-lg tracking-tight">
-                Admin Console
+                {t("Admin Console")}
               </p>
               <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
-                Antique Catalogue
+                {t("Antique Catalogue")}
               </p>
             </div>
           </div>
           <p className="mt-4 text-sm text-stone-600">
-            Sign in with your admin credentials to manage featured collections.
+            {t("Sign in with your admin credentials to manage featured collections.")}
           </p>
 
           {loginError ? (
             <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-              {loginError}
+              {t(loginError)}
             </div>
           ) : null}
 
           <form className="mt-6 space-y-4" onSubmit={handleLogin}>
             <div>
               <label className="text-xs font-medium text-stone-700" htmlFor="admin-email">
-                Email
+                {t("Email")}
               </label>
               <input
                 id="admin-email"
@@ -285,7 +287,7 @@ export default function AdminPage() {
             </div>
             <div>
               <label className="text-xs font-medium text-stone-700" htmlFor="admin-password">
-                Password
+                {t("Password")}
               </label>
               <input
                 id="admin-password"
@@ -297,7 +299,7 @@ export default function AdminPage() {
               />
             </div>
             <Button type="submit" className="w-full">
-              Sign in
+              {t("Sign in")}
             </Button>
           </form>
         </div>
@@ -313,61 +315,61 @@ export default function AdminPage() {
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-              Admin
+              {t("Admin")}
             </p>
             <h1 className="font-display mt-3 text-3xl text-stone-900">
-              Catalogue administration
+              {t("Catalogue administration")}
             </h1>
             <p className="mt-2 text-sm text-stone-600">
-              Monitor platform activity and select a featured collection.
+              {t("Monitor platform activity and select a featured collection.")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="outline" onClick={() => loadAdminData(page)}>
               <RefreshCcw className="h-4 w-4" />
-              Refresh
+              {t("Refresh")}
             </Button>
             <Button variant="ghost" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
-              Sign out
+              {t("Sign out")}
             </Button>
           </div>
         </header>
 
         {errorMessage ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {errorMessage}
+            {t(errorMessage)}
           </div>
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-              Total users
+              {t("Total users")}
             </p>
             <p className="mt-4 text-3xl font-semibold text-stone-900">
               {stats?.total_users ?? "-"}
             </p>
-            <p className="mt-2 text-sm text-stone-500">Registered accounts</p>
+            <p className="mt-2 text-sm text-stone-500">{t("Registered accounts")}</p>
           </div>
           <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-              Total collections
+              {t("Total collections")}
             </p>
             <p className="mt-4 text-3xl font-semibold text-stone-900">
               {stats?.total_collections ?? "-"}
             </p>
-            <p className="mt-2 text-sm text-stone-500">Across all users</p>
+            <p className="mt-2 text-sm text-stone-500">{t("Across all users")}</p>
           </div>
           <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-              Featured collection
+              {t("Featured collection")}
             </p>
             <p className="mt-4 text-3xl font-semibold text-stone-900">
               {stats?.featured_collection_id ?? "-"}
             </p>
             <p className="mt-2 text-sm text-stone-500">
-              Current featured ID
+              {t("Current featured ID")}
             </p>
           </div>
         </section>
@@ -376,13 +378,13 @@ export default function AdminPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                Featured selection
+                {t("Featured selection")}
               </p>
               <h2 className="font-display mt-3 text-2xl text-stone-900">
-                Choose a public collection to highlight.
+                {t("Choose a public collection to highlight.")}
               </h2>
               <p className="mt-2 text-sm text-stone-600">
-                Collections are sorted by newest first.
+                {t("Collections are sorted by newest first.")}
               </p>
             </div>
             <Button
@@ -391,17 +393,17 @@ export default function AdminPage() {
               disabled={featurePending !== null}
             >
               <Shield className="h-4 w-4" />
-              Clear featured
+              {t("Clear featured")}
             </Button>
           </div>
 
           {status === "loading" ? (
             <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-              Loading collections...
+              {t("Loading collections...")}
             </div>
           ) : collections.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-              No collections available yet.
+              {t("No collections available yet.")}
             </div>
           ) : (
             <div className="mt-6 space-y-4">
@@ -413,24 +415,26 @@ export default function AdminPage() {
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                        Collection #{collection.id}
+                        {t("Collection #{id}", { id: collection.id })}
                       </p>
                       <h3 className="mt-2 text-lg font-semibold text-stone-900">
                         {collection.name}
                       </h3>
                       <p className="mt-2 text-sm text-stone-600">
-                        {collection.description ?? "No description provided."}
+                        {collection.description ?? t("No description provided.")}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-3 text-xs text-stone-500">
                         <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
-                          Owner: {collection.owner_email}
+                          {t("Owner: {email}", {
+                            email: collection.owner_email
+                          })}
                         </span>
                         <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
-                          {collection.is_public ? "Public" : "Private"}
+                          {collection.is_public ? t("Public") : t("Private")}
                         </span>
                         <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
                           <CalendarDays className="h-3.5 w-3.5" />
-                          {formatDate(collection.created_at)}
+                          {formatDate(collection.created_at, locale)}
                         </span>
                       </div>
                     </div>
@@ -438,7 +442,7 @@ export default function AdminPage() {
                       {collection.is_featured ? (
                         <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
                           <Crown className="h-3.5 w-3.5" />
-                          Featured
+                          {t("Featured")}
                         </span>
                       ) : null}
                       <Button
@@ -449,7 +453,7 @@ export default function AdminPage() {
                           featurePending !== null || !collection.is_public
                         }
                       >
-                        {collection.is_public ? "Feature" : "Private"}
+                        {collection.is_public ? t("Feature") : t("Private")}
                       </Button>
                     </div>
                   </div>
@@ -458,7 +462,10 @@ export default function AdminPage() {
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-stone-500">
                 <span>
-                  Page {page + 1} of {totalPages}
+                  {t("Page {page} of {total}", {
+                    page: page + 1,
+                    total: totalPages
+                  })}
                 </span>
                 <div className="flex gap-2">
                   <Button
@@ -467,7 +474,7 @@ export default function AdminPage() {
                     onClick={() => setPage((prev) => Math.max(0, prev - 1))}
                     disabled={page === 0}
                   >
-                    Previous
+                    {t("Previous")}
                   </Button>
                   <Button
                     size="sm"
@@ -479,7 +486,7 @@ export default function AdminPage() {
                     }
                     disabled={page >= totalPages - 1}
                   >
-                    Next
+                    {t("Next")}
                   </Button>
                 </div>
               </div>
@@ -491,19 +498,23 @@ export default function AdminPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                Featured items
+                {t("Featured items")}
               </p>
               <h2 className="font-display mt-3 text-2xl text-stone-900">
-                Curate highlights from the featured collection.
+                {t("Curate highlights from the featured collection.")}
               </h2>
               <p className="mt-2 text-sm text-stone-600">
-                Select up to {MAX_FEATURED_ITEMS} items to spotlight on the
-                homepage.
+                {t("Select up to {count} items to spotlight on the homepage.", {
+                  count: MAX_FEATURED_ITEMS
+                })}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
               <span>
-                {selectionCount} of {MAX_FEATURED_ITEMS} selected
+                {t("{selected} of {count} selected", {
+                  selected: selectionCount,
+                  count: MAX_FEATURED_ITEMS
+                })}
               </span>
               <Button
                 variant="outline"
@@ -515,38 +526,38 @@ export default function AdminPage() {
                 }
               >
                 <Crown className="h-4 w-4" />
-                {featuredItemsPending ? "Saving..." : "Save featured"}
+                {featuredItemsPending ? t("Saving...") : t("Save featured")}
               </Button>
             </div>
           </div>
 
           {featuredItemsMessage ? (
             <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {featuredItemsMessage}
+              {t(featuredItemsMessage)}
             </div>
           ) : null}
 
           {featuredItemsError ? (
             <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {featuredItemsError}
+              {t(featuredItemsError)}
             </div>
           ) : null}
 
           {!stats?.featured_collection_id ? (
             <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-              Choose a featured collection to manage highlighted items.
+              {t("Choose a featured collection to manage highlighted items.")}
             </div>
           ) : featuredItemsState.status === "loading" ? (
             <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-              Loading featured items...
+              {t("Loading featured items...")}
             </div>
           ) : featuredItemsState.status === "error" ? (
             <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {featuredItemsState.error ?? "Unable to load featured items."}
+              {t(featuredItemsState.error ?? "Unable to load featured items.")}
             </div>
           ) : featuredItemsState.data.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-              No items yet in this collection.
+              {t("No items yet in this collection.")}
             </div>
           ) : (
             <div className="mt-6 space-y-3">
@@ -563,7 +574,9 @@ export default function AdminPage() {
                         {item.name}
                       </p>
                       <p className="mt-1 text-xs text-stone-500">
-                        Added {formatDate(item.created_at)}
+                        {t("Added {date}", {
+                          date: formatDate(item.created_at, locale)
+                        })}
                       </p>
                       {item.notes ? (
                         <p className="mt-2 text-xs text-stone-500">
@@ -577,7 +590,7 @@ export default function AdminPage() {
                       onClick={() => toggleFeaturedItem(item.id)}
                       disabled={featuredItemsPending || disableSelect}
                     >
-                      {isSelected ? "Featured" : "Feature"}
+                      {isSelected ? t("Featured") : t("Feature")}
                     </Button>
                   </div>
                 );

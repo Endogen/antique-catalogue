@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 
 const buildRedirectPath = (pathname: string | null) => {
   if (!pathname) {
@@ -19,6 +20,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
 
   React.useEffect(() => {
     if (status === "unauthenticated") {
@@ -37,7 +39,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-stone-50 text-sm text-stone-500">
-        Loading your workspace...
+        {t("Loading your workspace...")}
       </div>
     );
   }

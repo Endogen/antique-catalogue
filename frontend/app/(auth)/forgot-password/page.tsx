@@ -8,17 +8,19 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { authApi, isApiError } from "@/lib/api";
 
-const forgotSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Enter a valid email address")
-});
+const createForgotSchema = (t: (key: string) => string) =>
+  z.object({
+    email: z
+      .string()
+      .min(1, t("Email is required"))
+      .email(t("Enter a valid email address"))
+  });
 
-type ForgotFormValues = z.infer<typeof forgotSchema>;
+type ForgotFormValues = z.infer<ReturnType<typeof createForgotSchema>>;
 
 const steps = [
   {
@@ -38,9 +40,12 @@ const steps = [
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { status } = useAuth();
+  const { t } = useI18n();
   const [formError, setFormError] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [submittedEmail, setSubmittedEmail] = React.useState<string | null>(null);
+
+  const forgotSchema = React.useMemo(() => createForgotSchema(t), [t]);
 
   const {
     register,
@@ -83,7 +88,7 @@ export default function ForgotPasswordPage() {
   if (status === "authenticated") {
     return (
       <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
-        Redirecting to your workspace...
+        {t("Redirecting to your workspace...")}
       </div>
     );
   }
@@ -100,31 +105,32 @@ export default function ForgotPasswordPage() {
             </div>
             <div>
               <p className="font-display text-lg tracking-tight">
-                Antique Catalogue
+                {t("Antique Catalogue")}
               </p>
               <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
-                Studio Archive
+                {t("Studio Archive")}
               </p>
             </div>
           </Link>
           <div className="flex items-center gap-3 text-sm text-stone-600">
-            <span className="hidden sm:inline">Remembered your password?</span>
+            <span className="hidden sm:inline">{t("Remembered your password?")}</span>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/login">Sign in</Link>
+              <Link href="/login">{t("Sign in")}</Link>
             </Button>
           </div>
         </header>
 
         <section className="mt-10 rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
           <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-            Password reset
+            {t("Password reset")}
           </p>
           <h1 className="font-display mt-4 text-3xl text-stone-900">
-            Retrieve your access.
+            {t("Retrieve your access.")}
           </h1>
           <p className="mt-3 text-sm text-stone-600">
-            Enter the email tied to your archive. We will send a reset token you
-            can use to set a new password.
+            {t(
+              "Enter the email tied to your archive. We will send a reset token you can use to set a new password."
+            )}
           </p>
 
           {formError ? (
@@ -132,7 +138,7 @@ export default function ForgotPasswordPage() {
               role="alert"
               className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
             >
-              {formError}
+              {t(formError)}
             </div>
           ) : null}
 
@@ -141,11 +147,13 @@ export default function ForgotPasswordPage() {
               role="status"
               className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
             >
-              <p className="font-medium">{successMessage}</p>
+              <p className="font-medium">{t(successMessage)}</p>
               {submittedEmail ? (
                 <p className="mt-2 text-xs text-emerald-700">
-                  Reset token sent to {submittedEmail}. Use it on the reset page
-                  to choose a new password.
+                  {t(
+                    "Reset token sent to {email}. Use it on the reset page to choose a new password.",
+                    { email: submittedEmail }
+                  )}
                 </p>
               ) : null}
             </div>
@@ -154,7 +162,7 @@ export default function ForgotPasswordPage() {
           <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
               <label className="text-sm font-medium text-stone-700" htmlFor="email">
-                Email address
+                {t("Email address")}
               </label>
               <input
                 id="email"
@@ -179,20 +187,20 @@ export default function ForgotPasswordPage() {
               disabled={isSubmitting || isLocked}
             >
               {isLocked
-                ? "Check your inbox"
+                ? t("Check your inbox")
                 : isSubmitting
-                ? "Sending reset email..."
-                : "Send reset email"}
+                ? t("Sending reset email...")
+                : t("Send reset email")}
             </Button>
           </form>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
-            <span>Already have a token?</span>
+            <span>{t("Already have a token?")}</span>
             <Link
               href="/reset-password"
               className="font-medium text-amber-700 hover:text-amber-800"
             >
-              Reset your password
+              {t("Reset your password")}
             </Link>
           </div>
         </section>
@@ -201,14 +209,15 @@ export default function ForgotPasswordPage() {
       <aside className="order-first lg:order-none">
         <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-8 text-stone-100 shadow-sm">
           <p className="text-xs uppercase tracking-[0.4em] text-stone-400">
-            Reset flow
+            {t("Reset flow")}
           </p>
           <h2 className="font-display mt-4 text-3xl">
-            Regain control in minutes.
+            {t("Regain control in minutes.")}
           </h2>
           <p className="mt-3 text-sm text-stone-300">
-            Keep your archive secure with a short reset workflow designed to get
-            you back in quickly.
+            {t(
+              "Keep your archive secure with a short reset workflow designed to get you back in quickly."
+            )}
           </p>
           <ul className="mt-6 space-y-4 text-sm">
             {steps.map((step, index) => (
@@ -218,9 +227,9 @@ export default function ForgotPasswordPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-stone-100">
-                    {step.title}
+                    {t(step.title)}
                   </p>
-                  <p className="mt-1 text-xs text-stone-300">{step.detail}</p>
+                  <p className="mt-1 text-xs text-stone-300">{t(step.detail)}</p>
                 </div>
               </li>
             ))}
@@ -229,11 +238,12 @@ export default function ForgotPasswordPage() {
 
         <div className="mt-6 rounded-3xl border border-stone-200 bg-white/85 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            Security note
+            {t("Security note")}
           </p>
           <p className="mt-3 text-sm text-stone-700">
-            For privacy, we always respond with the same message even if the
-            address is not on file.
+            {t(
+              "For privacy, we always respond with the same message even if the address is not on file."
+            )}
           </p>
         </div>
       </aside>

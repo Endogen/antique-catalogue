@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { CalendarDays, Folder } from "lucide-react";
 
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { collectionApi, isApiError, type CollectionResponse } from "@/lib/api";
 
@@ -13,7 +14,7 @@ type LoadState = {
   error?: string;
 };
 
-const formatDate = (value?: string | null) => {
+const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
     return "-";
   }
@@ -21,7 +22,7 @@ const formatDate = (value?: string | null) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -29,6 +30,7 @@ const formatDate = (value?: string | null) => {
 };
 
 export default function DashboardPage() {
+  const { t, locale } = useI18n();
   const [state, setState] = React.useState<LoadState>({
     status: "loading",
     data: []
@@ -77,35 +79,39 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <section className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
         <p className="text-xs uppercase tracking-[0.4em] text-stone-500">
-          Getting started
+          {t("Getting started")}
         </p>
         <h1 className="font-display mt-4 text-3xl text-stone-900">
           {hasCollections
-            ? "Your archive is in motion."
-            : "Your archive is ready for its first collection."}
+            ? t("Your archive is in motion.")
+            : t("Your archive is ready for its first collection.")}
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-stone-600">
           {hasCollections
-            ? "Pick up where you left off, refine metadata, and keep adding items and imagery."
-            : "Create a collection to define your metadata schema, then begin adding items and imagery. Everything stays organized in one place."}
+            ? t(
+                "Pick up where you left off, refine metadata, and keep adding items and imagery."
+              )
+            : t(
+                "Create a collection to define your metadata schema, then begin adding items and imagery. Everything stays organized in one place."
+              )}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           {hasCollections ? (
             <>
               <Button asChild>
-                <Link href="/collections">View collections</Link>
+                <Link href="/collections">{t("View collections")}</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link href="/collections/new">New collection</Link>
+                <Link href="/collections/new">{t("New collection")}</Link>
               </Button>
             </>
           ) : (
             <>
               <Button asChild>
-                <Link href="/collections/new">Create collection</Link>
+                <Link href="/collections/new">{t("Create collection")}</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link href="/explore">Browse public collections</Link>
+                <Link href="/explore">{t("Browse public collections")}</Link>
               </Button>
             </>
           )}
@@ -115,30 +121,34 @@ export default function DashboardPage() {
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            Your collections
+            {t("Your collections")}
           </p>
           <h2 className="font-display mt-3 text-2xl text-stone-900">
             {hasCollections
-              ? "Continue your catalogue."
-              : "Start shaping your first collection."}
+              ? t("Continue your catalogue.")
+              : t("Start shaping your first collection.")}
           </h2>
           <p className="mt-3 text-sm text-stone-600">
             {hasCollections
-              ? "Jump back into a collection to refine metadata, add items, and keep your archive up to date."
-              : "Define the fields that matter most for your collection. Once you are ready, share access with collaborators and start capturing items."}
+              ? t(
+                  "Jump back into a collection to refine metadata, add items, and keep your archive up to date."
+                )
+              : t(
+                  "Define the fields that matter most for your collection. Once you are ready, share access with collaborators and start capturing items."
+                )}
           </p>
 
           {state.status === "loading" ? (
             <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/60 p-4 text-sm text-stone-500">
-              Loading your collections...
+              {t("Loading your collections...")}
             </div>
           ) : state.status === "error" ? (
             <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-sm text-rose-600">
-              {state.error ?? "We couldn't load your collections."}
+              {t(state.error ?? "We couldn't load your collections.")}
             </div>
           ) : state.data.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 text-sm text-stone-600">
-              No collections yet. Create one to start cataloguing.
+              {t("No collections yet. Create one to start cataloguing.")}
             </div>
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -150,24 +160,34 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between text-xs text-stone-500">
                     <span className="inline-flex items-center gap-2">
                       <Folder className="h-3.5 w-3.5 text-amber-600" />
-                      {collection.is_public ? "Public" : "Private"}
+                      {collection.is_public ? t("Public") : t("Private")}
                     </span>
-                    <span>Updated {formatDate(collection.updated_at)}</span>
+                    <span>
+                      {t("Updated {date}", {
+                        date: formatDate(collection.updated_at, locale)
+                      })}
+                    </span>
                   </div>
                   <h3 className="mt-3 text-base font-semibold text-stone-900">
                     {collection.name}
                   </h3>
                   <p className="mt-1 text-xs text-stone-600">
                     {collection.description ??
-                      "Add a description to capture the story behind this collection."}
+                      t(
+                        "Add a description to capture the story behind this collection."
+                      )}
                   </p>
                   <div className="mt-4 flex items-center justify-between text-xs text-stone-500">
                     <span className="inline-flex items-center gap-2">
                       <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
-                      Created {formatDate(collection.created_at)}
+                      {t("Created {date}", {
+                        date: formatDate(collection.created_at, locale)
+                      })}
                     </span>
                     <Button size="sm" variant="secondary" asChild>
-                      <Link href={`/collections/${collection.id}`}>Open</Link>
+                      <Link href={`/collections/${collection.id}`}>
+                        {t("Open")}
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -177,30 +197,30 @@ export default function DashboardPage() {
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Button variant="secondary" asChild>
-              <Link href="/collections">View all collections</Link>
+              <Link href="/collections">{t("View all collections")}</Link>
             </Button>
             <Button variant="ghost" asChild>
-              <Link href="/collections/new">New collection</Link>
+              <Link href="/collections/new">{t("New collection")}</Link>
             </Button>
           </div>
         </div>
 
         <div className="rounded-3xl border border-stone-200 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-            Studio checklist
+            {t("Studio checklist")}
           </p>
           <ul className="mt-4 space-y-3 text-sm">
             <li className="flex items-start gap-3">
               <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              Sketch your first collection story.
+              {t("Sketch your first collection story.")}
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              Prepare a lighting setup for mobile photos.
+              {t("Prepare a lighting setup for mobile photos.")}
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              Invite a collaborator when you are ready.
+              {t("Invite a collaborator when you are ready.")}
             </li>
           </ul>
         </div>

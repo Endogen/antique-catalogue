@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/i18n-provider";
 import { Lightbox } from "@/components/lightbox";
 import {
   imageApi,
@@ -30,7 +31,7 @@ const arrayMove = <T,>(items: T[], fromIndex: number, toIndex: number) => {
   return result;
 };
 
-const formatDate = (value?: string | null) => {
+const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
     return "—";
   }
@@ -38,7 +39,7 @@ const formatDate = (value?: string | null) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -58,6 +59,7 @@ export function ImageGallery({
   editable = true,
   refreshToken
 }: ImageGalleryProps) {
+  const { t, locale } = useI18n();
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
     "loading"
   );
@@ -85,7 +87,7 @@ export function ImageGallery({
     async (options?: { silent?: boolean }) => {
       if (!itemId) {
         setStatus("error");
-        setLoadError("Item ID is missing.");
+        setLoadError(t("Item ID is missing."));
         return;
       }
       if (!options?.silent) {
@@ -101,22 +103,24 @@ export function ImageGallery({
       } catch (error) {
         setStatus("error");
         setLoadError(
-          isApiError(error) ? error.detail : "We couldn't load item images."
+          isApiError(error)
+            ? t(error.detail)
+            : t("We couldn't load item images.")
         );
       }
     },
-    [itemId]
+    [itemId, t]
   );
 
   React.useEffect(() => {
     hasLoadedRef.current = false;
     if (!itemId) {
       setStatus("error");
-      setLoadError("Item ID is missing.");
+      setLoadError(t("Item ID is missing."));
       return;
     }
     void loadImages();
-  }, [itemId, loadImages]);
+  }, [itemId, loadImages, t]);
 
   React.useEffect(() => {
     if (!itemId || !hasLoadedRef.current) {
@@ -233,9 +237,11 @@ export function ImageGallery({
       if (!itemId || deletePendingId) {
         return;
       }
-      const confirmed = window.confirm(
-        `Delete "${image.filename || "this image"}"? This cannot be undone.`
-      );
+    const confirmed = window.confirm(
+      t('Delete "{filename}"? This cannot be undone.', {
+        filename: image.filename || t("this image")
+      })
+    );
       if (!confirmed) {
         return;
       }
@@ -249,14 +255,14 @@ export function ImageGallery({
       } catch (error) {
         setDeleteError(
           isApiError(error)
-            ? error.detail
-            : "We couldn't delete the image. Please try again."
+            ? t(error.detail)
+            : t("We couldn't delete the image. Please try again.")
         );
       } finally {
         setDeletePendingId(null);
       }
     },
-    [deletePendingId, itemId, loadImages]
+    [deletePendingId, itemId, loadImages, t]
   );
 
   return (
@@ -264,14 +270,15 @@ export function ImageGallery({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            Image gallery
+            {t("Image gallery")}
           </p>
           <h3 className="font-display mt-3 text-2xl text-stone-900">
-            Arrange item imagery
+            {t("Arrange item imagery")}
           </h3>
           <p className="mt-3 max-w-xl text-sm text-stone-600">
-            Drag images to reorder them or use the move controls to fine-tune the
-            sequence.
+            {t(
+              "Drag images to reorder them or use the move controls to fine-tune the sequence."
+            )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -281,7 +288,7 @@ export function ImageGallery({
             disabled={!itemId}
           >
             <RefreshCcw className="h-4 w-4" />
-            Refresh
+            {t("Refresh")}
           </Button>
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
             <ImageIcon className="h-6 w-6" />
@@ -292,28 +299,32 @@ export function ImageGallery({
       <div className="mt-6 space-y-4">
         {reorderError ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs text-rose-700">
-            {reorderError}
+            {t(reorderError)}
           </div>
         ) : null}
 
         {deleteError ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs text-rose-700">
-            {deleteError}
+            {t(deleteError)}
           </div>
         ) : null}
 
         {!canInteract ? (
           <div className="text-xs text-stone-500">
-            Finish loading the item to manage image order.
+            {t("Finish loading the item to manage image order.")}
           </div>
         ) : null}
 
         {isReordering ? (
-          <div className="text-xs text-amber-700">Saving image order...</div>
+          <div className="text-xs text-amber-700">
+            {t("Saving image order...")}
+          </div>
         ) : null}
 
         {deletePendingId !== null ? (
-          <div className="text-xs text-amber-700">Deleting image...</div>
+          <div className="text-xs text-amber-700">
+            {t("Deleting image...")}
+          </div>
         ) : null}
 
         {status === "loading" ? (
@@ -321,25 +332,25 @@ export function ImageGallery({
             className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500"
             aria-busy="true"
           >
-            Loading images...
+            {t("Loading images...")}
           </div>
         ) : status === "error" ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-6">
             <p className="text-sm font-medium text-rose-700">
-              We couldn&apos;t load the image gallery.
+              {t("We couldn't load the image gallery.")}
             </p>
             <p className="mt-2 text-sm text-rose-600">
-              {loadError ?? "Please try again."}
+              {loadError ?? t("Please try again.")}
             </p>
             <div className="mt-4">
               <Button size="sm" variant="outline" onClick={() => loadImages()}>
-                Try again
+                {t("Try again")}
               </Button>
             </div>
           </div>
         ) : images.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-            No images yet. Upload imagery to start building this gallery.
+            {t("No images yet. Upload imagery to start building this gallery.")}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -369,7 +380,9 @@ export function ImageGallery({
                           : "border-stone-200 bg-stone-50 hover:border-stone-300"
                       )}
                       draggable={canInteract && !isBusy}
-                      aria-label={`Drag to reorder ${image.filename}`}
+                      aria-label={t("Drag to reorder {filename}", {
+                        filename: image.filename || t("this image")
+                      })}
                       onDragStart={(event) =>
                         handleDragStart(event, image.id)
                       }
@@ -389,13 +402,13 @@ export function ImageGallery({
                       onClick={() =>
                         setLightboxImage({
                           src: imageApi.url(image.id, "original"),
-                          alt: image.filename || "Item image"
+                          alt: image.filename || t("Item image")
                         })
                       }
                     >
                       <img
                         src={imageApi.url(image.id, "medium")}
-                        alt={image.filename || "Item image"}
+                        alt={image.filename || t("Item image")}
                         className="block h-36 w-full object-cover"
                         loading="lazy"
                       />
@@ -404,10 +417,12 @@ export function ImageGallery({
 
                   <div className="mt-3">
                     <p className="truncate text-sm font-medium text-stone-900">
-                      {image.filename || "Untitled image"}
+                      {image.filename || t("Untitled image")}
                     </p>
                     <p className="mt-1 text-xs text-stone-500">
-                      Added {formatDate(image.created_at)}
+                      {t("Added {date}", {
+                        date: formatDate(image.created_at, locale)
+                      })}
                     </p>
                   </div>
 
@@ -419,7 +434,7 @@ export function ImageGallery({
                       disabled={!canInteract || isBusy || isFirst}
                     >
                       <ArrowLeft className="h-4 w-4" />
-                      Move left
+                      {t("Move left")}
                     </Button>
                     <Button
                       size="sm"
@@ -428,7 +443,7 @@ export function ImageGallery({
                       disabled={!canInteract || isBusy || isLast}
                     >
                       <ArrowRight className="h-4 w-4" />
-                      Move right
+                      {t("Move right")}
                     </Button>
                     {editable ? (
                       <Button
@@ -439,7 +454,9 @@ export function ImageGallery({
                         disabled={!canEdit || isBusy}
                       >
                         <Trash2 className="h-4 w-4" />
-                        {deletePendingId === image.id ? "Deleting..." : "Delete"}
+                        {deletePendingId === image.id
+                          ? t("Deleting...")
+                          : t("Delete")}
                       </Button>
                     ) : null}
                   </div>

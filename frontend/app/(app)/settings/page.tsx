@@ -15,27 +15,16 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { authApi, isApiError } from "@/lib/api";
 
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return "—";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  }).format(parsed);
-};
+const DELETE_TOKEN = "DELETE";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, logout, refresh } = useAuth();
+  const { t, locale, availableLocales, setLocale } = useI18n();
   const [resetEmail, setResetEmail] = React.useState("");
   const [resetState, setResetState] = React.useState<{
     status: "idle" | "sending" | "sent" | "error";
@@ -46,6 +35,24 @@ export default function SettingsPage() {
     status: "idle" | "working" | "error";
     message?: string;
   }>({ status: "idle" });
+
+  const formatDate = React.useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return "—";
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return value;
+      }
+      return new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }).format(parsed);
+    },
+    [locale]
+  );
 
   React.useEffect(() => {
     if (user?.email && !resetEmail) {
@@ -96,27 +103,28 @@ export default function SettingsPage() {
     }
   };
 
-  const confirmPhraseMatches = deletePhrase.trim().toUpperCase() === "DELETE";
+  const confirmPhraseMatches = deletePhrase.trim().toUpperCase() === DELETE_TOKEN;
 
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div>
           <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-            Settings
+            {t("Settings")}
           </p>
           <h1 className="font-display mt-4 text-3xl text-stone-900">
-            Profile and security controls.
+            {t("Profile and security controls.")}
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-stone-600">
-            Review account details, manage password access, and stay in control of
-            your archive session.
+            {t(
+              "Review account details, manage password access, and stay in control of your archive session."
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => refresh()}>
             <RefreshCcw className="h-4 w-4" />
-            Refresh profile
+            {t("Refresh profile")}
           </Button>
         </div>
       </header>
@@ -126,10 +134,10 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                Account overview
+                {t("Account overview")}
               </p>
               <h2 className="font-display mt-3 text-2xl text-stone-900">
-                Keep your archive identity current.
+                {t("Keep your archive identity current.")}
               </h2>
             </div>
             <span
@@ -140,7 +148,7 @@ export default function SettingsPage() {
               }`}
             >
               <BadgeCheck className="h-3.5 w-3.5" />
-              {user?.is_verified ? "Verified" : "Verification pending"}
+              {user?.is_verified ? t("Verified") : t("Verification pending")}
             </span>
           </div>
 
@@ -148,52 +156,52 @@ export default function SettingsPage() {
             <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-stone-500">
                 <Mail className="h-4 w-4 text-amber-700" />
-                Email address
+                {t("Email address")}
               </div>
               <p className="mt-3 text-sm font-medium text-stone-900">
                 {user?.email ?? "—"}
               </p>
               <p className="mt-2 text-xs text-stone-500">
-                Use this email to log in and receive notices.
+                {t("Use this email to log in and receive notices.")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-stone-500">
                 <CalendarDays className="h-4 w-4 text-amber-700" />
-                Member since
+                {t("Member since")}
               </div>
               <p className="mt-3 text-sm font-medium text-stone-900">
                 {formatDate(user?.created_at)}
               </p>
               <p className="mt-2 text-xs text-stone-500">
-                Account created in your studio archive.
+                {t("Account created in your studio archive.")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-stone-500">
                 <ShieldCheck className="h-4 w-4 text-amber-700" />
-                Status
+                {t("Status")}
               </div>
               <p className="mt-3 text-sm font-medium text-stone-900">
-                {user?.is_active ? "Active" : "Inactive"}
+                {user?.is_active ? t("Active") : t("Inactive")}
               </p>
               <p className="mt-2 text-xs text-stone-500">
-                Contact support if your account is inactive.
+                {t("Contact support if your account is inactive.")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-stone-500">
                 <KeyRound className="h-4 w-4 text-amber-700" />
-                Account ID
+                {t("Account ID")}
               </div>
               <p className="mt-3 text-sm font-medium text-stone-900">
                 {user ? `#${user.id}` : "—"}
               </p>
               <p className="mt-2 text-xs text-stone-500">
-                Keep this handy for support requests.
+                {t("Keep this handy for support requests.")}
               </p>
             </div>
           </div>
@@ -201,27 +209,28 @@ export default function SettingsPage() {
 
         <div className="rounded-3xl border border-stone-200 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-            Security snapshot
+            {t("Security snapshot")}
           </p>
           <h3 className="font-display mt-4 text-2xl">
-            Stay protected across every session.
+            {t("Stay protected across every session.")}
           </h3>
           <p className="mt-3 text-sm text-stone-300">
-            Rotate passwords regularly and verify your email to keep access under
-            your control.
+            {t(
+              "Rotate passwords regularly and verify your email to keep access under your control."
+            )}
           </p>
           <div className="mt-6 space-y-3 text-sm text-stone-200">
             <div className="flex items-start gap-3">
               <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              Password reset links expire quickly for safety.
+              {t("Password reset links expire quickly for safety.")}
             </div>
             <div className="flex items-start gap-3">
               <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              Verification status updates after email confirmation.
+              {t("Verification status updates after email confirmation.")}
             </div>
             <div className="flex items-start gap-3">
               <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              Delete actions remove collections, items, and images.
+              {t("Delete actions remove collections, items, and images.")}
             </div>
           </div>
         </div>
@@ -230,19 +239,57 @@ export default function SettingsPage() {
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            Password access
+            {t("Language preferences")}
           </p>
           <h2 className="font-display mt-3 text-2xl text-stone-900">
-            Send a reset link.
+            {t("Choose your display language.")}
           </h2>
           <p className="mt-3 text-sm text-stone-600">
-            We will email a secure reset link to the address below.
+            {t(
+              "We default to your browser language. Choose another to override it."
+            )}
+          </p>
+
+          <div className="mt-6">
+            <label
+              className="text-sm font-medium text-stone-700"
+              htmlFor="language-select"
+            >
+              {t("Display language")}
+            </label>
+            <select
+              id="language-select"
+              className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              value={locale}
+              onChange={(event) => setLocale(event.target.value as typeof locale)}
+            >
+              {availableLocales.map((language) => (
+                <option key={language} value={language}>
+                  {language === "de" ? t("German") : t("English")}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs text-stone-500">
+              {t("Changes apply immediately and stay on this device.")}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            {t("Password access")}
+          </p>
+          <h2 className="font-display mt-3 text-2xl text-stone-900">
+            {t("Send a reset link.")}
+          </h2>
+          <p className="mt-3 text-sm text-stone-600">
+            {t("We will email a secure reset link to the address below.")}
           </p>
 
           <form className="mt-6 space-y-4" onSubmit={handlePasswordReset}>
             <div>
               <label className="text-sm font-medium text-stone-700" htmlFor="reset-email">
-                Email address
+                {t("Email address")}
               </label>
               <input
                 id="reset-email"
@@ -259,7 +306,7 @@ export default function SettingsPage() {
                 role="alert"
                 className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
               >
-                {resetState.message}
+                {t(resetState.message)}
               </div>
             ) : null}
             {resetState.status === "sent" && resetState.message ? (
@@ -267,42 +314,46 @@ export default function SettingsPage() {
                 role="status"
                 className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
               >
-                {resetState.message}
+                {t(resetState.message)}
               </div>
             ) : null}
 
             <Button type="submit" disabled={resetState.status === "sending"}>
-              {resetState.status === "sending" ? "Sending..." : "Send reset link"}
+              {resetState.status === "sending"
+                ? t("Sending...")
+                : t("Send reset link")}
             </Button>
           </form>
         </div>
 
         <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            Active session
+            {t("Active session")}
           </p>
           <h2 className="font-display mt-3 text-2xl text-stone-900">
-            Manage your current login.
+            {t("Manage your current login.")}
           </h2>
           <p className="mt-3 text-sm text-stone-600">
-            Log out from this device, or refresh to sync the latest profile data.
+            {t(
+              "Log out from this device, or refresh to sync the latest profile data."
+            )}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Button variant="outline" onClick={() => refresh()}>
               <RefreshCcw className="h-4 w-4" />
-              Refresh profile
+              {t("Refresh profile")}
             </Button>
             <Button variant="ghost" onClick={() => logout()}>
               <LogOut className="h-4 w-4" />
-              Log out
+              {t("Log out")}
             </Button>
           </div>
 
           <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 text-sm text-stone-600">
-            <p className="font-medium text-stone-700">Tip</p>
+            <p className="font-medium text-stone-700">{t("Tip")}</p>
             <p className="mt-2">
-              For shared devices, log out after each cataloguing session.
+              {t("For shared devices, log out after each cataloguing session.")}
             </p>
           </div>
         </div>
@@ -312,14 +363,16 @@ export default function SettingsPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
-              Danger zone
+              {t("Danger zone")}
             </p>
             <h2 className="font-display mt-3 text-2xl text-stone-900">
-              Permanently delete this account.
+              {t("Permanently delete this account.")}
             </h2>
             <p className="mt-3 max-w-2xl text-sm text-rose-700">
-              This removes all collections, items, and images tied to your account.
-              Type DELETE to confirm.
+              {t(
+                "This removes all collections, items, and images tied to your account. Type {token} to confirm.",
+                { token: DELETE_TOKEN }
+              )}
             </p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
@@ -330,7 +383,7 @@ export default function SettingsPage() {
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
           <div>
             <label className="text-sm font-medium text-rose-700" htmlFor="delete-confirm">
-              Confirmation phrase
+              {t("Confirmation phrase")}
             </label>
             <input
               id="delete-confirm"
@@ -338,7 +391,7 @@ export default function SettingsPage() {
               className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
               value={deletePhrase}
               onChange={(event) => setDeletePhrase(event.target.value)}
-              placeholder="Type DELETE to confirm"
+              placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}
             />
           </div>
           <div className="flex items-end">
@@ -350,7 +403,9 @@ export default function SettingsPage() {
               onClick={handleDeleteAccount}
             >
               <Trash2 className="h-4 w-4" />
-              {deleteState.status === "working" ? "Deleting..." : "Delete account"}
+              {deleteState.status === "working"
+                ? t("Deleting...")
+                : t("Delete account")}
             </Button>
           </div>
         </div>
@@ -360,7 +415,7 @@ export default function SettingsPage() {
             role="alert"
             className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
           >
-            {deleteState.message}
+            {t(deleteState.message)}
           </div>
         ) : null}
       </section>

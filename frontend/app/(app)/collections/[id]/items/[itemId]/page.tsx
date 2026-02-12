@@ -17,6 +17,7 @@ import {
 import { ItemForm, type ItemFormValues } from "@/components/item-form";
 import { ImageGallery } from "@/components/image-gallery";
 import { ImageUploader } from "@/components/image-uploader";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
   collectionApi,
@@ -45,78 +46,16 @@ type DeleteState = {
   message?: string;
 };
 
-const fieldTypeLabels: Record<string, string> = {
-  text: "Text",
-  number: "Number",
-  date: "Date",
-  timestamp: "Timestamp",
-  checkbox: "Checkbox",
-  select: "Select"
-};
+const DELETE_TOKEN = "DELETE";
 
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return "—";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  }).format(parsed);
-};
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) {
-    return "—";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(parsed);
-};
-
-const formatFieldValue = (value: unknown, fieldType?: string) => {
-  if (value === null || value === undefined || value === "") {
-    return "—";
-  }
-
-  if (fieldType === "checkbox") {
-    return typeof value === "boolean" ? (value ? "Yes" : "No") : String(value);
-  }
-
-  if (fieldType === "number") {
-    return typeof value === "number" ? value.toLocaleString("en-US") : String(value);
-  }
-
-  if (fieldType === "date") {
-    return typeof value === "string" ? formatDate(value) : String(value);
-  }
-
-  if (fieldType === "timestamp") {
-    return typeof value === "string" ? formatDateTime(value) : String(value);
-  }
-
-  if (Array.isArray(value)) {
-    return value.join(", ");
-  }
-
-  if (typeof value === "object") {
-    return "Details";
-  }
-
-  return String(value);
-};
+const buildFieldTypeLabels = (t: (key: string) => string): Record<string, string> => ({
+  text: t("Text"),
+  number: t("Number"),
+  date: t("Date"),
+  timestamp: t("Timestamp"),
+  checkbox: t("Checkbox"),
+  select: t("Select")
+});
 
 const sortFields = (items: FieldDefinitionResponse[]) =>
   [...items].sort((a, b) => a.position - b.position || a.id - b.id);
@@ -124,10 +63,88 @@ const sortFields = (items: FieldDefinitionResponse[]) =>
 export default function ItemDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { t, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const itemId = Array.isArray(params?.itemId)
     ? params.itemId[0]
     : params?.itemId;
+
+  const fieldTypeLabels = React.useMemo(() => buildFieldTypeLabels(t), [t]);
+
+  const formatDate = React.useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return "—";
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return value;
+      }
+      return new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }).format(parsed);
+    },
+    [locale]
+  );
+
+  const formatDateTime = React.useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return "—";
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return value;
+      }
+      return new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      }).format(parsed);
+    },
+    [locale]
+  );
+
+  const formatFieldValue = React.useCallback(
+    (value: unknown, fieldType?: string) => {
+      if (value === null || value === undefined || value === "") {
+        return "—";
+      }
+
+      if (fieldType === "checkbox") {
+        return typeof value === "boolean" ? (value ? t("Yes") : t("No")) : String(value);
+      }
+
+      if (fieldType === "number") {
+        return typeof value === "number"
+          ? new Intl.NumberFormat(locale).format(value)
+          : String(value);
+      }
+
+      if (fieldType === "date") {
+        return typeof value === "string" ? formatDate(value) : String(value);
+      }
+
+      if (fieldType === "timestamp") {
+        return typeof value === "string" ? formatDateTime(value) : String(value);
+      }
+
+      if (Array.isArray(value)) {
+        return value.join(", ");
+      }
+
+      if (typeof value === "object") {
+        return t("Details");
+      }
+
+      return String(value);
+    },
+    [formatDate, formatDateTime, locale, t]
+  );
 
   const [collectionState, setCollectionState] = React.useState<
     LoadState<CollectionResponse>
@@ -178,7 +195,7 @@ export default function ItemDetailPage() {
   );
 
   const canEdit = itemState.status === "ready" && fieldsState.status !== "error";
-  const confirmDeleteMatches = deletePhrase.trim().toUpperCase() === "DELETE";
+  const confirmDeleteMatches = deletePhrase.trim().toUpperCase() === DELETE_TOKEN;
 
   const loadCollection = React.useCallback(async () => {
     if (!collectionId) {
@@ -348,38 +365,39 @@ export default function ItemDetailPage() {
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/collections/${collectionId ?? ""}`}>
               <ArrowLeft className="h-4 w-4" />
-              Back to collection
+              {t("Back to collection")}
             </Link>
           </Button>
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-              Item detail
+              {t("Item detail")}
             </p>
             <h1 className="font-display mt-4 text-3xl text-stone-900">
               {itemState.status === "ready" && itemState.data
                 ? itemState.data.name
-                : "Review item details"}
+                : t("Review item details")}
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-stone-600">
-              View metadata, notes, and the current schema for this catalogued
-              item.
+              {t(
+                "View metadata, notes, and the current schema for this catalogued item."
+              )}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCcw className="h-4 w-4" />
-            Refresh
+            {t("Refresh")}
           </Button>
           {itemState.status === "ready" ? (
             <Button
               variant={isEditing ? "ghost" : "secondary"}
               onClick={() => setIsEditing((prev) => !prev)}
               disabled={!canEdit}
-              title={!canEdit ? "Reload schema to edit this item." : undefined}
+              title={!canEdit ? t("Reload schema to edit this item.") : undefined}
             >
               <Pencil className="h-4 w-4" />
-              {isEditing ? "Cancel edit" : "Edit item"}
+              {isEditing ? t("Cancel edit") : t("Edit item")}
             </Button>
           ) : null}
         </div>
@@ -390,22 +408,22 @@ export default function ItemDetailPage() {
           className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
           aria-busy="true"
         >
-          Loading item details...
+          {t("Loading item details...")}
         </div>
       ) : itemState.status === "error" ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
           <p className="text-sm font-medium text-rose-700">
-            We hit a snag loading this item.
+            {t("We hit a snag loading this item.")}
           </p>
           <p className="mt-2 text-sm text-rose-600">
-            {itemState.error ?? "Please try again."}
+            {t(itemState.error ?? "Please try again.")}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Button variant="outline" onClick={handleRefresh}>
-              Try again
+              {t("Try again")}
             </Button>
             <Button variant="ghost" asChild>
-              <Link href="/collections">Back to collections</Link>
+              <Link href="/collections">{t("Back to collections")}</Link>
             </Button>
           </div>
         </div>
@@ -421,15 +439,15 @@ export default function ItemDetailPage() {
                 is_highlight: itemState.data?.is_highlight ?? false
               }}
               onSubmit={handleSubmit}
-              submitLabel="Save changes"
-              submitPendingLabel="Saving changes..."
+              submitLabel={t("Save changes")}
+              submitPendingLabel={t("Saving changes...")}
               secondaryAction={
                 <Button
                   variant="ghost"
                   type="button"
                   onClick={() => setIsEditing(false)}
                 >
-                  Cancel
+                  {t("Cancel")}
                 </Button>
               }
               formError={formError}
@@ -438,29 +456,32 @@ export default function ItemDetailPage() {
                   <div className="space-y-6">
                     <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
                       <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                        Edit item
+                        {t("Edit item")}
                       </p>
                       <h2 className="font-display mt-3 text-2xl text-stone-900">
-                        Update item information.
+                        {t("Update item information.")}
                       </h2>
                       <p className="mt-3 text-sm text-stone-600">
-                        Adjust the item name, notes, and schema-specific metadata
-                        fields.
+                        {t(
+                          "Adjust the item name, notes, and schema-specific metadata fields."
+                        )}
                       </p>
 
                       <div className="mt-6 space-y-6">
                         {fieldsState.status === "loading" ? (
                           <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-                            Loading schema fields...
+                            {t("Loading schema fields...")}
                           </div>
                         ) : fieldsState.status === "error" ? (
                           <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                             <p>
-                              {fieldsState.error ??
-                                "We couldn't load the schema fields. Please try again."}
+                              {t(
+                                fieldsState.error ??
+                                  "We couldn't load the schema fields. Please try again."
+                              )}
                             </p>
                             <Button size="sm" variant="outline" onClick={loadFields}>
-                              Try again
+                              {t("Try again")}
                             </Button>
                           </div>
                         ) : (
@@ -491,12 +512,14 @@ export default function ItemDetailPage() {
                     <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
                       {fieldsState.status === "loading" ? (
                         <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-                          Loading schema fields...
+                          {t("Loading schema fields...")}
                         </div>
                       ) : fieldsState.status === "error" ? (
                         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                          {fieldsState.error ??
-                            "We couldn't load schema fields. Metadata may be incomplete."}
+                          {t(
+                            fieldsState.error ??
+                              "We couldn't load schema fields. Metadata may be incomplete."
+                          )}
                         </div>
                       ) : (
                         metadataFields
@@ -507,14 +530,16 @@ export default function ItemDetailPage() {
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
-                            Danger zone
+                            {t("Danger zone")}
                           </p>
                           <h3 className="font-display mt-3 text-2xl text-stone-900">
-                            Permanently delete this item.
+                            {t("Permanently delete this item.")}
                           </h3>
                           <p className="mt-3 text-sm text-rose-700">
-                            This removes the item and any attached imagery. Type DELETE
-                            to confirm.
+                            {t(
+                              "This removes the item and any attached imagery. Type {token} to confirm.",
+                              { token: DELETE_TOKEN }
+                            )}
                           </p>
                         </div>
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
@@ -528,7 +553,7 @@ export default function ItemDetailPage() {
                             className="text-sm font-medium text-rose-700"
                             htmlFor="delete-confirm"
                           >
-                            Confirmation phrase
+                            {t("Confirmation phrase")}
                           </label>
                           <input
                             id="delete-confirm"
@@ -536,7 +561,7 @@ export default function ItemDetailPage() {
                             className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
                             value={deletePhrase}
                             onChange={(event) => setDeletePhrase(event.target.value)}
-                            placeholder="Type DELETE to confirm"
+                            placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}
                           />
                         </div>
                         <Button
@@ -548,8 +573,8 @@ export default function ItemDetailPage() {
                         >
                           <Trash2 className="h-4 w-4" />
                           {deleteState.status === "working"
-                            ? "Deleting..."
-                            : "Delete item"}
+                            ? t("Deleting...")
+                            : t("Delete item")}
                         </Button>
                       </div>
 
@@ -558,7 +583,7 @@ export default function ItemDetailPage() {
                           role="alert"
                           className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
                         >
-                          {deleteState.message}
+                          {t(deleteState.message)}
                         </div>
                       ) : null}
                     </div>
@@ -571,13 +596,13 @@ export default function ItemDetailPage() {
               <div className="contents lg:block lg:space-y-6">
                 <div className="order-2 rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm lg:order-none">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                    Item overview
+                    {t("Item overview")}
                   </p>
                   <div className="mt-6 space-y-6">
                     <p className="text-sm text-stone-600">
                       {collectionName
-                        ? `Collection: ${collectionName}`
-                        : "Collection details unavailable."}
+                        ? t("Collection: {name}", { name: collectionName })
+                        : t("Collection details unavailable.")}
                     </p>
 
                     {saveMessage ? (
@@ -585,7 +610,7 @@ export default function ItemDetailPage() {
                         role="status"
                         className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
                       >
-                        {saveMessage}
+                        {t(saveMessage)}
                       </div>
                     ) : null}
 
@@ -593,10 +618,10 @@ export default function ItemDetailPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                            Notes
+                            {t("Notes")}
                           </p>
                           <p className="mt-2 text-sm text-stone-600">
-                            {itemState.data?.notes ? "" : "No notes added yet."}
+                            {itemState.data?.notes ? "" : t("No notes added yet.")}
                           </p>
                         </div>
                         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-600">
@@ -633,10 +658,10 @@ export default function ItemDetailPage() {
               <div className="contents lg:block lg:space-y-6">
                 <div className="order-1 rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm lg:order-none">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                    Item snapshot
+                    {t("Item snapshot")}
                   </p>
                   <h3 className="font-display mt-3 text-2xl text-stone-900">
-                    Quick overview
+                    {t("Quick overview")}
                   </h3>
                   <div className="mt-6 space-y-4 text-sm text-stone-600">
                     <div className="flex items-start gap-3">
@@ -644,7 +669,7 @@ export default function ItemDetailPage() {
                         <CalendarDays className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="font-medium text-stone-900">Created</p>
+                        <p className="font-medium text-stone-900">{t("Created")}</p>
                         <p>{formatDate(itemState.data?.created_at)}</p>
                       </div>
                     </div>
@@ -653,7 +678,7 @@ export default function ItemDetailPage() {
                         <RefreshCcw className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="font-medium text-stone-900">Updated</p>
+                        <p className="font-medium text-stone-900">{t("Updated")}</p>
                         <p>{formatDate(itemState.data?.updated_at)}</p>
                       </div>
                     </div>
@@ -663,9 +688,9 @@ export default function ItemDetailPage() {
                       </div>
                       <div>
                         <p className="font-medium text-stone-900">
-                          Metadata fields
+                          {t("Metadata fields")}
                         </p>
-                        <p>{sortedFields.length} schema fields</p>
+                        <p>{t("{count} schema fields", { count: sortedFields.length })}</p>
                       </div>
                     </div>
                   </div>
@@ -673,29 +698,32 @@ export default function ItemDetailPage() {
 
                 <div className="order-3 rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm lg:order-none">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                    Metadata
+                    {t("Metadata")}
                   </p>
                   <h3 className="font-display mt-3 text-2xl text-stone-900">
-                    Schema attributes
+                    {t("Schema attributes")}
                   </h3>
                   <p className="mt-3 text-sm text-stone-600">
-                    Review each field captured for this item.
+                    {t("Review each field captured for this item.")}
                   </p>
 
                   <div className="mt-6">
                     {fieldsState.status === "loading" ? (
                       <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-                        Loading schema fields...
+                        {t("Loading schema fields...")}
                       </div>
                     ) : fieldsState.status === "error" ? (
                       <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                        {fieldsState.error ??
-                          "We couldn't load schema fields. Metadata may be incomplete."}
+                        {t(
+                          fieldsState.error ??
+                            "We couldn't load schema fields. Metadata may be incomplete."
+                        )}
                       </div>
                     ) : sortedFields.length === 0 ? (
                       <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-                        No schema fields yet. Define fields to capture structured
-                        metadata for this item.
+                        {t(
+                          "No schema fields yet. Define fields to capture structured metadata for this item."
+                        )}
                       </div>
                     ) : (
                       <div className="grid gap-4">
@@ -706,7 +734,7 @@ export default function ItemDetailPage() {
                             rawValue === undefined ||
                             rawValue === "";
                           const displayValue = isMissing
-                            ? "Not provided"
+                            ? t("Not provided")
                             : formatFieldValue(rawValue, field.field_type);
 
                           return (
@@ -721,14 +749,12 @@ export default function ItemDetailPage() {
                                 <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
                                   {fieldTypeLabels[field.field_type] ??
                                     field.field_type}
-                                  {field.is_required ? " · Required" : ""}
+                                  {field.is_required ? ` · ${t("Required")}` : ""}
                                 </span>
                               </div>
                               <p
                                 className={`mt-3 text-sm ${
-                                  isMissing
-                                    ? "text-stone-400"
-                                    : "text-stone-700"
+                                  isMissing ? "text-stone-400" : "text-stone-700"
                                 }`}
                               >
                                 {displayValue}
@@ -743,7 +769,7 @@ export default function ItemDetailPage() {
                   {additionalMetadata.length > 0 ? (
                     <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
                       <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                        Additional metadata
+                        {t("Additional metadata")}
                       </p>
                       <div className="mt-3 space-y-2 text-sm text-stone-600">
                         {additionalMetadata.map(([key, value]) => (
