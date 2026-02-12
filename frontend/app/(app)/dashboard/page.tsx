@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CalendarDays, Folder } from "lucide-react";
+import { CalendarDays, Folder, Star } from "lucide-react";
 
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
@@ -194,12 +194,20 @@ export default function DashboardPage() {
                       )}
                   </p>
                   <div className="mt-4 flex items-center justify-between text-xs text-stone-500">
-                    <span className="inline-flex items-center gap-2">
-                      <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
-                      {t("Created {date}", {
-                        date: formatDate(collection.created_at, locale)
-                      })}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="inline-flex items-center gap-2">
+                        <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
+                        {t("Created {date}", {
+                          date: formatDate(collection.created_at, locale)
+                        })}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 text-amber-600" />
+                        {t("{count} stars", {
+                          count: collection.star_count ?? 0
+                        })}
+                      </span>
+                    </div>
                     <Button size="sm" variant="secondary" asChild>
                       <Link href={`/collections/${collection.id}`}>
                         {t("Open")}

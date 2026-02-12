@@ -13,6 +13,7 @@ import {
   Menu,
   Search,
   Settings2,
+  Star,
   Sparkles,
   X
 } from "lucide-react";
@@ -53,6 +54,13 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
       description: t("Saved collections"),
       icon: Folder,
       match: ["/collections"]
+    },
+    {
+      label: t("Stars"),
+      href: "/stars",
+      description: t("Starred items and collections"),
+      icon: Star,
+      match: ["/stars"]
     },
     {
       label: t("Settings"),

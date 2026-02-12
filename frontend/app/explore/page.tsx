@@ -9,7 +9,8 @@ import {
   Globe2,
   LogOut,
   RefreshCcw,
-  Search
+  Search,
+  Star
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -377,11 +378,19 @@ export default function ExplorePage() {
                       t("This collection is ready to be explored.")}
                   </p>
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 text-xs text-stone-500">
-                      <CalendarDays className="h-4 w-4 text-amber-600" />
-                      {t("Created {date}", {
-                        date: formatDate(collection.created_at, locale)
-                      })}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
+                      <span className="inline-flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-amber-600" />
+                        {t("Created {date}", {
+                          date: formatDate(collection.created_at, locale)
+                        })}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-4 w-4 text-amber-600" />
+                        {t("{count} stars", {
+                          count: collection.star_count ?? 0
+                        })}
+                      </span>
                     </div>
                     <Button size="sm" variant="secondary" asChild>
                       <Link href={`/explore/${collection.id}`}>

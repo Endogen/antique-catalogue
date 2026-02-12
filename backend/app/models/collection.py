@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.collection_star import CollectionStar
     from app.models.field_definition import FieldDefinition
     from app.models.item import Item
     from app.models.user import User
@@ -41,5 +42,8 @@ class Collection(Base):
         back_populates="collection", cascade="all, delete-orphan", passive_deletes=True
     )
     items: Mapped[list[Item]] = relationship(
+        back_populates="collection", cascade="all, delete-orphan", passive_deletes=True
+    )
+    stars: Mapped[list[CollectionStar]] = relationship(
         back_populates="collection", cascade="all, delete-orphan", passive_deletes=True
     )

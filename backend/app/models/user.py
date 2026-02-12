@@ -10,7 +10,9 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.collection import Collection
+    from app.models.collection_star import CollectionStar
     from app.models.email_token import EmailToken
+    from app.models.item_star import ItemStar
 
 
 class User(Base):
@@ -37,4 +39,10 @@ class User(Base):
     )
     collections: Mapped[list[Collection]] = relationship(
         back_populates="owner", cascade="all, delete-orphan", passive_deletes=True
+    )
+    starred_collections: Mapped[list[CollectionStar]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    starred_items: Mapped[list[ItemStar]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )

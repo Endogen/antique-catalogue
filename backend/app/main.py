@@ -11,6 +11,7 @@ from app.api.images import serve_router as images_serve_router
 from app.api.items import public_router as public_items_router
 from app.api.items import router as items_router
 from app.api.search import router as search_router
+from app.api.stars import router as stars_router
 from app.core.exceptions import register_exception_handlers
 from app.core.settings import settings
 from app.schemas.responses import DEFAULT_ERROR_RESPONSES, HealthResponse
@@ -29,6 +30,7 @@ app.include_router(images_serve_router)
 app.include_router(public_collections_router)
 app.include_router(public_items_router)
 app.include_router(search_router)
+app.include_router(stars_router)
 
 
 @app.get("/health", response_model=HealthResponse)
