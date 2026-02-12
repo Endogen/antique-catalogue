@@ -8,6 +8,7 @@ class Base(DeclarativeBase):
 
 
 # Import models so Alembic can discover metadata.
+from app.models.activity_log import ActivityLog  # noqa: E402,F401
 from app.models.collection import Collection  # noqa: E402,F401
 from app.models.email_token import EmailToken  # noqa: E402,F401
 from app.models.field_definition import FieldDefinition  # noqa: E402,F401

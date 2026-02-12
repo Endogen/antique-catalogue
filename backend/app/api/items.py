@@ -15,6 +15,7 @@ from app.models.item_image import ItemImage
 from app.models.user import User
 from app.schemas.items import ItemCreateRequest, ItemResponse, ItemUpdateRequest
 from app.schemas.responses import MessageResponse
+from app.services.activity import log_activity
 from app.services.metadata import MetadataValidationError, validate_metadata
 
 router = APIRouter(prefix="/collections/{collection_id}/items", tags=["items"])
@@ -382,7 +383,7 @@ def create_item(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ItemResponse:
-    _get_collection_or_404(db, collection_id, current_user.id)
+    collection = _get_collection_or_404(db, collection_id, current_user.id)
     field_definitions = _get_field_definitions(db, collection_id)
     metadata = _validate_metadata_or_422(field_definitions, request.metadata)
 
@@ -394,6 +395,15 @@ def create_item(
         is_highlight=request.is_highlight,
     )
     db.add(item)
+    db.flush()
+    log_activity(
+        db,
+        user_id=current_user.id,
+        action_type="item.created",
+        resource_type="item",
+        resource_id=item.id,
+        summary=f'Created item "{item.name}" in "{collection.name}".',
+    )
     db.commit()
     db.refresh(item)
     return item
@@ -429,6 +439,7 @@ def update_item(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ItemResponse:
+    collection = _get_collection_or_404(db, collection_id, current_user.id)
     item = _get_item_or_404(db, collection_id, item_id, current_user.id)
     data = request.model_dump(exclude_unset=True)
 
@@ -444,6 +455,15 @@ def update_item(
         item.is_highlight = data["is_highlight"]
 
     db.add(item)
+    if data:
+        log_activity(
+            db,
+            user_id=current_user.id,
+            action_type="item.updated",
+            resource_type="item",
+            resource_id=item.id,
+            summary=f'Updated item "{item.name}" in "{collection.name}".',
+        )
     db.commit()
     db.refresh(item)
     return item
@@ -456,7 +476,16 @@ def delete_item(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MessageResponse:
+    collection = _get_collection_or_404(db, collection_id, current_user.id)
     item = _get_item_or_404(db, collection_id, item_id, current_user.id)
+    log_activity(
+        db,
+        user_id=current_user.id,
+        action_type="item.deleted",
+        resource_type="item",
+        resource_id=item.id,
+        summary=f'Deleted item "{item.name}" from "{collection.name}".',
+    )
     db.delete(item)
     db.commit()
     return MessageResponse(message="Item deleted")

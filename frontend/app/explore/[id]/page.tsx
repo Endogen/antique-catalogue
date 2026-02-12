@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -293,9 +294,13 @@ export default function PublicCollectionPage() {
       <header className="border-b border-stone-200/80 bg-stone-50/80 px-6 py-6 backdrop-blur lg:px-12">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-stone-900 text-sm font-semibold text-stone-50">
-              AC
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Antique Catalogue"
+              width={44}
+              height={44}
+              className="rounded-full"
+            />
             <div>
               <p className="font-display text-lg tracking-tight">
                 {t("Antique Catalogue")}
@@ -505,7 +510,7 @@ export default function PublicCollectionPage() {
                     checked={filterHighlight}
                     onChange={(event) => setFilterHighlight(event.target.checked)}
                   />
-                  {t("Highlight")}
+                  {t("Spotlight")}
                 </label>
               </div>
             </div>

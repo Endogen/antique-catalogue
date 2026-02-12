@@ -483,7 +483,7 @@ export function ItemForm({
               className="text-sm font-medium text-stone-800"
               htmlFor="is_highlight"
             >
-              {t("Highlight item")}
+              {t("Spotlight item")}
             </label>
             <p className="mt-1 text-xs text-stone-600">
               {t("Adds a warm glow to featured items across the catalogue.")}

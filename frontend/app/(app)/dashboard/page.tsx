@@ -6,11 +6,23 @@ import { CalendarDays, Folder } from "lucide-react";
 
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { collectionApi, isApiError, type CollectionResponse } from "@/lib/api";
+import {
+  activityApi,
+  collectionApi,
+  isApiError,
+  type ActivityLogResponse,
+  type CollectionResponse
+} from "@/lib/api";
 
-type LoadState = {
+type CollectionsState = {
   status: "loading" | "ready" | "error";
   data: CollectionResponse[];
+  error?: string;
+};
+
+type ActivityState = {
+  status: "loading" | "ready" | "error";
+  data: ActivityLogResponse[];
   error?: string;
 };
 
@@ -29,27 +41,50 @@ const formatDate = (value: string | null | undefined, locale: string) => {
   }).format(parsed);
 };
 
+const formatDateTime = (value: string | null | undefined, locale: string) => {
+  if (!value) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(parsed);
+};
+
+const formatActionType = (value: string) => value.replace(/[._-]+/g, " ");
+
 export default function DashboardPage() {
   const { t, locale } = useI18n();
-  const [state, setState] = React.useState<LoadState>({
+  const [collectionsState, setCollectionsState] = React.useState<CollectionsState>({
+    status: "loading",
+    data: []
+  });
+  const [activityState, setActivityState] = React.useState<ActivityState>({
     status: "loading",
     data: []
   });
 
   const loadCollections = React.useCallback(async () => {
-    setState((prev) => ({
+    setCollectionsState((prev) => ({
       ...prev,
       status: "loading",
       error: undefined
     }));
     try {
       const data = await collectionApi.list();
-      setState({
+      setCollectionsState({
         status: "ready",
         data
       });
     } catch (error) {
-      setState((prev) => ({
+      setCollectionsState((prev) => ({
         status: "error",
         data: prev.data,
         error: isApiError(error)
@@ -59,66 +94,47 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const loadActivity = React.useCallback(async () => {
+    setActivityState((prev) => ({
+      ...prev,
+      status: "loading",
+      error: undefined
+    }));
+    try {
+      const data = await activityApi.list({ limit: 5 });
+      setActivityState({
+        status: "ready",
+        data
+      });
+    } catch (error) {
+      setActivityState((prev) => ({
+        status: "error",
+        data: prev.data,
+        error: isApiError(error) ? error.detail : "Activity unavailable right now."
+      }));
+    }
+  }, []);
+
   React.useEffect(() => {
     void loadCollections();
-  }, [loadCollections]);
+    void loadActivity();
+  }, [loadActivity, loadCollections]);
 
-  const totalCount = state.data.length;
-  const hasCollections = state.status === "ready" && totalCount > 0;
+  const totalCount = collectionsState.data.length;
+  const hasCollections = collectionsState.status === "ready" && totalCount > 0;
   const recentCollections = React.useMemo(() => {
-    return [...state.data]
+    return [...collectionsState.data]
       .sort((a, b) => {
         const aDate = new Date(a.updated_at ?? a.created_at ?? 0).getTime();
         const bDate = new Date(b.updated_at ?? b.created_at ?? 0).getTime();
         return bDate - aDate;
       })
       .slice(0, 2);
-  }, [state.data]);
+  }, [collectionsState.data]);
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-        <p className="text-xs uppercase tracking-[0.4em] text-stone-500">
-          {t("Getting started")}
-        </p>
-        <h1 className="font-display mt-4 text-3xl text-stone-900">
-          {hasCollections
-            ? t("Your archive is in motion.")
-            : t("Your archive is ready for its first collection.")}
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm text-stone-600">
-          {hasCollections
-            ? t(
-                "Pick up where you left off, refine metadata, and keep adding items and imagery."
-              )
-            : t(
-                "Create a collection to define your metadata schema, then begin adding items and imagery. Everything stays organized in one place."
-              )}
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          {hasCollections ? (
-            <>
-              <Button asChild>
-                <Link href="/collections">{t("View collections")}</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/collections/new">{t("New collection")}</Link>
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button asChild>
-                <Link href="/collections/new">{t("Create collection")}</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/explore">{t("Browse public collections")}</Link>
-              </Button>
-            </>
-          )}
-        </div>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <section className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
         <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
             {t("Your collections")}
@@ -138,15 +154,15 @@ export default function DashboardPage() {
                 )}
           </p>
 
-          {state.status === "loading" ? (
+          {collectionsState.status === "loading" ? (
             <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/60 p-4 text-sm text-stone-500">
               {t("Loading your collections...")}
             </div>
-          ) : state.status === "error" ? (
+          ) : collectionsState.status === "error" ? (
             <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-sm text-rose-600">
-              {t(state.error ?? "We couldn't load your collections.")}
+              {t(collectionsState.error ?? "We couldn't load your collections.")}
             </div>
-          ) : state.data.length === 0 ? (
+          ) : collectionsState.data.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 text-sm text-stone-600">
               {t("No collections yet. Create one to start cataloguing.")}
             </div>
@@ -205,24 +221,66 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-stone-200 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-            {t("Studio checklist")}
-          </p>
-          <ul className="mt-4 space-y-3 text-sm">
-            <li className="flex items-start gap-3">
-              <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              {t("Sketch your first collection story.")}
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              {t("Prepare a lighting setup for mobile photos.")}
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-              {t("Invite a collaborator when you are ready.")}
-            </li>
-          </ul>
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+              {t("Recent activity")}
+            </p>
+            <h2 className="font-display mt-3 text-2xl text-stone-900">
+              {t("Latest updates from your archive.")}
+            </h2>
+            {activityState.status === "loading" && activityState.data.length === 0 ? (
+              <p className="mt-4 text-sm text-stone-500">
+                {t("Loading activity...")}
+              </p>
+            ) : activityState.status === "error" && activityState.data.length === 0 ? (
+              <p className="mt-4 text-sm text-rose-600">
+                {t(activityState.error ?? "Activity unavailable right now.")}
+              </p>
+            ) : activityState.data.length === 0 ? (
+              <p className="mt-4 text-sm text-stone-600">
+                {t("No activity yet. Create a collection to start your timeline.")}
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {activityState.data.map((entry) => {
+                  const isNewItemEntry = entry.action_type === "item.created";
+                  const targetHref =
+                    entry.target_path ??
+                    (entry.resource_type === "collection" && entry.resource_id
+                      ? `/collections/${entry.resource_id}`
+                      : null);
+                  return (
+                    <li
+                      key={entry.id}
+                      className="rounded-2xl border border-stone-200 bg-white p-3"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs uppercase tracking-[0.2em] text-amber-700">
+                          {formatActionType(entry.action_type)}
+                        </p>
+                        <span className="text-xs text-stone-500">
+                          {formatDateTime(entry.created_at, locale)}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-stone-900">
+                          {entry.summary}
+                        </p>
+                        {targetHref ? (
+                          <Button size="sm" variant="ghost" asChild>
+                            <Link href={targetHref}>
+                              {isNewItemEntry ? t("View") : t("Open")}
+                            </Link>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
       </section>
     </div>
