@@ -412,134 +412,160 @@ export default function ItemDetailPage() {
       ) : (
         <section className="space-y-6">
           {isEditing ? (
-            <div className="space-y-6">
-              <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-                <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                  Edit item
-                </p>
-                <h2 className="font-display mt-3 text-2xl text-stone-900">
-                  Update item information.
-                </h2>
-                <p className="mt-3 text-sm text-stone-600">
-                  Adjust the item name, notes, and schema-specific metadata
-                  fields.
-                </p>
-
-                <div className="mt-6">
-                  {fieldsState.status === "loading" ? (
-                    <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-                      Loading schema fields...
-                    </div>
-                  ) : fieldsState.status === "error" ? (
-                    <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                      <p>
-                        {fieldsState.error ??
-                          "We couldn't load the schema fields. Please try again."}
+            <ItemForm
+              fields={fieldsState.data}
+              initialValues={{
+                name: itemState.data?.name ?? "",
+                notes: itemState.data?.notes ?? "",
+                metadata: itemState.data?.metadata ?? null,
+                is_highlight: itemState.data?.is_highlight ?? false
+              }}
+              onSubmit={handleSubmit}
+              submitLabel="Save changes"
+              submitPendingLabel="Saving changes..."
+              secondaryAction={
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancel
+                </Button>
+              }
+              formError={formError}
+              render={({ formError: formErrorNode, baseFields, metadataFields, actions }) => (
+                <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
+                  <div className="space-y-6">
+                    <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+                      <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                        Edit item
                       </p>
-                      <Button size="sm" variant="outline" onClick={loadFields}>
-                        Try again
-                      </Button>
+                      <h2 className="font-display mt-3 text-2xl text-stone-900">
+                        Update item information.
+                      </h2>
+                      <p className="mt-3 text-sm text-stone-600">
+                        Adjust the item name, notes, and schema-specific metadata
+                        fields.
+                      </p>
+
+                      <div className="mt-6 space-y-6">
+                        {fieldsState.status === "loading" ? (
+                          <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+                            Loading schema fields...
+                          </div>
+                        ) : fieldsState.status === "error" ? (
+                          <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                            <p>
+                              {fieldsState.error ??
+                                "We couldn't load the schema fields. Please try again."}
+                            </p>
+                            <Button size="sm" variant="outline" onClick={loadFields}>
+                              Try again
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            {formErrorNode}
+                            {baseFields}
+                            {actions}
+                          </>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <ItemForm
-                      fields={fieldsState.data}
-                      initialValues={{
-                        name: itemState.data?.name ?? "",
-                        notes: itemState.data?.notes ?? "",
-                        metadata: itemState.data?.metadata ?? null,
-                        is_highlight: itemState.data?.is_highlight ?? false
-                      }}
-                      onSubmit={handleSubmit}
-                      submitLabel="Save changes"
-                      submitPendingLabel="Saving changes..."
-                      secondaryAction={
+
+                    <ImageGallery
+                      itemId={itemId ?? null}
+                      disabled={itemState.status !== "ready"}
+                      refreshToken={imageRefreshToken}
+                      editable={isEditing}
+                    />
+
+                    <ImageUploader
+                      itemId={itemId ?? null}
+                      disabled={itemState.status !== "ready"}
+                      onUploaded={handleImageUploaded}
+                    />
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+                      {fieldsState.status === "loading" ? (
+                        <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+                          Loading schema fields...
+                        </div>
+                      ) : fieldsState.status === "error" ? (
+                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                          {fieldsState.error ??
+                            "We couldn't load schema fields. Metadata may be incomplete."}
+                        </div>
+                      ) : (
+                        metadataFields
+                      )}
+                    </div>
+
+                    <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
+                            Danger zone
+                          </p>
+                          <h3 className="font-display mt-3 text-2xl text-stone-900">
+                            Permanently delete this item.
+                          </h3>
+                          <p className="mt-3 text-sm text-rose-700">
+                            This removes the item and any attached imagery. Type DELETE
+                            to confirm.
+                          </p>
+                        </div>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+                          <ShieldAlert className="h-6 w-6" />
+                        </div>
+                      </div>
+
+                      <div className="mt-6 grid gap-4">
+                        <div>
+                          <label
+                            className="text-sm font-medium text-rose-700"
+                            htmlFor="delete-confirm"
+                          >
+                            Confirmation phrase
+                          </label>
+                          <input
+                            id="delete-confirm"
+                            type="text"
+                            className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                            value={deletePhrase}
+                            onChange={(event) => setDeletePhrase(event.target.value)}
+                            placeholder="Type DELETE to confirm"
+                          />
+                        </div>
                         <Button
-                          variant="ghost"
                           type="button"
-                          onClick={() => setIsEditing(false)}
+                          variant="outline"
+                          className="border-rose-200 text-rose-700 hover:bg-rose-100"
+                          disabled={!confirmDeleteMatches || deleteState.status === "working"}
+                          onClick={handleDelete}
                         >
-                          Cancel
+                          <Trash2 className="h-4 w-4" />
+                          {deleteState.status === "working"
+                            ? "Deleting..."
+                            : "Delete item"}
                         </Button>
-                      }
-                      formError={formError}
-                    />
-                  )}
-                </div>
-              </div>
+                      </div>
 
-              <ImageGallery
-                itemId={itemId ?? null}
-                disabled={itemState.status !== "ready"}
-                refreshToken={imageRefreshToken}
-                editable={isEditing}
-              />
-
-              <ImageUploader
-                itemId={itemId ?? null}
-                disabled={itemState.status !== "ready"}
-                onUploaded={handleImageUploaded}
-              />
-
-              <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
-                      Danger zone
-                    </p>
-                    <h3 className="font-display mt-3 text-2xl text-stone-900">
-                      Permanently delete this item.
-                    </h3>
-                    <p className="mt-3 text-sm text-rose-700">
-                      This removes the item and any attached imagery. Type DELETE
-                      to confirm.
-                    </p>
-                  </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
-                    <ShieldAlert className="h-6 w-6" />
+                      {deleteState.status === "error" && deleteState.message ? (
+                        <div
+                          role="alert"
+                          className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
+                        >
+                          {deleteState.message}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-
-                <div className="mt-6 grid gap-4">
-                  <div>
-                    <label
-                      className="text-sm font-medium text-rose-700"
-                      htmlFor="delete-confirm"
-                    >
-                      Confirmation phrase
-                    </label>
-                    <input
-                      id="delete-confirm"
-                      type="text"
-                      className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
-                      value={deletePhrase}
-                      onChange={(event) => setDeletePhrase(event.target.value)}
-                      placeholder="Type DELETE to confirm"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-rose-200 text-rose-700 hover:bg-rose-100"
-                    disabled={!confirmDeleteMatches || deleteState.status === "working"}
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {deleteState.status === "working"
-                      ? "Deleting..."
-                      : "Delete item"}
-                  </Button>
-                </div>
-
-                {deleteState.status === "error" && deleteState.message ? (
-                  <div
-                    role="alert"
-                    className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
-                  >
-                    {deleteState.message}
-                  </div>
-                ) : null}
-              </div>
-            </div>
+              )}
+            />
           ) : (
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
               <div className="contents lg:block lg:space-y-6">
