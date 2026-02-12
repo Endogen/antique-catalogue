@@ -49,7 +49,7 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
     {
       label: t("Collections"),
       href: "/collections",
-      description: t("Your saved collections"),
+      description: t("Saved collections"),
       icon: Folder,
       match: ["/collections"]
     },

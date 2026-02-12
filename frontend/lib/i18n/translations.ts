@@ -605,7 +605,7 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "Your collection studio, built for detail.": "Dein Sammlungsstudio, gebaut für Details.",
   "Your collections": "Deine Sammlungen",
   "Your private archive": "Dein privates Archiv",
-  "Your saved collections": "Deine gespeicherten Sammlungen",
+  "Saved collections": "Deine Sammlungen",
   "YYYY-MM-DD": "JJJJ-MM-TT",
   "YYYY-MM-DD format": "Format JJJJ-MM-TT",
   "YYYY-MM-DDThh:mm": "JJJJ-MM-TThh:mm",
