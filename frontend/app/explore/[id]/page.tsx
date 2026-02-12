@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Lightbox } from "@/components/lightbox";
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 import {
   isApiError,
   imageApi,
@@ -40,49 +41,12 @@ type ItemsState = {
 
 const PAGE_SIZE = 12;
 
-const sortOptions = [
-  { label: "Newest first", value: "-created_at" },
-  { label: "Oldest first", value: "created_at" },
-  { label: "Name A to Z", value: "name" },
-  { label: "Name Z to A", value: "-name" }
+const buildSortOptions = (t: (key: string) => string) => [
+  { label: t("Newest first"), value: "-created_at" },
+  { label: t("Oldest first"), value: "created_at" },
+  { label: t("Name A to Z"), value: "name" },
+  { label: t("Name Z to A"), value: "-name" }
 ];
-
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  }).format(parsed);
-};
-
-const formatMetadataValue = (value: unknown) => {
-  if (value === null || value === undefined) {
-    return "-";
-  }
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number") {
-    return value.toLocaleString("en-US");
-  }
-  if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
-  }
-  if (Array.isArray(value)) {
-    return value.join(", ");
-  }
-  if (typeof value === "object") {
-    return "Details";
-  }
-  return String(value);
-};
 
 const truncate = (value: string, maxLength: number) => {
   if (value.length <= maxLength) {
@@ -97,7 +61,53 @@ const highlightCardClass =
 export default function PublicCollectionPage() {
   const { isAuthenticated, logout, status: authStatus } = useAuth();
   const params = useParams();
+  const { t, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+
+  const sortOptions = React.useMemo(() => buildSortOptions(t), [t]);
+
+  const formatDate = React.useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return "-";
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return value;
+      }
+      return new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }).format(parsed);
+    },
+    [locale]
+  );
+
+  const formatMetadataValue = React.useCallback(
+    (value: unknown) => {
+      if (value === null || value === undefined) {
+        return "-";
+      }
+      if (typeof value === "string") {
+        return value;
+      }
+      if (typeof value === "number") {
+        return new Intl.NumberFormat(locale).format(value);
+      }
+      if (typeof value === "boolean") {
+        return value ? t("Yes") : t("No");
+      }
+      if (Array.isArray(value)) {
+        return value.join(", ");
+      }
+      if (typeof value === "object") {
+        return t("Details");
+      }
+      return String(value);
+    },
+    [locale, t]
+  );
 
   const [collectionState, setCollectionState] = React.useState<LoadState>({
     status: "loading"
@@ -108,7 +118,7 @@ export default function PublicCollectionPage() {
     hasMore: false
   });
   const [search, setSearch] = React.useState("");
-  const [sort, setSort] = React.useState(sortOptions[0].value);
+  const [sort, setSort] = React.useState(sortOptions[0]?.value ?? "-created_at");
   const [filterImages, setFilterImages] = React.useState(false);
   const [filterHighlight, setFilterHighlight] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
@@ -288,22 +298,22 @@ export default function PublicCollectionPage() {
             </div>
             <div>
               <p className="font-display text-lg tracking-tight">
-                Antique Catalogue
+                {t("Antique Catalogue")}
               </p>
               <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
-                Studio Archive
+                {t("Studio Archive")}
               </p>
             </div>
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-stone-600 md:flex">
             <Link href="/" className="hover:text-stone-900">
-              Home
+              {t("Home")}
             </Link>
             <Link href="/explore" className="font-medium text-stone-900">
-              Explore
+              {t("Explore")}
             </Link>
             <Link href="/dashboard" className="hover:text-stone-900">
-              Dashboard
+              {t("Dashboard")}
             </Link>
           </nav>
           <div className="flex items-center gap-3">
@@ -314,15 +324,15 @@ export default function PublicCollectionPage() {
                 disabled={isLoggingOut}
               >
                 <LogOut className="h-4 w-4" />
-                {isLoggingOut ? "Logging out..." : "Logout"}
+                {isLoggingOut ? t("Logging out...") : t("Log out")}
               </Button>
             ) : (
               <>
                 <Button variant="ghost" className="hidden sm:inline-flex" asChild>
-                  <Link href="/login">Log in</Link>
+                  <Link href="/login">{t("Log in")}</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/register">Create account</Link>
+                  <Link href="/register">{t("Create account")}</Link>
                 </Button>
               </>
             )}
@@ -338,12 +348,12 @@ export default function PublicCollectionPage() {
             <Button variant="ghost" size="sm" asChild>
               <Link href="/explore">
                 <ArrowLeft className="h-4 w-4" />
-                Back to explore
+                {t("Back to explore")}
               </Link>
             </Button>
             <Button variant="outline" size="sm" onClick={handleRefresh}>
               <RefreshCcw className="h-4 w-4" />
-              Refresh
+              {t("Refresh")}
             </Button>
           </div>
 
@@ -352,22 +362,22 @@ export default function PublicCollectionPage() {
               className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
               aria-busy="true"
             >
-              Loading collection details...
+              {t("Loading collection details...")}
             </div>
           ) : collectionState.status === "error" ? (
             <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
               <p className="text-sm font-medium text-rose-700">
-                We hit a snag loading this collection.
+                {t("We hit a snag loading this collection.")}
               </p>
               <p className="mt-2 text-sm text-rose-600">
-                {collectionState.error ?? "Please try again."}
+                {t(collectionState.error ?? "Please try again.")}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button variant="outline" onClick={handleRefresh}>
-                  Try again
+                  {t("Try again")}
                 </Button>
                 <Button variant="ghost" asChild>
-                  <Link href="/explore">Back to explore</Link>
+                  <Link href="/explore">{t("Back to explore")}</Link>
                 </Button>
               </div>
             </div>
@@ -375,29 +385,29 @@ export default function PublicCollectionPage() {
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
               <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
                 <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-                  Public collection
+                  {t("Public collection")}
                 </p>
                 <h1 className="font-display mt-4 text-3xl text-stone-900">
                   {collectionState.data?.name}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm text-stone-600">
                   {collectionState.data?.description ??
-                    "This collection is ready to explore."}
+                    t("This collection is ready to explore.")}
                 </p>
                 <div className="mt-6 flex flex-wrap gap-4 text-sm text-stone-600">
                   <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
                     <Globe2 className="h-3.5 w-3.5" />
-                    Public access
+                    {t("Public access")}
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
-                    {itemCount} items loaded
+                    {t("{count} items loaded", { count: itemCount })}
                   </span>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
                 <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                  Collection timeline
+                  {t("Collection timeline")}
                 </p>
                 <div className="mt-6 space-y-4 text-sm text-stone-600">
                   <div className="flex items-start gap-3">
@@ -405,7 +415,7 @@ export default function PublicCollectionPage() {
                       <CalendarDays className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="font-medium text-stone-900">Created</p>
+                      <p className="font-medium text-stone-900">{t("Created")}</p>
                       <p className="mt-1 text-xs text-stone-500">
                         {formatDate(collectionState.data?.created_at)}
                       </p>
@@ -416,7 +426,7 @@ export default function PublicCollectionPage() {
                       <RefreshCcw className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="font-medium text-stone-900">Last updated</p>
+                      <p className="font-medium text-stone-900">{t("Last updated")}</p>
                       <p className="mt-1 text-xs text-stone-500">
                         {formatDate(collectionState.data?.updated_at)}
                       </p>
@@ -425,10 +435,10 @@ export default function PublicCollectionPage() {
                 </div>
                 <div className="mt-6 rounded-2xl border border-stone-900/90 bg-stone-950 px-4 py-3 text-stone-100">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                    Explore more
+                    {t("Explore more")}
                   </p>
                   <p className="mt-2 text-sm text-stone-300">
-                    Browse other public catalogues for inspiration.
+                    {t("Browse other public catalogues for inspiration.")}
                   </p>
                   <Button
                     size="sm"
@@ -436,7 +446,7 @@ export default function PublicCollectionPage() {
                     className="mt-4"
                     asChild
                   >
-                    <Link href="/explore">Back to directory</Link>
+                    <Link href="/explore">{t("Back to directory")}</Link>
                   </Button>
                 </div>
               </div>
@@ -449,10 +459,10 @@ export default function PublicCollectionPage() {
         <div className="space-y-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-              Items
+              {t("Items")}
             </p>
             <h2 className="font-display mt-3 text-2xl text-stone-900">
-              Collection items
+              {t("Collection items")}
             </h2>
           </div>
           <div className="flex w-full flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center">
@@ -460,7 +470,7 @@ export default function PublicCollectionPage() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
               <input
                 type="search"
-                placeholder="Search items"
+                placeholder={t("Search items")}
                 className="h-10 w-full rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -486,7 +496,7 @@ export default function PublicCollectionPage() {
                     checked={filterImages}
                     onChange={(event) => setFilterImages(event.target.checked)}
                   />
-                  With images
+                  {t("With images")}
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 rounded-full border border-amber-200/60 bg-amber-50/70 px-3 py-2 text-amber-700 shadow-sm">
                   <input
@@ -495,7 +505,7 @@ export default function PublicCollectionPage() {
                     checked={filterHighlight}
                     onChange={(event) => setFilterHighlight(event.target.checked)}
                   />
-                  Highlight
+                  {t("Highlight")}
                 </label>
               </div>
             </div>
@@ -507,19 +517,19 @@ export default function PublicCollectionPage() {
             className="mt-6 rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
             aria-busy="true"
           >
-            Loading items...
+            {t("Loading items...")}
           </div>
         ) : itemsState.status === "error" ? (
           <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
             <p className="text-sm font-medium text-rose-700">
-              We hit a snag loading items.
+              {t("We hit a snag loading items.")}
             </p>
             <p className="mt-2 text-sm text-rose-600">
-              {itemsState.error ?? "Please try again."}
+              {t(itemsState.error ?? "Please try again.")}
             </p>
             <div className="mt-4">
               <Button variant="outline" onClick={handleRefresh}>
-                Try again
+                {t("Try again")}
               </Button>
             </div>
           </div>
@@ -528,20 +538,20 @@ export default function PublicCollectionPage() {
             <div className="flex flex-wrap items-start justify-between gap-6">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                  No items yet
+                  {t("No items yet")}
                 </p>
                 <h3 className="font-display mt-3 text-2xl text-stone-900">
-                  This collection does not have public items.
+                  {t("This collection does not have public items.")}
                 </h3>
                 <p className="mt-3 max-w-xl text-sm text-stone-600">
-                  Check back later or browse another public collection.
+                  {t("Check back later or browse another public collection.")}
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button variant="outline" onClick={handleRefresh}>
-                    Refresh items
+                    {t("Refresh items")}
                   </Button>
                   <Button asChild>
-                    <Link href="/explore">Browse directory</Link>
+                    <Link href="/explore">{t("Browse directory")}</Link>
                   </Button>
                 </div>
               </div>
@@ -557,14 +567,13 @@ export default function PublicCollectionPage() {
                 <div className="flex flex-wrap items-start justify-between gap-6">
                   <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                      No matches
+                      {t("No matches")}
                     </p>
                     <h3 className="font-display mt-3 text-2xl text-stone-900">
-                      No items match these filters.
+                      {t("No items match these filters.")}
                     </h3>
                     <p className="mt-3 max-w-xl text-sm text-stone-600">
-                      Try adjusting your filters or clearing them to see more
-                      items.
+                      {t("Try adjusting your filters or clearing them to see more items.")}
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3">
                       <Button
@@ -574,10 +583,10 @@ export default function PublicCollectionPage() {
                           setFilterHighlight(false);
                         }}
                       >
-                        Clear filters
+                        {t("Clear filters")}
                       </Button>
                       <Button variant="ghost" onClick={() => setSearch("")}>
-                        Clear search
+                        {t("Clear search")}
                       </Button>
                     </div>
                   </div>
@@ -621,14 +630,14 @@ export default function PublicCollectionPage() {
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                            Item
+                            {t("Item")}
                           </p>
                           <h3 className="mt-3 text-xl font-semibold text-stone-900">
                             {item.name}
                           </h3>
                         </div>
                         <span className="text-xs text-stone-500">
-                          Added {formatDate(item.created_at)}
+                          {t("Added {date}", { date: formatDate(item.created_at) })}
                         </span>
                       </div>
                       {item.notes ? (
@@ -639,7 +648,7 @@ export default function PublicCollectionPage() {
                       <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 text-sm text-stone-600">
                         {metadataEntries.length === 0 ? (
                           <p className="text-xs text-stone-500">
-                            No metadata shared.
+                            {t("No metadata shared.")}
                           </p>
                         ) : (
                           <div className="space-y-2 text-xs">
@@ -658,7 +667,9 @@ export default function PublicCollectionPage() {
                             ))}
                             {metadataEntries.length > 3 ? (
                               <p className="text-xs text-stone-400">
-                                +{metadataEntries.length - 3} more fields
+                                {t("+{count} more fields", {
+                                  count: metadataEntries.length - 3
+                                })}
                               </p>
                             ) : null}
                           </div>
@@ -671,7 +682,7 @@ export default function PublicCollectionPage() {
             )}
             <div className="flex flex-col items-center gap-3">
               {loadMoreError ? (
-                <p className="text-xs text-rose-600">{loadMoreError}</p>
+                <p className="text-xs text-rose-600">{t(loadMoreError)}</p>
               ) : null}
               {itemsState.hasMore ? (
                 <Button
@@ -679,11 +690,13 @@ export default function PublicCollectionPage() {
                   disabled={isLoadingMore}
                   onClick={handleLoadMore}
                 >
-                  {isLoadingMore ? "Loading more..." : "Load more items"}
+                  {isLoadingMore
+                    ? t("Loading more...")
+                    : t("Load more items")}
                 </Button>
               ) : (
                 <p className="text-xs text-stone-500">
-                  You have reached the end of the list.
+                  {t("You have reached the end of the list.")}
                 </p>
               )}
             </div>

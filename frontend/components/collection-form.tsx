@@ -7,20 +7,22 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
-const collectionSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Collection name is required")
-    .max(120, "Keep the name under 120 characters"),
-  description: z
-    .string()
-    .max(500, "Keep the description under 500 characters"),
-  is_public: z.boolean()
-});
+const createCollectionSchema = (t: (key: string) => string) =>
+  z.object({
+    name: z
+      .string()
+      .min(1, t("Collection name is required"))
+      .max(120, t("Keep the name under 120 characters")),
+    description: z
+      .string()
+      .max(500, t("Keep the description under 500 characters")),
+    is_public: z.boolean()
+  });
 
-export type CollectionFormValues = z.infer<typeof collectionSchema>;
+export type CollectionFormValues = z.infer<ReturnType<typeof createCollectionSchema>>;
 
 type CollectionFormProps = {
   initialValues?: Partial<CollectionFormValues>;
@@ -39,6 +41,8 @@ export function CollectionForm({
   secondaryAction,
   formError
 }: CollectionFormProps) {
+  const { t } = useI18n();
+  const collectionSchema = React.useMemo(() => createCollectionSchema(t), [t]);
   const defaults = React.useMemo<CollectionFormValues>(
     () => ({
       name: initialValues?.name ?? "",
@@ -73,13 +77,13 @@ export function CollectionForm({
           role="alert"
           className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
         >
-          {formError}
+          {t(formError)}
         </div>
       ) : null}
 
       <div>
         <label className="text-sm font-medium text-stone-700" htmlFor="name">
-          Collection name
+          {t("Collection name")}
         </label>
         <input
           id="name"
@@ -99,7 +103,7 @@ export function CollectionForm({
           className="text-sm font-medium text-stone-700"
           htmlFor="description"
         >
-          Description
+          {t("Description")}
         </label>
         <textarea
           id="description"
@@ -113,16 +117,18 @@ export function CollectionForm({
           </p>
         ) : null}
         <p className="mt-2 text-xs text-stone-500">
-          Share the theme, era, or provenance you will capture.
+          {t("Share the theme, era, or provenance you will capture.")}
         </p>
       </div>
 
       <div>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-stone-700">Visibility</p>
+            <p className="text-sm font-medium text-stone-700">
+              {t("Visibility")}
+            </p>
             <p className="mt-1 text-xs text-stone-500">
-              Choose whether this collection appears in the public directory.
+              {t("Choose whether this collection appears in the public directory.")}
             </p>
           </div>
         </div>
@@ -139,10 +145,10 @@ export function CollectionForm({
           >
             <div className="flex items-center gap-2 font-medium">
               <Lock className="h-4 w-4 text-amber-600" />
-              Private
+              {t("Private")}
             </div>
             <p className="mt-2 text-xs text-stone-500">
-              Only you can view and edit items.
+              {t("Only you can view and edit items.")}
             </p>
           </button>
           <button
@@ -157,10 +163,10 @@ export function CollectionForm({
           >
             <div className="flex items-center gap-2 font-medium">
               <Globe2 className="h-4 w-4 text-emerald-600" />
-              Public
+              {t("Public")}
             </div>
             <p className="mt-2 text-xs text-stone-500">
-              Share read-only access with the public.
+              {t("Share read-only access with the public.")}
             </p>
           </button>
         </div>
@@ -171,7 +177,7 @@ export function CollectionForm({
         {secondaryAction}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting
-            ? submitPendingLabel ?? "Saving..."
+            ? submitPendingLabel ?? t("Saving...")
             : submitLabel}
         </Button>
       </div>

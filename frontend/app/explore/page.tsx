@@ -13,6 +13,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 import {
   isApiError,
   publicCollectionApi,
@@ -25,7 +26,7 @@ type LoadState = {
   error?: string;
 };
 
-const formatDate = (value?: string | null) => {
+const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
     return "-";
   }
@@ -33,7 +34,7 @@ const formatDate = (value?: string | null) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -59,6 +60,7 @@ const filterCollections = (
 
 export default function ExplorePage() {
   const { isAuthenticated, logout, status: authStatus } = useAuth();
+  const { t, locale } = useI18n();
   const [state, setState] = React.useState<LoadState>({
     status: "loading",
     data: []
@@ -128,22 +130,22 @@ export default function ExplorePage() {
               </div>
               <div>
                 <p className="font-display text-lg tracking-tight">
-                  Antique Catalogue
+                  {t("Antique Catalogue")}
                 </p>
                 <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
-                  Studio Archive
+                  {t("Studio Archive")}
                 </p>
               </div>
             </Link>
             <nav className="hidden items-center gap-6 text-sm text-stone-600 md:flex">
               <Link href="/" className="hover:text-stone-900">
-                Home
+                {t("Home")}
               </Link>
               <Link href="/explore" className="font-medium text-stone-900">
-                Explore
+                {t("Explore")}
               </Link>
               <Link href="/dashboard" className="hover:text-stone-900">
-                Dashboard
+                {t("Dashboard")}
               </Link>
             </nav>
             <div className="flex items-center gap-3">
@@ -154,7 +156,7 @@ export default function ExplorePage() {
                   disabled={isLoggingOut}
                 >
                   <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? "Logging out..." : "Logout"}
+                  {isLoggingOut ? t("Logging out...") : t("Log out")}
                 </Button>
               ) : (
                 <>
@@ -163,10 +165,10 @@ export default function ExplorePage() {
                     className="hidden sm:inline-flex"
                     asChild
                   >
-                    <Link href="/login">Log in</Link>
+                    <Link href="/login">{t("Log in")}</Link>
                   </Button>
                   <Button asChild>
-                    <Link href="/register">Create account</Link>
+                    <Link href="/register">{t("Create account")}</Link>
                   </Button>
                 </>
               )}
@@ -178,39 +180,43 @@ export default function ExplorePage() {
           <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-12 pt-6 lg:flex-row lg:items-center lg:px-12 lg:pt-12">
             <div className="flex-1">
               <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-                Public directory
+                {t("Public directory")}
               </p>
               <h1 className="font-display mt-4 text-4xl text-stone-900 sm:text-5xl">
-                Explore shared collections and curated archives.
+                {t("Explore shared collections and curated archives.")}
               </h1>
               <p className="mt-4 max-w-xl text-sm text-stone-600 sm:text-base">
-                Browse public catalogues to discover provenance notes, condition
-                details, and restoration history from collectors worldwide.
+                {t(
+                  "Browse public catalogues to discover provenance notes, condition details, and restoration history from collectors worldwide."
+                )}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button size="lg" asChild>
-                  <Link href="/register">Start your own archive</Link>
+                  <Link href="/register">{t("Start your own archive")}</Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link href="/dashboard">Go to dashboard</Link>
+                  <Link href="/dashboard">{t("Go to dashboard")}</Link>
                 </Button>
               </div>
               <div className="mt-8 rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm">
                 <label className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                  Search collections
+                  {t("Search collections")}
                 </label>
                 <div className="mt-3 flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 shadow-sm">
                   <Search className="h-4 w-4 text-stone-400" />
                   <input
                     type="search"
                     className="w-full text-sm text-stone-700 focus:outline-none"
-                    placeholder="Search by collection name or description"
+                    placeholder={t("Search by collection name or description")}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                   />
                 </div>
                 <p className="mt-3 text-xs text-stone-500">
-                  Showing {filtered.length} of {totalCount} public collections.
+                  {t("Showing {shown} of {total} public collections.", {
+                    shown: filtered.length,
+                    total: totalCount
+                  })}
                 </p>
               </div>
             </div>
@@ -218,54 +224,55 @@ export default function ExplorePage() {
               <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-[0_18px_60px_-40px_rgba(15,23,42,0.35)]">
                 <div className="flex items-center justify-between">
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                    Directory snapshot
+                    {t("Directory snapshot")}
                   </p>
                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                    Live
+                    {t("Live")}
                   </span>
                 </div>
                 <h2 className="font-display mt-4 text-2xl text-stone-900">
-                  Public collections
+                  {t("Public collections")}
                 </h2>
                 <p className="mt-3 text-sm text-stone-600">
-                  Discover what others are cataloguing and share your own
-                  collection when you are ready.
+                  {t(
+                    "Discover what others are cataloguing and share your own collection when you are ready."
+                  )}
                 </p>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4">
                     <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                      Total
+                      {t("Total")}
                     </p>
                     <p className="mt-3 text-2xl font-semibold text-stone-900">
                       {state.status === "ready" ? totalCount : "-"}
                     </p>
                     <p className="mt-2 text-xs text-stone-500">
-                      Shared archives
+                      {t("Shared archives")}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4">
                     <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                      Access
+                      {t("Access")}
                     </p>
                     <p className="mt-3 text-2xl font-semibold text-stone-900">
-                      Free
+                      {t("Free")}
                     </p>
                     <p className="mt-2 text-xs text-stone-500">
-                      Read-only browsing
+                      {t("Read-only browsing")}
                     </p>
                   </div>
                 </div>
                 <div className="mt-6 flex items-center justify-between rounded-2xl bg-stone-900 px-4 py-3 text-stone-100">
                   <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                      Publish your work
+                      {t("Publish your work")}
                     </p>
                     <p className="text-sm font-medium">
-                      Share curated catalogues publicly.
+                      {t("Share curated catalogues publicly.")}
                     </p>
                   </div>
                   <Button size="sm" variant="secondary" asChild>
-                    <Link href="/collections/new">Create collection</Link>
+                    <Link href="/collections/new">{t("Create collection")}</Link>
                   </Button>
                 </div>
               </div>
@@ -277,15 +284,15 @@ export default function ExplorePage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                Public collections
+                {t("Public collections")}
               </p>
               <h2 className="font-display mt-3 text-2xl text-stone-900">
-                Browse the directory.
+                {t("Browse the directory.")}
               </h2>
             </div>
             <Button variant="outline" onClick={() => loadCollections()}>
               <RefreshCcw className="h-4 w-4" />
-              Refresh
+              {t("Refresh")}
             </Button>
           </div>
 
@@ -294,19 +301,19 @@ export default function ExplorePage() {
               className="mt-6 rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
               aria-busy="true"
             >
-              Loading public collections...
+              {t("Loading public collections...")}
             </div>
           ) : state.status === "error" ? (
             <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
               <p className="text-sm font-medium text-rose-700">
-                We hit a snag loading the directory.
+                {t("We hit a snag loading the directory.")}
               </p>
               <p className="mt-2 text-sm text-rose-600">
-                {state.error ?? "Please try again."}
+                {t(state.error ?? "Please try again.")}
               </p>
               <div className="mt-4">
                 <Button variant="outline" onClick={() => loadCollections()}>
-                  Try again
+                  {t("Try again")}
                 </Button>
               </div>
             </div>
@@ -315,21 +322,22 @@ export default function ExplorePage() {
               <div className="flex flex-wrap items-start justify-between gap-6">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                    No matches
+                    {t("No matches")}
                   </p>
                   <h3 className="font-display mt-3 text-2xl text-stone-900">
-                    We could not find collections for that search.
+                    {t("We could not find collections for that search.")}
                   </h3>
                   <p className="mt-3 max-w-xl text-sm text-stone-600">
-                    Try adjusting your search terms or refresh to see the latest
-                    public catalogues.
+                    {t(
+                      "Try adjusting your search terms or refresh to see the latest public catalogues."
+                    )}
                   </p>
                   <div className="mt-6 flex flex-wrap gap-3">
                     <Button variant="outline" onClick={() => setSearch("")}>
-                      Clear search
+                      {t("Clear search")}
                     </Button>
                     <Button asChild>
-                      <Link href="/register">Create your own</Link>
+                      <Link href="/register">{t("Create your own")}</Link>
                     </Button>
                   </div>
                 </div>
@@ -348,10 +356,12 @@ export default function ExplorePage() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
                       <Globe2 className="h-3.5 w-3.5" />
-                      Public
+                      {t("Public")}
                     </span>
                     <span className="text-xs text-stone-500">
-                      Updated {formatDate(collection.updated_at)}
+                      {t("Updated {date}", {
+                        date: formatDate(collection.updated_at, locale)
+                      })}
                     </span>
                   </div>
                   <h3 className="mt-4 text-xl font-semibold text-stone-900">
@@ -359,16 +369,18 @@ export default function ExplorePage() {
                   </h3>
                   <p className="mt-2 text-sm text-stone-600">
                     {collection.description ??
-                      "This collection is ready to be explored."}
+                      t("This collection is ready to be explored.")}
                   </p>
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-2 text-xs text-stone-500">
                       <CalendarDays className="h-4 w-4 text-amber-600" />
-                      Created {formatDate(collection.created_at)}
+                      {t("Created {date}", {
+                        date: formatDate(collection.created_at, locale)
+                      })}
                     </div>
                     <Button size="sm" variant="secondary" asChild>
                       <Link href={`/explore/${collection.id}`}>
-                        View collection
+                        {t("View collection")}
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     </Button>

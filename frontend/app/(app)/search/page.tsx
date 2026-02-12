@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FolderOpen, RefreshCcw, Search } from "lucide-react";
 
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
   imageApi,
@@ -20,7 +21,7 @@ type LoadState = {
   error?: string;
 };
 
-const formatDate = (value?: string | null) => {
+const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
     return "-";
   }
@@ -28,7 +29,7 @@ const formatDate = (value?: string | null) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -45,9 +46,10 @@ const truncate = (value: string, maxLength: number) => {
 const highlightCardClass =
   "border-amber-200/70 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_12px_32px_-22px_rgba(251,191,36,0.55)]";
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t, locale } = useI18n();
   const queryParam = searchParams.get("query") ?? "";
   const [searchValue, setSearchValue] = React.useState(queryParam);
   const [state, setState] = React.useState<LoadState>({
@@ -105,18 +107,18 @@ export default function SearchPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-              Search
+              {t("Search")}
             </p>
             <h1 className="font-display mt-3 text-3xl text-stone-900">
-              Search your items.
+              {t("Search your items.")}
             </h1>
             <p className="mt-2 text-sm text-stone-600">
-              Find items across every collection by name or notes.
+              {t("Find items across every collection by name or notes.")}
             </p>
           </div>
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCcw className="h-4 w-4" />
-            Refresh
+            {t("Refresh")}
           </Button>
         </div>
         <form
@@ -127,50 +129,50 @@ export default function SearchPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
             <input
               type="search"
-              placeholder="Search items by name or notes"
+              placeholder={t("Search items by name or notes")}
               className="h-11 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
             />
           </div>
           <Button type="submit" className="sm:w-auto">
-            Search
+            {t("Search")}
           </Button>
         </form>
       </header>
 
       {state.status === "idle" ? (
         <div className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-8 text-sm text-stone-500">
-          Enter a search term to see matching items.
+          {t("Enter a search term to see matching items.")}
         </div>
       ) : state.status === "loading" ? (
         <div
           className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-8 text-sm text-stone-500"
           aria-busy="true"
         >
-          Searching items...
+          {t("Searching items...")}
         </div>
       ) : state.status === "error" ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50/70 p-6 text-sm text-rose-700">
-          {state.error ?? "We couldn't load search results."}
+          {t(state.error ?? "We couldn't load search results.")}
         </div>
       ) : state.data.length === 0 ? (
         <div className="rounded-3xl border border-stone-200 bg-white/70 p-8">
           <p className="text-sm font-medium text-stone-700">
-            No items matched your search.
+            {t("No items matched your search.")}
           </p>
           <p className="mt-2 text-sm text-stone-500">
-            Try another term or check spelling.
+            {t("Try another term or check spelling.")}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-              Results
+              {t("Results")}
             </p>
             <span className="text-xs text-stone-400">
-              {state.data.length} items found
+              {t("{count} items found", { count: state.data.length })}
             </span>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -193,7 +195,7 @@ export default function SearchPage() {
                         {item.name}
                       </h2>
                       <p className="mt-2 text-xs text-stone-500">
-                        Added {formatDate(item.created_at)}
+                        {t("Added {date}", { date: formatDate(item.created_at, locale) })}
                       </p>
                     </div>
                     {imageId ? (
@@ -220,12 +222,12 @@ export default function SearchPage() {
                       <Link
                         href={`/collections/${item.collection_id}/items/${item.id}`}
                       >
-                        Open item
+                        {t("Open item")}
                       </Link>
                     </Button>
                     <Button size="sm" variant="ghost" asChild>
                       <Link href={`/collections/${item.collection_id}`}>
-                        View collection
+                        {t("View collection")}
                       </Link>
                     </Button>
                   </div>
@@ -236,5 +238,22 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function SearchFallback() {
+  const { t } = useI18n();
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+      {t("Loading...")}
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <React.Suspense fallback={<SearchFallback />}>
+      <SearchContent />
+    </React.Suspense>
   );
 }

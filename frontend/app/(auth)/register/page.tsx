@@ -8,27 +8,29 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { authApi, isApiError } from "@/lib/api";
 
-const registerSchema = z
-  .object({
-    email: z
-      .string()
-      .min(1, "Email is required")
-      .email("Enter a valid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z
-      .string()
-      .min(1, "Confirm your password")
-      .min(8, "Password must be at least 8 characters")
-  })
-  .refine((values) => values.password === values.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match"
-  });
+const createRegisterSchema = (t: (key: string) => string) =>
+  z
+    .object({
+      email: z
+        .string()
+        .min(1, t("Email is required"))
+        .email(t("Enter a valid email address")),
+      password: z.string().min(8, t("Password must be at least 8 characters")),
+      confirmPassword: z
+        .string()
+        .min(1, t("Confirm your password"))
+        .min(8, t("Password must be at least 8 characters"))
+    })
+    .refine((values) => values.password === values.confirmPassword, {
+      path: ["confirmPassword"],
+      message: t("Passwords do not match")
+    });
 
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type RegisterFormValues = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 const steps = [
   {
@@ -37,7 +39,7 @@ const steps = [
   },
   {
     title: "Document",
-    detail: "Capture provenance, notes, and condition." 
+    detail: "Capture provenance, notes, and condition."
   },
   {
     title: "Share",
@@ -48,9 +50,12 @@ const steps = [
 export default function RegisterPage() {
   const router = useRouter();
   const { status } = useAuth();
+  const { t } = useI18n();
   const [formError, setFormError] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [submittedEmail, setSubmittedEmail] = React.useState<string | null>(null);
+
+  const registerSchema = React.useMemo(() => createRegisterSchema(t), [t]);
 
   const {
     register: formRegister,
@@ -95,7 +100,7 @@ export default function RegisterPage() {
   if (status === "authenticated") {
     return (
       <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
-        Redirecting to your workspace...
+        {t("Redirecting to your workspace...")}
       </div>
     );
   }
@@ -112,30 +117,30 @@ export default function RegisterPage() {
             </div>
             <div>
               <p className="font-display text-lg tracking-tight">
-                Antique Catalogue
+                {t("Antique Catalogue")}
               </p>
               <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
-                Studio Archive
+                {t("Studio Archive")}
               </p>
             </div>
           </Link>
           <div className="flex items-center gap-3 text-sm text-stone-600">
-            <span className="hidden sm:inline">Already have an account?</span>
+            <span className="hidden sm:inline">{t("Already have an account?")}</span>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/login">Sign in</Link>
+              <Link href="/login">{t("Sign in")}</Link>
             </Button>
           </div>
         </header>
 
         <section className="mt-10 rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
           <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-            Create your studio
+            {t("Create your studio")}
           </p>
           <h1 className="font-display mt-4 text-3xl text-stone-900">
-            Start cataloguing in minutes.
+            {t("Start cataloguing in minutes.")}
           </h1>
           <p className="mt-3 text-sm text-stone-600">
-            Build a secure, searchable archive for every piece you collect.
+            {t("Build a secure, searchable archive for every piece you collect.")}
           </p>
 
           {formError ? (
@@ -143,7 +148,7 @@ export default function RegisterPage() {
               role="alert"
               className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
             >
-              {formError}
+              {t(formError)}
             </div>
           ) : null}
 
@@ -152,11 +157,13 @@ export default function RegisterPage() {
               role="status"
               className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
             >
-              <p className="font-medium">{successMessage}</p>
+              <p className="font-medium">{t(successMessage)}</p>
               {submittedEmail ? (
                 <p className="mt-2 text-xs text-emerald-700">
-                  We sent a verification token to {submittedEmail}. Enter it on the
-                  verification page to activate your account.
+                  {t(
+                    "We sent a verification token to {email}. Enter it on the verification page to activate your account.",
+                    { email: submittedEmail }
+                  )}
                 </p>
               ) : null}
             </div>
@@ -165,7 +172,7 @@ export default function RegisterPage() {
           <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
               <label className="text-sm font-medium text-stone-700" htmlFor="email">
-                Email address
+                {t("Email address")}
               </label>
               <input
                 id="email"
@@ -185,7 +192,7 @@ export default function RegisterPage() {
 
             <div>
               <label className="text-sm font-medium text-stone-700" htmlFor="password">
-                Password
+                {t("Password")}
               </label>
               <input
                 id="password"
@@ -208,7 +215,7 @@ export default function RegisterPage() {
                 className="text-sm font-medium text-stone-700"
                 htmlFor="confirmPassword"
               >
-                Confirm password
+                {t("Confirm password")}
               </label>
               <input
                 id="confirmPassword"
@@ -233,25 +240,26 @@ export default function RegisterPage() {
               disabled={isSubmitting || isLocked}
             >
               {isLocked
-                ? "Check your email"
+                ? t("Check your email")
                 : isSubmitting
-                ? "Creating account..."
-                : "Create account"}
+                ? t("Creating account...")
+                : t("Create account")}
             </Button>
           </form>
 
           <p className="mt-6 text-xs text-stone-500">
-            By creating an account you agree to receive verification emails from
-            Antique Catalogue.
+            {t(
+              "By creating an account you agree to receive verification emails from Antique Catalogue."
+            )}
           </p>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
-            <span>Already verified?</span>
+            <span>{t("Already verified?")}</span>
             <Link
               href="/verify"
               className="font-medium text-amber-700 hover:text-amber-800"
             >
-              Enter verification token
+              {t("Enter verification token")}
             </Link>
           </div>
         </section>
@@ -260,14 +268,15 @@ export default function RegisterPage() {
       <aside className="order-first lg:order-none">
         <div className="rounded-3xl border border-stone-200 bg-white/80 p-8 shadow-sm">
           <p className="text-xs uppercase tracking-[0.4em] text-stone-500">
-            How it works
+            {t("How it works")}
           </p>
           <h2 className="font-display mt-4 text-3xl text-stone-900">
-            Your collection studio, built for detail.
+            {t("Your collection studio, built for detail.")}
           </h2>
           <p className="mt-3 text-sm text-stone-600">
-            Antique Catalogue blends structured metadata with imagery so every
-            object is documented with context.
+            {t(
+              "Antique Catalogue blends structured metadata with imagery so every object is documented with context."
+            )}
           </p>
           <div className="mt-6 space-y-4">
             {steps.map((step, index) => (
@@ -280,9 +289,9 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-stone-900">
-                    {step.title}
+                    {t(step.title)}
                   </p>
-                  <p className="mt-1 text-xs text-stone-500">{step.detail}</p>
+                  <p className="mt-1 text-xs text-stone-500">{t(step.detail)}</p>
                 </div>
               </div>
             ))}
@@ -291,11 +300,12 @@ export default function RegisterPage() {
 
         <div className="mt-6 rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-            Studio note
+            {t("Studio note")}
           </p>
           <p className="mt-3 text-sm text-stone-300">
-            Mobile camera capture is built in. Photograph artifacts wherever you
-            catalogue, then let the platform handle the rest.
+            {t(
+              "Mobile camera capture is built in. Photograph artifacts wherever you catalogue, then let the platform handle the rest."
+            )}
           </p>
         </div>
       </aside>

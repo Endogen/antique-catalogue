@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -28,47 +29,6 @@ type NavItem = {
   match: string[];
 };
 
-const primaryNav: NavItem[] = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    description: "Your private archive",
-    icon: LayoutGrid,
-    match: ["/dashboard"]
-  },
-  {
-    label: "Collections",
-    href: "/collections",
-    description: "Your saved collections",
-    icon: Folder,
-    match: ["/collections"]
-  },
-  {
-    label: "Settings",
-    href: "/settings",
-    description: "Profile and security",
-    icon: Settings2,
-    match: ["/settings"]
-  }
-];
-
-const secondaryNav: NavItem[] = [
-  {
-    label: "Home",
-    href: "/",
-    description: "Return to the homepage",
-    icon: Home,
-    match: ["/"]
-  },
-  {
-    label: "Explore",
-    href: "/explore",
-    description: "Public collections",
-    icon: Compass,
-    match: ["/explore"]
-  }
-];
-
 type SidebarContentProps = {
   onNavigate?: () => void;
   onClose?: () => void;
@@ -76,6 +36,48 @@ type SidebarContentProps = {
 
 const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
   const pathname = usePathname();
+  const { t } = useI18n();
+
+  const primaryNav: NavItem[] = [
+    {
+      label: t("Dashboard"),
+      href: "/dashboard",
+      description: t("Your private archive"),
+      icon: LayoutGrid,
+      match: ["/dashboard"]
+    },
+    {
+      label: t("Collections"),
+      href: "/collections",
+      description: t("Your saved collections"),
+      icon: Folder,
+      match: ["/collections"]
+    },
+    {
+      label: t("Settings"),
+      href: "/settings",
+      description: t("Profile and security"),
+      icon: Settings2,
+      match: ["/settings"]
+    }
+  ];
+
+  const secondaryNav: NavItem[] = [
+    {
+      label: t("Home"),
+      href: "/",
+      description: t("Return to the homepage"),
+      icon: Home,
+      match: ["/"]
+    },
+    {
+      label: t("Explore"),
+      href: "/explore",
+      description: t("Public collections"),
+      icon: Compass,
+      match: ["/explore"]
+    }
+  ];
 
   return (
     <div className="relative flex h-full flex-col gap-6">
@@ -90,10 +92,10 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
           </div>
           <div>
             <p className="font-display text-lg tracking-tight text-stone-100">
-              Antique Catalogue
+              {t("Antique Catalogue")}
             </p>
             <p className="text-xs uppercase tracking-[0.35em] text-stone-400">
-              Studio Archive
+              {t("Studio Archive")}
             </p>
           </div>
         </Link>
@@ -102,7 +104,7 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
             type="button"
             className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-700 text-stone-200 transition hover:border-stone-500 hover:text-stone-100"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label={t("Close menu")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -201,15 +203,15 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
         <div className="rounded-2xl border border-stone-800/70 bg-stone-900/60 p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-              Archive pulse
+              {t("Archive pulse")}
             </p>
             <Sparkles className="h-4 w-4 text-amber-200" />
           </div>
           <p className="mt-3 text-lg font-semibold text-stone-100">
-            0 items catalogued
+            {t("0 items catalogued")}
           </p>
           <p className="mt-1 text-xs text-stone-400">
-            Start your first collection to unlock insights.
+            {t("Start your first collection to unlock insights.")}
           </p>
         </div>
       </div>
@@ -227,6 +229,7 @@ export const AppShell = ({ children }: AppShellProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { logout } = useAuth();
+  const { t } = useI18n();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState(
     searchParams.get("query") ?? ""
@@ -315,16 +318,16 @@ export const AppShell = ({ children }: AppShellProps) => {
                   type="button"
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white/80 text-stone-700 shadow-sm transition hover:border-stone-300 hover:text-stone-900 lg:hidden"
                   onClick={() => setMobileOpen(true)}
-                  aria-label="Open menu"
+                  aria-label={t("Open menu")}
                 >
                   <Menu className="h-5 w-5" />
                 </button>
                 <div>
                   <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-                    Workspace
+                    {t("Workspace")}
                   </p>
                   <p className="font-display text-xl text-stone-900">
-                    Catalogue Studio
+                    {t("Catalogue Studio")}
                   </p>
                 </div>
               </div>
@@ -333,7 +336,7 @@ export const AppShell = ({ children }: AppShellProps) => {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                   <input
                     type="search"
-                    placeholder="Search all items"
+                    placeholder={t("Search all items")}
                     className="h-10 w-64 rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
@@ -347,7 +350,7 @@ export const AppShell = ({ children }: AppShellProps) => {
                   disabled={isLoggingOut}
                 >
                   <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? "Logging out..." : "Log out"}
+                  {isLoggingOut ? t("Logging out...") : t("Log out")}
                 </Button>
               </div>
             </div>
@@ -357,7 +360,7 @@ export const AppShell = ({ children }: AppShellProps) => {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                   <input
                     type="search"
-                    placeholder="Search all items"
+                    placeholder={t("Search all items")}
                     className="h-10 w-full rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
@@ -370,7 +373,7 @@ export const AppShell = ({ children }: AppShellProps) => {
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                 >
-                  {isLoggingOut ? "Logging out..." : "Log out"}
+                  {isLoggingOut ? t("Logging out...") : t("Log out")}
                 </Button>
               </div>
             </div>

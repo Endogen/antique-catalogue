@@ -16,6 +16,7 @@ import {
   isApiError,
   type ItemImageResponse
 } from "@/lib/api";
+import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -66,6 +67,7 @@ export function ImageUploader({
   disabled = false,
   onUploaded
 }: ImageUploaderProps) {
+  const { t } = useI18n();
   const [uploads, setUploads] = React.useState<UploadEntry[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [globalError, setGlobalError] = React.useState<string | null>(null);
@@ -84,7 +86,7 @@ export function ImageUploader({
   const uploadEntries = React.useCallback(
     async (entries: UploadEntry[]) => {
       if (!itemId) {
-        setGlobalError("Upload is unavailable until the item finishes loading.");
+        setGlobalError(t("Upload is unavailable until the item finishes loading."));
         return;
       }
 
@@ -98,13 +100,13 @@ export function ImageUploader({
           updateUpload(entry.id, {
             status: "error",
             error: isApiError(error)
-              ? error.detail
-              : "We couldn't upload this image."
+              ? t(error.detail)
+              : t("We couldn't upload this image.")
           });
         }
       }
     },
-    [itemId, onUploaded, updateUpload]
+    [itemId, onUploaded, t, updateUpload]
   );
 
   const handleFiles = React.useCallback(
@@ -127,7 +129,7 @@ export function ImageUploader({
           return {
             ...entry,
             status: "error",
-            error: "Unsupported file type"
+            error: t("Unsupported file type")
           };
         }
 
@@ -135,7 +137,7 @@ export function ImageUploader({
           return {
             ...entry,
             status: "error",
-            error: "File exceeds the 10MB limit"
+            error: t("File exceeds the 10MB limit")
           };
         }
 
@@ -149,7 +151,7 @@ export function ImageUploader({
         void uploadEntries(validEntries);
       }
     },
-    [uploadEntries]
+    [t, uploadEntries]
   );
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,14 +201,15 @@ export function ImageUploader({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            Images
+            {t("Images")}
           </p>
           <h3 className="font-display mt-3 text-2xl text-stone-900">
-            Upload imagery
+            {t("Upload imagery")}
           </h3>
           <p className="mt-3 max-w-xl text-sm text-stone-600">
-            Drag photos here, browse files, or capture new images straight from
-            your device camera.
+            {t(
+              "Drag photos here, browse files, or capture new images straight from your device camera."
+            )}
           </p>
         </div>
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
@@ -233,9 +236,11 @@ export function ImageUploader({
               <UploadCloud className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-medium text-stone-900">Drop images to upload</p>
+              <p className="font-medium text-stone-900">
+                {t("Drop images to upload")}
+              </p>
               <p className="mt-1 text-xs text-stone-500">
-                JPG, PNG, WebP, or HEIC. Up to 10MB each.
+                {t("JPG, PNG, WebP, or HEIC. Up to 10MB each.")}
               </p>
             </div>
           </div>
@@ -266,7 +271,7 @@ export function ImageUploader({
             onClick={() => fileInputRef.current?.click()}
             disabled={!isReady}
           >
-            Browse files
+            {t("Browse files")}
           </Button>
           <Button
             type="button"
@@ -275,14 +280,14 @@ export function ImageUploader({
             disabled={!isReady}
           >
             <Camera className="h-4 w-4" />
-            Use camera
+            {t("Use camera")}
           </Button>
         </div>
 
         {!isReady ? (
           <div className="flex items-center gap-2 text-xs text-stone-500">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
-            Finish loading the item to enable image uploads.
+            {t("Finish loading the item to enable image uploads.")}
           </div>
         ) : null}
 
@@ -298,7 +303,7 @@ export function ImageUploader({
         {hasUploads ? (
           <div className="rounded-2xl border border-stone-200 bg-stone-50/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-stone-500">
-              Upload queue
+              {t("Upload queue")}
             </p>
             <div className="mt-3 max-h-40 space-y-3 overflow-y-auto pr-2 text-sm">
               {uploads.map((entry) => (
@@ -318,22 +323,22 @@ export function ImageUploader({
                     {entry.status === "uploading" ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-                        <span className="text-amber-700">Uploading</span>
+                        <span className="text-amber-700">{t("Uploading")}</span>
                       </>
                     ) : entry.status === "success" ? (
                       <>
                         <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        <span className="text-emerald-700">Uploaded</span>
+                        <span className="text-emerald-700">{t("Uploaded")}</span>
                       </>
                     ) : entry.status === "error" ? (
                       <>
                         <AlertTriangle className="h-4 w-4 text-rose-600" />
                         <span className="text-rose-600">
-                          {entry.error ?? "Upload failed"}
+                          {entry.error ?? t("Upload failed")}
                         </span>
                       </>
                     ) : (
-                      <span className="text-stone-500">Queued</span>
+                      <span className="text-stone-500">{t("Queued")}</span>
                     )}
                   </div>
                 </div>

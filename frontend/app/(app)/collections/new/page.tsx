@@ -9,6 +9,7 @@ import {
   CollectionForm,
   type CollectionFormValues
 } from "@/components/collection-form";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { collectionApi, isApiError } from "@/lib/api";
 
@@ -20,6 +21,7 @@ const buildPayload = (values: CollectionFormValues) => ({
 
 export default function NewCollectionPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const handleSubmit = async (values: CollectionFormValues) => {
@@ -43,19 +45,20 @@ export default function NewCollectionPage() {
           <Button variant="ghost" size="sm" asChild>
             <Link href="/collections">
               <ArrowLeft className="h-4 w-4" />
-              Back to collections
+              {t("Back to collections")}
             </Link>
           </Button>
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-              New collection
+              {t("New collection")}
             </p>
             <h1 className="font-display mt-4 text-3xl text-stone-900">
-              Design the foundation for your archive.
+              {t("Design the foundation for your archive.")}
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-stone-600">
-              Give the collection a clear name, describe what belongs in it, and
-              decide whether it is visible in the public directory.
+              {t(
+                "Give the collection a clear name, describe what belongs in it, and decide whether it is visible in the public directory."
+              )}
             </p>
           </div>
         </div>
@@ -64,23 +67,23 @@ export default function NewCollectionPage() {
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            Collection details
+            {t("Collection details")}
           </p>
           <h2 className="font-display mt-3 text-2xl text-stone-900">
-            Capture the story you want to document.
+            {t("Capture the story you want to document.")}
           </h2>
           <p className="mt-3 text-sm text-stone-600">
-            You can adjust the details later, including public visibility.
+            {t("You can adjust the details later, including public visibility.")}
           </p>
 
           <div className="mt-6">
             <CollectionForm
               onSubmit={handleSubmit}
-              submitLabel="Create collection"
-              submitPendingLabel="Creating collection..."
+              submitLabel={t("Create collection")}
+              submitPendingLabel={t("Creating collection...")}
               secondaryAction={
                 <Button variant="ghost" type="button" asChild>
-                  <Link href="/collections">Cancel</Link>
+                  <Link href="/collections">{t("Cancel")}</Link>
                 </Button>
               }
               formError={formError}
@@ -91,14 +94,15 @@ export default function NewCollectionPage() {
         <aside className="space-y-6">
           <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-              What happens next
+              {t("What happens next")}
             </p>
             <h3 className="font-display mt-3 text-2xl text-stone-900">
-              Build your schema and start cataloguing.
+              {t("Build your schema and start cataloguing.")}
             </h3>
             <p className="mt-3 text-sm text-stone-600">
-              After creating the collection, define metadata fields, then add
-              items and images from any device.
+              {t(
+                "After creating the collection, define metadata fields, then add items and images from any device."
+              )}
             </p>
             <div className="mt-6 space-y-4 text-sm text-stone-600">
               <div className="flex items-start gap-3">
@@ -106,9 +110,9 @@ export default function NewCollectionPage() {
                   <FolderPlus className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900">Define fields</p>
+                  <p className="font-medium text-stone-900">{t("Define fields")}</p>
                   <p className="mt-1 text-xs text-stone-500">
-                    Set up condition, era, provenance, and more.
+                    {t("Set up condition, era, provenance, and more.")}
                   </p>
                 </div>
               </div>
@@ -117,9 +121,9 @@ export default function NewCollectionPage() {
                   <Camera className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900">Capture imagery</p>
+                  <p className="font-medium text-stone-900">{t("Capture imagery")}</p>
                   <p className="mt-1 text-xs text-stone-500">
-                    Upload photos or use the mobile camera capture button.
+                    {t("Upload photos or use the mobile camera capture button.")}
                   </p>
                 </div>
               </div>
@@ -128,9 +132,9 @@ export default function NewCollectionPage() {
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900">Share publicly</p>
+                  <p className="font-medium text-stone-900">{t("Share publicly")}</p>
                   <p className="mt-1 text-xs text-stone-500">
-                    Publish the collection when you are ready.
+                    {t("Publish the collection when you are ready.")}
                   </p>
                 </div>
               </div>
@@ -139,11 +143,12 @@ export default function NewCollectionPage() {
 
           <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-              Studio note
+              {t("Studio note")}
             </p>
             <p className="mt-3 text-sm text-stone-300">
-              Start with a simple collection and expand its schema once you see
-              how you want to capture details.
+              {t(
+                "Start with a simple collection and expand its schema once you see how you want to capture details."
+              )}
             </p>
           </div>
         </aside>

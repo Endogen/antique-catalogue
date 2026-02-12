@@ -6,23 +6,25 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/i18n-provider";
 import type { FieldDefinitionResponse, FieldOptions } from "@/lib/api";
 
-const itemSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Item name is required")
-    .max(160, "Keep the name under 160 characters"),
-  notes: z
-    .string()
-    .max(2000, "Keep the notes under 2000 characters")
-    .optional()
-    .or(z.literal("")),
-  metadata: z.record(z.unknown()).optional(),
-  is_highlight: z.boolean().optional()
-});
+const createItemSchema = (t: (key: string) => string) =>
+  z.object({
+    name: z
+      .string()
+      .min(1, t("Item name is required"))
+      .max(160, t("Keep the name under 160 characters")),
+    notes: z
+      .string()
+      .max(2000, t("Keep the notes under 2000 characters"))
+      .optional()
+      .or(z.literal("")),
+    metadata: z.record(z.unknown()).optional(),
+    is_highlight: z.boolean().optional()
+  });
 
-type ItemFormInput = z.infer<typeof itemSchema>;
+type ItemFormInput = z.infer<ReturnType<typeof createItemSchema>>;
 
 export type ItemFormValues = {
   name: string;
@@ -57,14 +59,14 @@ type MetadataValidationResult = {
   errors: MetadataError[];
 };
 
-const fieldTypeLabels: Record<string, string> = {
-  text: "Text",
-  number: "Number",
-  date: "Date",
-  timestamp: "Timestamp",
-  checkbox: "Checkbox",
-  select: "Select"
-};
+const buildFieldTypeLabels = (t: (key: string) => string): Record<string, string> => ({
+  text: t("Text"),
+  number: t("Number"),
+  date: t("Date"),
+  timestamp: t("Timestamp"),
+  checkbox: t("Checkbox"),
+  select: t("Select")
+});
 
 const sortFields = (items: FieldDefinitionResponse[]) =>
   [...items].sort((a, b) => a.position - b.position || a.id - b.id);
@@ -179,7 +181,8 @@ const buildMetadataDefaults = (
 
 const validateMetadata = (
   fields: FieldDefinitionResponse[],
-  metadataValues?: Record<string, unknown>
+  metadataValues: Record<string, unknown> | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string
 ): MetadataValidationResult => {
   const errors: MetadataError[] = [];
   const normalized: Record<string, unknown> = {};
@@ -191,19 +194,19 @@ const validateMetadata = (
 
     if (isEmptyValue(rawValue)) {
       if (field.is_required) {
-        errors.push({ fieldId: key, message: "Field is required" });
+        errors.push({ fieldId: key, message: t("Field is required") });
       }
       return;
     }
 
     if (field.field_type === "text") {
       if (typeof rawValue !== "string") {
-        errors.push({ fieldId: key, message: "Value must be a string" });
+        errors.push({ fieldId: key, message: t("Value must be a string") });
         return;
       }
       const trimmed = rawValue.trim();
       if (field.is_required && !trimmed) {
-        errors.push({ fieldId: key, message: "Field is required" });
+        errors.push({ fieldId: key, message: t("Field is required") });
         return;
       }
       if (trimmed) {
@@ -220,7 +223,7 @@ const validateMetadata = (
             ? Number(rawValue)
             : NaN;
       if (Number.isNaN(numericValue)) {
-        errors.push({ fieldId: key, message: "Value must be a number" });
+        errors.push({ fieldId: key, message: t("Value must be a number") });
         return;
       }
       normalized[field.name] = numericValue;
@@ -229,17 +232,26 @@ const validateMetadata = (
 
     if (field.field_type === "date") {
       if (typeof rawValue !== "string") {
-        errors.push({ fieldId: key, message: "Value must be a date (YYYY-MM-DD)" });
+        errors.push({
+          fieldId: key,
+          message: t("Value must be a date (YYYY-MM-DD)")
+        });
         return;
       }
       const trimmed = rawValue.trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-        errors.push({ fieldId: key, message: "Value must be a date (YYYY-MM-DD)" });
+        errors.push({
+          fieldId: key,
+          message: t("Value must be a date (YYYY-MM-DD)")
+        });
         return;
       }
       const parsed = new Date(`${trimmed}T00:00:00Z`);
       if (Number.isNaN(parsed.getTime())) {
-        errors.push({ fieldId: key, message: "Value must be a date (YYYY-MM-DD)" });
+        errors.push({
+          fieldId: key,
+          message: t("Value must be a date (YYYY-MM-DD)")
+        });
         return;
       }
       normalized[field.name] = trimmed;
@@ -248,12 +260,18 @@ const validateMetadata = (
 
     if (field.field_type === "timestamp") {
       if (typeof rawValue !== "string") {
-        errors.push({ fieldId: key, message: "Value must be a timestamp (ISO 8601)" });
+        errors.push({
+          fieldId: key,
+          message: t("Value must be a timestamp (ISO 8601)")
+        });
         return;
       }
       const trimmed = rawValue.trim();
       if (!trimmed || (!trimmed.includes("T") && !trimmed.includes(" "))) {
-        errors.push({ fieldId: key, message: "Value must be a timestamp (ISO 8601)" });
+        errors.push({
+          fieldId: key,
+          message: t("Value must be a timestamp (ISO 8601)")
+        });
         return;
       }
       const adjusted = trimmed.endsWith("Z")
@@ -261,7 +279,10 @@ const validateMetadata = (
         : trimmed;
       const parsed = new Date(adjusted);
       if (Number.isNaN(parsed.getTime())) {
-        errors.push({ fieldId: key, message: "Value must be a timestamp (ISO 8601)" });
+        errors.push({
+          fieldId: key,
+          message: t("Value must be a timestamp (ISO 8601)")
+        });
         return;
       }
       normalized[field.name] = trimmed;
@@ -270,7 +291,7 @@ const validateMetadata = (
 
     if (field.field_type === "checkbox") {
       if (typeof rawValue !== "boolean") {
-        errors.push({ fieldId: key, message: "Value must be true or false" });
+        errors.push({ fieldId: key, message: t("Value must be true or false") });
         return;
       }
       normalized[field.name] = rawValue;
@@ -279,19 +300,24 @@ const validateMetadata = (
 
     if (field.field_type === "select") {
       if (typeof rawValue !== "string") {
-        errors.push({ fieldId: key, message: "Value must be a string" });
+        errors.push({ fieldId: key, message: t("Value must be a string") });
         return;
       }
       const trimmed = rawValue.trim();
       const options = extractOptions(field.options);
       if (!options.length) {
-        errors.push({ fieldId: key, message: "Select field is missing options" });
+        errors.push({
+          fieldId: key,
+          message: t("Select field is missing options")
+        });
         return;
       }
       if (!trimmed || !options.includes(trimmed)) {
         errors.push({
           fieldId: key,
-          message: `Value must be one of: ${options.join(", ")}`
+          message: t("Value must be one of: {options}", {
+            options: options.join(", ")
+          })
         });
         return;
       }
@@ -299,7 +325,7 @@ const validateMetadata = (
       return;
     }
 
-    errors.push({ fieldId: key, message: "Unsupported field type" });
+    errors.push({ fieldId: key, message: t("Unsupported field type") });
   });
 
   if (!Object.keys(normalized).length) {
@@ -319,6 +345,9 @@ export function ItemForm({
   formError,
   render
 }: ItemFormProps) {
+  const { t } = useI18n();
+  const fieldTypeLabels = React.useMemo(() => buildFieldTypeLabels(t), [t]);
+  const itemSchema = React.useMemo(() => createItemSchema(t), [t]);
   const sortedFields = React.useMemo(() => sortFields(fields), [fields]);
 
   const defaults = React.useMemo<ItemFormInput>(
@@ -374,7 +403,8 @@ export function ItemForm({
 
     const { payload, errors: metadataErrors } = validateMetadata(
       sortedFields,
-      values.metadata
+      values.metadata,
+      t
     );
 
     if (metadataErrors.length) {
@@ -404,16 +434,16 @@ export function ItemForm({
       role="alert"
       className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
     >
-      {formError}
+      {t(formError)}
     </div>
   ) : null;
 
   const baseFields = (
     <div className="space-y-4">
       <div>
-        <label className="text-sm font-medium text-stone-700" htmlFor="name">
-          Item name
-        </label>
+          <label className="text-sm font-medium text-stone-700" htmlFor="name">
+            {t("Item name")}
+          </label>
         <input
           id="name"
           type="text"
@@ -428,9 +458,9 @@ export function ItemForm({
       </div>
 
       <div>
-        <label className="text-sm font-medium text-stone-700" htmlFor="notes">
-          Notes
-        </label>
+          <label className="text-sm font-medium text-stone-700" htmlFor="notes">
+            {t("Notes")}
+          </label>
         <textarea
           id="notes"
           rows={4}
@@ -440,9 +470,9 @@ export function ItemForm({
         {errors.notes ? (
           <p className="mt-2 text-xs text-rose-600">{errors.notes.message}</p>
         ) : (
-          <p className="mt-2 text-xs text-stone-500">
-            Optional context, provenance, or acquisition details.
-          </p>
+            <p className="mt-2 text-xs text-stone-500">
+              {t("Optional context, provenance, or acquisition details.")}
+            </p>
         )}
       </div>
 
@@ -453,10 +483,10 @@ export function ItemForm({
               className="text-sm font-medium text-stone-800"
               htmlFor="is_highlight"
             >
-              Highlight item
+              {t("Highlight item")}
             </label>
             <p className="mt-1 text-xs text-stone-600">
-              Adds a warm glow to featured items across the catalogue.
+              {t("Adds a warm glow to featured items across the catalogue.")}
             </p>
           </div>
           <input
@@ -473,22 +503,23 @@ export function ItemForm({
   const metadataFields = (
     <div className="space-y-4">
       <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-          Metadata
-        </p>
-        <h3 className="font-display mt-3 text-2xl text-stone-900">
-          Capture collection-specific fields.
-        </h3>
-        <p className="mt-2 text-sm text-stone-600">
-          Complete the schema-driven attributes for this item.
-        </p>
+          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            {t("Metadata")}
+          </p>
+          <h3 className="font-display mt-3 text-2xl text-stone-900">
+            {t("Capture collection-specific fields.")}
+          </h3>
+          <p className="mt-2 text-sm text-stone-600">
+            {t("Complete the schema-driven attributes for this item.")}
+          </p>
       </div>
 
-      {sortedFields.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-          No schema fields yet. Define fields in collection settings to capture
-          metadata.
-        </div>
+        {sortedFields.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+            {t(
+              "No schema fields yet. Define fields in collection settings to capture metadata."
+            )}
+          </div>
       ) : (
         <div className="grid gap-4">
           {sortedFields.map((field) => {
@@ -514,7 +545,9 @@ export function ItemForm({
                     </label>
                     <p className="mt-1 text-xs text-stone-500">
                       {fieldTypeLabels[field.field_type] ?? field.field_type}
-                      {field.is_required ? " · Required" : " · Optional"}
+                      {field.is_required
+                        ? ` · ${t("Required")}`
+                        : ` · ${t("Optional")}`}
                     </p>
                     {errorMessage ? (
                       <p className="mt-2 text-xs text-rose-600">
@@ -547,7 +580,9 @@ export function ItemForm({
                   </label>
                   <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
                     {fieldTypeLabels[field.field_type] ?? field.field_type}
-                    {field.is_required ? " · Required" : " · Optional"}
+                    {field.is_required
+                      ? ` · ${t("Required")}`
+                      : ` · ${t("Optional")}`}
                   </span>
                 </div>
 
@@ -559,7 +594,7 @@ export function ItemForm({
                     {...registerMetadataField(fieldId)}
                     disabled={!options.length}
                   >
-                    <option value="">Select a value</option>
+                      <option value="">{t("Select a value")}</option>
                     {options.map((option) => (
                       <option key={option} value={option}>
                         {option}
@@ -581,13 +616,13 @@ export function ItemForm({
                     step={field.field_type === "number" ? "any" : undefined}
                     className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                     aria-invalid={errorMessage ? "true" : "false"}
-                    placeholder={
-                      field.field_type === "date"
-                        ? "YYYY-MM-DD"
-                        : field.field_type === "timestamp"
-                          ? "YYYY-MM-DDThh:mm"
-                          : "Enter value"
-                    }
+                      placeholder={
+                        field.field_type === "date"
+                          ? t("YYYY-MM-DD")
+                          : field.field_type === "timestamp"
+                            ? t("YYYY-MM-DDThh:mm")
+                            : t("Enter value")
+                      }
                     {...registerMetadataField(fieldId, {
                       setValueAs:
                         field.field_type === "number"
@@ -615,7 +650,7 @@ export function ItemForm({
     <div className="flex flex-wrap items-center gap-3">
       {secondaryAction}
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? submitPendingLabel ?? "Saving..." : submitLabel}
+        {isSubmitting ? submitPendingLabel ?? t("Saving...") : submitLabel}
       </Button>
     </div>
   );

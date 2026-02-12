@@ -17,27 +17,13 @@ import {
   type CollectionFormValues
 } from "@/components/collection-form";
 import { SchemaBuilder } from "@/components/schema-builder";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
   collectionApi,
   isApiError,
   type CollectionResponse
 } from "@/lib/api";
-
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return "—";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  }).format(parsed);
-};
 
 const buildPayload = (values: CollectionFormValues) => ({
   name: values.name.trim(),
@@ -53,12 +39,31 @@ type LoadState = {
 
 export default function CollectionSettingsPage() {
   const params = useParams();
+  const { t, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [state, setState] = React.useState<LoadState>({
     status: "loading"
   });
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
+
+  const formatDate = React.useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return "—";
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return value;
+      }
+      return new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }).format(parsed);
+    },
+    [locale]
+  );
 
   const loadCollection = React.useCallback(async () => {
     if (!collectionId) {
@@ -127,27 +132,29 @@ export default function CollectionSettingsPage() {
           <Button variant="ghost" size="sm" asChild>
             <Link href="/collections">
               <ArrowLeft className="h-4 w-4" />
-              Back to collections
+              {t("Back to collections")}
             </Link>
           </Button>
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-              Collection settings
+              {t("Collection settings")}
             </p>
             <h1 className="font-display mt-4 text-3xl text-stone-900">
               {state.status === "ready" && state.data
                 ? state.data.name
-                : "Review collection details"}
+                : t("Review collection details")}
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-stone-600">
-              Update the collection name, description, and public visibility.
+              {t(
+                "Update the collection name, description, and public visibility."
+              )}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => loadCollection()}>
             <RefreshCcw className="h-4 w-4" />
-            Refresh
+            {t("Refresh")}
           </Button>
         </div>
       </header>
@@ -157,22 +164,22 @@ export default function CollectionSettingsPage() {
           className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
           aria-busy="true"
         >
-          Loading collection settings...
+          {t("Loading collection settings...")}
         </div>
       ) : state.status === "error" ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
           <p className="text-sm font-medium text-rose-700">
-            We hit a snag loading this collection.
+            {t("We hit a snag loading this collection.")}
           </p>
           <p className="mt-2 text-sm text-rose-600">
-            {state.error ?? "Please try again."}
+            {t(state.error ?? "Please try again.")}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Button variant="outline" onClick={() => loadCollection()}>
-              Try again
+              {t("Try again")}
             </Button>
             <Button variant="ghost" asChild>
-              <Link href="/collections">Back to collections</Link>
+              <Link href="/collections">{t("Back to collections")}</Link>
             </Button>
           </div>
         </div>
@@ -181,14 +188,15 @@ export default function CollectionSettingsPage() {
           <div className="space-y-6">
             <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
               <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                Collection details
+                {t("Collection details")}
               </p>
               <h2 className="font-display mt-3 text-2xl text-stone-900">
-                Keep your catalogue organized.
+                {t("Keep your catalogue organized.")}
               </h2>
               <p className="mt-3 text-sm text-stone-600">
-                These details appear throughout your workspace and in the public
-                directory if enabled.
+                {t(
+                  "These details appear throughout your workspace and in the public directory if enabled."
+                )}
               </p>
 
               {saveMessage ? (
@@ -196,7 +204,7 @@ export default function CollectionSettingsPage() {
                   role="status"
                   className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
                 >
-                  {saveMessage}
+                  {t(saveMessage)}
                 </div>
               ) : null}
 
@@ -208,11 +216,11 @@ export default function CollectionSettingsPage() {
                     is_public: state.data?.is_public ?? false
                   }}
                   onSubmit={handleSubmit}
-                  submitLabel="Save changes"
-                  submitPendingLabel="Saving changes..."
+                  submitLabel={t("Save changes")}
+                  submitPendingLabel={t("Saving changes...")}
                   secondaryAction={
                     <Button variant="ghost" type="button" asChild>
-                      <Link href="/collections">Back to collections</Link>
+                      <Link href="/collections">{t("Back to collections")}</Link>
                     </Button>
                   }
                   formError={formError}
@@ -226,10 +234,10 @@ export default function CollectionSettingsPage() {
           <aside className="space-y-6">
             <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
               <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-                Collection snapshot
+                {t("Collection snapshot")}
               </p>
               <h3 className="font-display mt-3 text-2xl text-stone-900">
-                Quick details
+                {t("Quick details")}
               </h3>
               <div className="mt-6 space-y-4 text-sm text-stone-600">
                 <div className="flex items-start gap-3">
@@ -237,7 +245,7 @@ export default function CollectionSettingsPage() {
                     <CalendarDays className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-stone-900">Created</p>
+                    <p className="font-medium text-stone-900">{t("Created")}</p>
                     <p className="mt-1 text-xs text-stone-500">
                       {formatDate(state.data?.created_at)}
                     </p>
@@ -248,7 +256,9 @@ export default function CollectionSettingsPage() {
                     <Settings2 className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-stone-900">Last updated</p>
+                    <p className="font-medium text-stone-900">
+                      {t("Last updated")}
+                    </p>
                     <p className="mt-1 text-xs text-stone-500">
                       {formatDate(state.data?.updated_at)}
                     </p>
@@ -263,11 +273,11 @@ export default function CollectionSettingsPage() {
                     )}
                   </div>
                   <div>
-                    <p className="font-medium text-stone-900">Visibility</p>
+                    <p className="font-medium text-stone-900">{t("Visibility")}</p>
                     <p className="mt-1 text-xs text-stone-500">
                       {state.data?.is_public
-                        ? "Public directory"
-                        : "Private workspace"}
+                        ? t("Public directory")
+                        : t("Private workspace")}
                     </p>
                   </div>
                 </div>
@@ -276,11 +286,12 @@ export default function CollectionSettingsPage() {
 
             <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
               <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                Next step
+                {t("Next step")}
               </p>
               <p className="mt-3 text-sm text-stone-300">
-                Define the metadata fields for this collection to begin adding
-                items in the next step.
+                {t(
+                  "Define the metadata fields for this collection to begin adding items in the next step."
+                )}
               </p>
             </div>
           </aside>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
+import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
   imageApi,
@@ -45,6 +46,7 @@ const highlightCardClass =
 
 export default function Home() {
   const { isAuthenticated, logout, status: authStatus } = useAuth();
+  const { t } = useI18n();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [featuredState, setFeaturedState] = React.useState<{
     status: "loading" | "ready" | "error";
@@ -74,8 +76,8 @@ export default function Home() {
           status: "error",
           data: null,
           error: isApiError(error)
-            ? error.detail
-            : "We couldn't load the featured collection."
+            ? t(error.detail)
+            : t("We couldn't load the featured collection.")
         });
       }
     })();
@@ -94,15 +96,15 @@ export default function Home() {
           status: "error",
           data: [],
           error: isApiError(error)
-            ? error.detail
-            : "We couldn't load featured items."
+            ? t(error.detail)
+            : t("We couldn't load featured items.")
         });
       }
     })();
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [t]);
 
   const handleLogout = async () => {
     if (isLoggingOut) {
@@ -136,22 +138,22 @@ export default function Home() {
               </div>
               <div>
                 <p className="font-display text-lg tracking-tight">
-                  Antique Catalogue
+                  {t("Antique Catalogue")}
                 </p>
                 <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
-                  Studio Archive
+                  {t("Studio Archive")}
                 </p>
               </div>
             </div>
             <nav className="hidden items-center gap-6 text-sm text-stone-600 md:flex">
               <Link href="/" className="font-medium text-stone-900">
-                Home
+                {t("Home")}
               </Link>
               <Link href="/explore" className="hover:text-stone-900">
-                Explore
+                {t("Explore")}
               </Link>
               <Link href="/dashboard" className="hover:text-stone-900">
-                Dashboard
+                {t("Dashboard")}
               </Link>
             </nav>
             <div className="flex items-center gap-3">
@@ -162,7 +164,7 @@ export default function Home() {
                   disabled={isLoggingOut}
                 >
                   <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? "Logging out..." : "Logout"}
+                  {isLoggingOut ? t("Logging out...") : t("Log out")}
                 </Button>
               ) : (
                 <>
@@ -171,10 +173,10 @@ export default function Home() {
                     className="hidden sm:inline-flex"
                     asChild
                   >
-                    <Link href="/login">Log in</Link>
+                    <Link href="/login">{t("Log in")}</Link>
                   </Button>
                   <Button asChild>
-                    <Link href="/register">Create account</Link>
+                    <Link href="/register">{t("Create account")}</Link>
                   </Button>
                 </>
               )}
@@ -186,30 +188,29 @@ export default function Home() {
           <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6 pb-16 pt-10 lg:flex-row lg:items-center lg:px-12 lg:pt-20">
             <div className="flex-1 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
-                Collection intelligence
+                {t("Collection intelligence")}
               </p>
               <h1 className="font-display mt-4 text-4xl leading-tight text-stone-900 sm:text-5xl lg:text-6xl">
-                Build living archives for objects that deserve a story.
+                {t("Build living archives for objects that deserve a story.")}
               </h1>
               <p className="mt-6 max-w-xl text-base text-stone-600 sm:text-lg">
-                Antique Catalogue keeps provenance, condition, and imagery
-                organized in one focused workspace. Create custom metadata
-                schemas, upload photos from any device, and share curated
-                collections with confidence.
+                {t(
+                  "Antique Catalogue keeps provenance, condition, and imagery organized in one focused workspace. Create custom metadata schemas, upload photos from any device, and share curated collections with confidence."
+                )}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button size="lg" asChild>
-                  <Link href="/dashboard">Go to dashboard</Link>
+                  <Link href="/dashboard">{t("Go to dashboard")}</Link>
                 </Button>
                 <Button variant="outline" size="lg" asChild>
-                  <Link href="/explore">Browse public collections</Link>
+                  <Link href="/explore">{t("Browse public collections")}</Link>
                 </Button>
               </div>
               <div className="mt-10 grid gap-4 rounded-2xl border border-stone-200 bg-white/80 p-6 backdrop-blur">
                 {highlights.map((item) => (
                   <div key={item} className="flex items-start gap-3 text-sm">
                     <span className="mt-1 h-2 w-2 rounded-full bg-amber-500" />
-                    <span className="text-stone-700">{item}</span>
+                    <span className="text-stone-700">{t(item)}</span>
                   </div>
                 ))}
               </div>
@@ -218,25 +219,27 @@ export default function Home() {
               <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-[0_20px_80px_-40px_rgba(15,23,42,0.4)]">
                 <div className="flex items-center justify-between">
                   <p className="text-sm uppercase tracking-[0.3em] text-stone-400">
-                    Featured collection
+                    {t("Featured collection")}
                   </p>
                   {featuredState.data ? (
                     <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                      Public
+                      {t("Public")}
                     </span>
                   ) : null}
                 </div>
                 <h2 className="font-display mt-4 text-2xl text-stone-900">
                   {featuredState.status === "loading"
-                    ? "Loading featured collection..."
-                    : featuredState.data?.name ?? "No featured collection yet"}
+                    ? t("Loading featured collection...")
+                    : featuredState.data?.name ?? t("No featured collection yet")}
                 </h2>
                 <p className="mt-3 text-sm text-stone-600">
                   {featuredState.status === "error"
                     ? featuredState.error ??
-                      "We couldn't load the featured collection."
+                      t("We couldn't load the featured collection.")
                     : featuredState.data?.description ??
-                      "Select a public collection to highlight on the homepage."}
+                      t(
+                        "Select a public collection to highlight on the homepage."
+                      )}
                 </p>
                 <div className="mt-6 grid grid-cols-2 gap-4">
                   {(showFeaturedItems ? featuredItems : [0, 1, 2, 3]).map(
@@ -250,15 +253,15 @@ export default function Home() {
                             <div className="h-20 rounded-xl bg-gradient-to-br from-stone-200 via-stone-100 to-amber-100" />
                             <p className="mt-3 text-sm font-medium text-stone-800">
                               {featuredState.data
-                                ? "Featured item"
+                                ? t("Featured item")
                                 : featuredState.status === "loading"
-                                  ? "Loading preview"
-                                  : "Collection preview"}
+                                  ? t("Loading preview")
+                                  : t("Collection preview")}
                             </p>
                             <p className="text-xs text-stone-500">
                               {featuredState.data
-                                ? "Curated highlight"
-                                : "Select a collection to feature"}
+                                ? t("Curated highlight")
+                                : t("Select a collection to feature")}
                             </p>
                           </div>
                         );
@@ -290,7 +293,7 @@ export default function Home() {
                           <p className="text-xs text-stone-500">
                             {item.notes
                               ? item.notes.slice(0, 50)
-                              : "Featured highlight"}
+                              : t("Featured highlight")}
                           </p>
                         </div>
                       );
@@ -300,12 +303,12 @@ export default function Home() {
                 <div className="mt-6 flex items-center justify-between rounded-2xl bg-stone-900 px-4 py-3 text-stone-100">
                   <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                      Next intake
+                      {t("Next intake")}
                     </p>
                     <p className="text-sm font-medium">
                       {featuredState.data
-                        ? "View the featured collection"
-                        : "Feature a public collection"}
+                        ? t("View the featured collection")
+                        : t("Feature a public collection")}
                     </p>
                   </div>
                   <Button size="sm" variant="secondary" asChild>
@@ -316,7 +319,9 @@ export default function Home() {
                           : "/explore"
                       }
                     >
-                      {featuredState.data ? "View collection" : "Browse public"}
+                      {featuredState.data
+                        ? t("View collection")
+                        : t("Browse public")}
                     </Link>
                   </Button>
                 </div>
@@ -333,10 +338,10 @@ export default function Home() {
                 className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
                 <h3 className="font-display text-xl text-stone-900">
-                  {feature.title}
+                  {t(feature.title)}
                 </h3>
                 <p className="mt-3 text-sm text-stone-600">
-                  {feature.description}
+                  {t(feature.description)}
                 </p>
               </div>
             ))}
@@ -347,10 +352,10 @@ export default function Home() {
           <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 text-stone-100 lg:flex-row lg:items-center lg:justify-between lg:px-12">
             <div>
               <p className="text-xs uppercase tracking-[0.4em] text-stone-400">
-                Ready to start
+                {t("Ready to start")}
               </p>
               <h2 className="font-display mt-4 text-3xl">
-                Turn your archive into a living collection.
+                {t("Turn your archive into a living collection.")}
               </h2>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -361,12 +366,12 @@ export default function Home() {
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                 >
-                  {isLoggingOut ? "Logging out..." : "Logout"}
+                  {isLoggingOut ? t("Logging out...") : t("Log out")}
                 </Button>
               ) : (
                 <>
                   <Button size="lg" variant="secondary" asChild>
-                    <Link href="/register">Create an account</Link>
+                    <Link href="/register">{t("Create an account")}</Link>
                   </Button>
                   <Button
                     size="lg"
@@ -374,7 +379,7 @@ export default function Home() {
                     className="text-stone-100"
                     asChild
                   >
-                    <Link href="/login">Sign in</Link>
+                    <Link href="/login">{t("Sign in")}</Link>
                   </Button>
                 </>
               )}
