@@ -17,6 +17,7 @@ from app.schemas.collections import (
 )
 from app.schemas.featured import FeaturedItemResponse
 from app.schemas.responses import MessageResponse
+from app.services.activity import log_activity
 
 router = APIRouter(prefix="/collections", tags=["collections"])
 public_router = APIRouter(prefix="/public/collections", tags=["public collections"])
@@ -106,6 +107,15 @@ def create_collection(
         is_public=request.is_public,
     )
     db.add(collection)
+    db.flush()
+    log_activity(
+        db,
+        user_id=current_user.id,
+        action_type="collection.created",
+        resource_type="collection",
+        resource_id=collection.id,
+        summary=f'Created collection "{collection.name}".',
+    )
     db.commit()
     db.refresh(collection)
     return collection
@@ -143,6 +153,15 @@ def update_collection(
         collection.is_public = data["is_public"]
 
     db.add(collection)
+    if data:
+        log_activity(
+            db,
+            user_id=current_user.id,
+            action_type="collection.updated",
+            resource_type="collection",
+            resource_id=collection.id,
+            summary=f'Updated collection "{collection.name}".',
+        )
     db.commit()
     db.refresh(collection)
     return collection
@@ -155,6 +174,14 @@ def delete_collection(
     db: Session = Depends(get_db),
 ) -> MessageResponse:
     collection = _get_collection_or_404(db, collection_id, current_user.id)
+    log_activity(
+        db,
+        user_id=current_user.id,
+        action_type="collection.deleted",
+        resource_type="collection",
+        resource_id=collection.id,
+        summary=f'Deleted collection "{collection.name}".',
+    )
     db.delete(collection)
     db.commit()
     return MessageResponse(message="Collection deleted")

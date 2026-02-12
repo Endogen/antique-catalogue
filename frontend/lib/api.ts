@@ -143,6 +143,16 @@ export type ItemSearchResponse = {
   updated_at: string;
 };
 
+export type ActivityLogResponse = {
+  id: number;
+  action_type: string;
+  resource_type: string;
+  resource_id: number | null;
+  target_path?: string | null;
+  summary: string;
+  created_at: string;
+};
+
 export type ApiErrorPayload = {
   detail?: string;
   message?: string;
@@ -619,6 +629,17 @@ export const collectionApi = {
       method: "PATCH",
       body: payload
     })
+};
+
+export const activityApi = {
+  list: (options: { limit?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (typeof options.limit === "number") {
+      params.set("limit", String(options.limit));
+    }
+    const query = params.toString();
+    return apiRequest<ActivityLogResponse[]>(`/activity${query ? `?${query}` : ""}`);
+  }
 };
 
 export const publicCollectionApi = {

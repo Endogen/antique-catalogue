@@ -21,7 +21,11 @@ export const metadata: Metadata = {
   title: "Antique Catalogue",
   description: "Catalogue and preserve antique collections with custom metadata.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon.ico" }
+    ],
     apple: "/apple-touch-icon.png"
   }
 };

@@ -10,6 +10,7 @@ import {
   Pencil,
   RefreshCcw,
   ShieldAlert,
+  Sparkles,
   Tag,
   Trash2
 } from "lucide-react";
@@ -682,6 +683,17 @@ export default function ItemDetailPage() {
                         <p>{formatDate(itemState.data?.updated_at)}</p>
                       </div>
                     </div>
+                    {itemState.data?.is_highlight ? (
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                          <Sparkles className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-stone-900">{t("Spotlight")}</p>
+                          <p>{t("Yes")}</p>
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="flex items-start gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
                         <Tag className="h-4 w-4" />

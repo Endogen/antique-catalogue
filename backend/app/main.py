@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.activity import router as activity_router
 from app.api.admin import router as admin_router
 from app.api.auth import router as auth_router
 from app.api.collections import public_router as public_collections_router
@@ -19,6 +20,7 @@ app.state.settings = settings
 register_exception_handlers(app)
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(activity_router)
 app.include_router(collections_router)
 app.include_router(fields_router)
 app.include_router(items_router)
