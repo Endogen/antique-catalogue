@@ -326,37 +326,6 @@ export default function SettingsPage() {
           </form>
         </div>
 
-        <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            {t("Active session")}
-          </p>
-          <h2 className="font-display mt-3 text-2xl text-stone-900">
-            {t("Manage your current login.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-600">
-            {t(
-              "Log out from this device, or refresh to sync the latest profile data."
-            )}
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button variant="outline" onClick={() => refresh()}>
-              <RefreshCcw className="h-4 w-4" />
-              {t("Refresh profile")}
-            </Button>
-            <Button variant="ghost" onClick={() => logout()}>
-              <LogOut className="h-4 w-4" />
-              {t("Log out")}
-            </Button>
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 text-sm text-stone-600">
-            <p className="font-medium text-stone-700">{t("Tip")}</p>
-            <p className="mt-2">
-              {t("For shared devices, log out after each cataloguing session.")}
-            </p>
-          </div>
-        </div>
       </section>
 
       <section className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
