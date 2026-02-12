@@ -19,7 +19,11 @@ const body = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "Antique Catalogue",
-  description: "Catalogue and preserve antique collections with custom metadata."
+  description: "Catalogue and preserve antique collections with custom metadata.",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png"
+  }
 };
 
 export default function RootLayout({

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -87,9 +88,13 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
           className="flex items-center gap-3"
           onClick={onNavigate}
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-200 text-sm font-semibold text-stone-900">
-            AC
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Antique Catalogue"
+            width={44}
+            height={44}
+            className="rounded-full"
+          />
           <div>
             <p className="font-display text-lg tracking-tight text-stone-100">
               {t("Antique Catalogue")}
