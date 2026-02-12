@@ -197,6 +197,7 @@ export function ImageGallery({
       return;
     }
     event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
     if (dragOverId !== imageId) {
       setDragOverId(imageId);
     }
@@ -381,9 +382,7 @@ export function ImageGallery({
                           ? "border-amber-300 bg-amber-50 text-amber-700"
                           : "border-stone-200 bg-stone-50 hover:border-stone-300",
                         canInteract && !isBusy
-                          ? draggingId === image.id
-                            ? "cursor-grabbing"
-                            : "cursor-ew-resize"
+                          ? "cursor-ew-resize"
                           : "cursor-default"
                       )}
                       draggable={canInteract && !isBusy}
