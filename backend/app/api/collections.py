@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.collection import Collection
+from app.models.collection_star import CollectionStar
 from app.models.item import Item
 from app.models.item_image import ItemImage
 from app.models.user import User
@@ -61,6 +62,27 @@ def _primary_image_id_subquery():
     )
 
 
+def _collection_item_count(collection_id: int):
+    return select(func.count(Item.id)).where(Item.collection_id == collection_id)
+
+
+def _collection_star_count(collection_id: int):
+    return select(func.count(CollectionStar.id)).where(
+        CollectionStar.collection_id == collection_id
+    )
+
+
+def _collection_star_counts_subquery():
+    return (
+        select(
+            CollectionStar.collection_id,
+            func.count(CollectionStar.id).label("star_count"),
+        )
+        .group_by(CollectionStar.collection_id)
+        .subquery()
+    )
+
+
 @router.get("", response_model=list[CollectionResponse])
 @router.get("/", response_model=list[CollectionResponse], include_in_schema=False)
 def list_collections(
@@ -75,15 +97,22 @@ def list_collections(
         .group_by(Item.collection_id)
         .subquery()
     )
+    star_counts = _collection_star_counts_subquery()
     rows = db.execute(
-        select(Collection, func.coalesce(item_counts.c.item_count, 0))
+        select(
+            Collection,
+            func.coalesce(item_counts.c.item_count, 0),
+            func.coalesce(star_counts.c.star_count, 0),
+        )
         .outerjoin(item_counts, item_counts.c.collection_id == Collection.id)
+        .outerjoin(star_counts, star_counts.c.collection_id == Collection.id)
         .where(Collection.owner_id == current_user.id)
         .order_by(Collection.created_at.desc())
     ).all()
     collections: list[Collection] = []
-    for collection, count in rows:
-        setattr(collection, "item_count", count)
+    for collection, item_count, star_count in rows:
+        setattr(collection, "item_count", item_count)
+        setattr(collection, "star_count", star_count)
         collections.append(collection)
     return collections
 
@@ -118,6 +147,8 @@ def create_collection(
     )
     db.commit()
     db.refresh(collection)
+    setattr(collection, "item_count", 0)
+    setattr(collection, "star_count", 0)
     return collection
 
 
@@ -128,10 +159,10 @@ def get_collection(
     db: Session = Depends(get_db),
 ) -> CollectionResponse:
     collection = _get_collection_or_404(db, collection_id, current_user.id)
-    count = db.execute(
-        select(func.count(Item.id)).where(Item.collection_id == collection.id)
-    ).scalar_one()
-    setattr(collection, "item_count", count)
+    item_count = db.execute(_collection_item_count(collection.id)).scalar_one()
+    star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
+    setattr(collection, "item_count", item_count)
+    setattr(collection, "star_count", star_count)
     return collection
 
 
@@ -164,6 +195,10 @@ def update_collection(
         )
     db.commit()
     db.refresh(collection)
+    item_count = db.execute(_collection_item_count(collection.id)).scalar_one()
+    star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
+    setattr(collection, "item_count", item_count)
+    setattr(collection, "star_count", star_count)
     return collection
 
 
@@ -198,15 +233,22 @@ def list_public_collections(db: Session = Depends(get_db)) -> list[CollectionRes
         .group_by(Item.collection_id)
         .subquery()
     )
+    star_counts = _collection_star_counts_subquery()
     rows = db.execute(
-        select(Collection, func.coalesce(item_counts.c.item_count, 0))
+        select(
+            Collection,
+            func.coalesce(item_counts.c.item_count, 0),
+            func.coalesce(star_counts.c.star_count, 0),
+        )
         .outerjoin(item_counts, item_counts.c.collection_id == Collection.id)
+        .outerjoin(star_counts, star_counts.c.collection_id == Collection.id)
         .where(Collection.is_public.is_(True))
         .order_by(Collection.created_at.desc())
     ).all()
     collections: list[Collection] = []
-    for collection, count in rows:
-        setattr(collection, "item_count", count)
+    for collection, item_count, star_count in rows:
+        setattr(collection, "item_count", item_count)
+        setattr(collection, "star_count", star_count)
         collections.append(collection)
     return collections
 
@@ -222,6 +264,11 @@ def get_featured_collection(db: Session = Depends(get_db)) -> CollectionResponse
         .scalars()
         .first()
     )
+    if collection:
+        item_count = db.execute(_collection_item_count(collection.id)).scalar_one()
+        star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
+        setattr(collection, "item_count", item_count)
+        setattr(collection, "star_count", star_count)
     return collection
 
 
@@ -252,8 +299,8 @@ def get_featured_collection_items(db: Session = Depends(get_db)) -> list[Feature
 @public_router.get("/{collection_id}", response_model=CollectionResponse)
 def get_public_collection(collection_id: int, db: Session = Depends(get_db)) -> CollectionResponse:
     collection = _get_public_collection_or_404(db, collection_id)
-    count = db.execute(
-        select(func.count(Item.id)).where(Item.collection_id == collection.id)
-    ).scalar_one()
-    setattr(collection, "item_count", count)
+    item_count = db.execute(_collection_item_count(collection.id)).scalar_one()
+    star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
+    setattr(collection, "item_count", item_count)
+    setattr(collection, "star_count", star_count)
     return collection

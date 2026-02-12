@@ -24,6 +24,7 @@ export type CollectionResponse = {
   is_public: boolean;
   is_featured?: boolean;
   item_count?: number | null;
+  star_count?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -81,6 +82,7 @@ export type ItemResponse = {
   notes: string | null;
   primary_image_id?: number | null;
   image_count?: number | null;
+  star_count?: number | null;
   is_highlight: boolean;
   created_at: string;
   updated_at: string;
@@ -151,6 +153,40 @@ export type ActivityLogResponse = {
   target_path?: string | null;
   summary: string;
   created_at: string;
+};
+
+export type StarStatusResponse = {
+  starred: boolean;
+  star_count: number;
+};
+
+export type StarredCollectionResponse = {
+  id: number;
+  name: string;
+  description: string | null;
+  is_public: boolean;
+  item_count: number;
+  star_count: number;
+  starred_at: string;
+  target_path: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StarredItemResponse = {
+  id: number;
+  collection_id: number;
+  collection_name: string;
+  name: string;
+  notes: string | null;
+  primary_image_id?: number | null;
+  image_count: number;
+  star_count: number;
+  is_highlight: boolean;
+  starred_at: string;
+  target_path: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ApiErrorPayload = {
@@ -383,6 +419,25 @@ const buildItemListQuery = (options?: ItemListOptions) => {
       .forEach((filter) => params.append("filter", filter));
   }
 
+  const query = params.toString();
+  return query ? `?${query}` : "";
+};
+
+const buildStarsListQuery = (options: {
+  q?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (options.q) {
+    params.set("q", options.q);
+  }
+  if (typeof options.limit === "number") {
+    params.set("limit", String(options.limit));
+  }
+  if (typeof options.offset === "number") {
+    params.set("offset", String(options.offset));
+  }
   const query = params.toString();
   return query ? `?${query}` : "";
 };
@@ -640,6 +695,43 @@ export const activityApi = {
     const query = params.toString();
     return apiRequest<ActivityLogResponse[]>(`/activity${query ? `?${query}` : ""}`);
   }
+};
+
+export const starsApi = {
+  listCollections: (options: { q?: string; limit?: number; offset?: number } = {}) =>
+    apiRequest<StarredCollectionResponse[]>(
+      `/stars/collections${buildStarsListQuery(options)}`
+    ),
+  listItems: (options: { q?: string; limit?: number; offset?: number } = {}) =>
+    apiRequest<StarredItemResponse[]>(`/stars/items${buildStarsListQuery(options)}`),
+  collectionStatus: (collectionId: number | string) =>
+    apiRequest<StarStatusResponse>(`/stars/collections/${collectionId}`),
+  starCollection: (collectionId: number | string) =>
+    apiRequest<StarStatusResponse>(`/stars/collections/${collectionId}`, {
+      method: "POST"
+    }),
+  unstarCollection: (collectionId: number | string) =>
+    apiRequest<StarStatusResponse>(`/stars/collections/${collectionId}`, {
+      method: "DELETE"
+    }),
+  itemStatus: (collectionId: number | string, itemId: number | string) =>
+    apiRequest<StarStatusResponse>(
+      `/stars/collections/${collectionId}/items/${itemId}`
+    ),
+  starItem: (collectionId: number | string, itemId: number | string) =>
+    apiRequest<StarStatusResponse>(
+      `/stars/collections/${collectionId}/items/${itemId}`,
+      {
+        method: "POST"
+      }
+    ),
+  unstarItem: (collectionId: number | string, itemId: number | string) =>
+    apiRequest<StarStatusResponse>(
+      `/stars/collections/${collectionId}/items/${itemId}`,
+      {
+        method: "DELETE"
+      }
+    )
 };
 
 export const publicCollectionApi = {

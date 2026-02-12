@@ -12,6 +12,7 @@ from app.models.collection import Collection
 from app.models.field_definition import FieldDefinition
 from app.models.item import Item
 from app.models.item_image import ItemImage
+from app.models.item_star import ItemStar
 from app.models.user import User
 from app.schemas.items import ItemCreateRequest, ItemResponse, ItemUpdateRequest
 from app.schemas.responses import MessageResponse
@@ -307,6 +308,14 @@ def _image_count_subquery():
     return select(func.count(ItemImage.id)).where(ItemImage.item_id == Item.id).scalar_subquery()
 
 
+def _item_star_count_subquery():
+    return select(func.count(ItemStar.id)).where(ItemStar.item_id == Item.id).scalar_subquery()
+
+
+def _item_star_count(item_id: int):
+    return select(func.count(ItemStar.id)).where(ItemStar.item_id == item_id)
+
+
 def _filter_public_metadata(
     metadata: dict[str, object] | None, public_fields: set[str]
 ) -> dict[str, object] | None:
@@ -351,7 +360,10 @@ def list_items(
 
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
     image_count = _image_count_subquery().label("image_count")
-    query = select(Item, primary_image_id, image_count).where(Item.collection_id == collection_id)
+    star_count = _item_star_count_subquery().label("star_count")
+    query = select(Item, primary_image_id, image_count, star_count).where(
+        Item.collection_id == collection_id
+    )
     if search_term:
         pattern = f"%{search_term}%"
         query = query.where(or_(Item.name.ilike(pattern), Item.notes.ilike(pattern)))
@@ -363,9 +375,10 @@ def list_items(
 
     rows = db.execute(query).all()
     items: list[Item] = []
-    for item, image_id, count in rows:
+    for item, image_id, count, stars in rows:
         setattr(item, "primary_image_id", image_id)
         setattr(item, "image_count", count)
+        setattr(item, "star_count", stars)
         items.append(item)
     return items
 
@@ -406,6 +419,9 @@ def create_item(
     )
     db.commit()
     db.refresh(item)
+    setattr(item, "primary_image_id", None)
+    setattr(item, "image_count", 0)
+    setattr(item, "star_count", 0)
     return item
 
 
@@ -426,8 +442,10 @@ def get_item(
     image_count = db.execute(
         select(func.count(ItemImage.id)).where(ItemImage.item_id == item.id)
     ).scalar_one()
+    star_count = db.execute(_item_star_count(item.id)).scalar_one()
     setattr(item, "primary_image_id", image_id)
     setattr(item, "image_count", image_count)
+    setattr(item, "star_count", star_count)
     return item
 
 
@@ -466,6 +484,19 @@ def update_item(
         )
     db.commit()
     db.refresh(item)
+    image_id = db.execute(
+        select(ItemImage.id)
+        .where(ItemImage.item_id == item.id)
+        .order_by(ItemImage.position.asc(), ItemImage.id.asc())
+        .limit(1)
+    ).scalar_one_or_none()
+    image_count = db.execute(
+        select(func.count(ItemImage.id)).where(ItemImage.item_id == item.id)
+    ).scalar_one()
+    star_count = db.execute(_item_star_count(item.id)).scalar_one()
+    setattr(item, "primary_image_id", image_id)
+    setattr(item, "image_count", image_count)
+    setattr(item, "star_count", star_count)
     return item
 
 
@@ -526,7 +557,10 @@ def list_public_items(
 
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
     image_count = _image_count_subquery().label("image_count")
-    query = select(Item, primary_image_id, image_count).where(Item.collection_id == collection_id)
+    star_count = _item_star_count_subquery().label("star_count")
+    query = select(Item, primary_image_id, image_count, star_count).where(
+        Item.collection_id == collection_id
+    )
     if search_term:
         pattern = f"%{search_term}%"
         query = query.where(or_(Item.name.ilike(pattern), Item.notes.ilike(pattern)))
@@ -538,9 +572,10 @@ def list_public_items(
 
     rows = db.execute(query).all()
     items: list[Item] = []
-    for item, image_id, count in rows:
+    for item, image_id, count, stars in rows:
         setattr(item, "primary_image_id", image_id)
         setattr(item, "image_count", count)
+        setattr(item, "star_count", stars)
         item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
         items.append(item)
     return items
@@ -564,7 +599,9 @@ def get_public_item(
     image_count = db.execute(
         select(func.count(ItemImage.id)).where(ItemImage.item_id == item.id)
     ).scalar_one()
+    star_count = db.execute(_item_star_count(item.id)).scalar_one()
     setattr(item, "primary_image_id", image_id)
     setattr(item, "image_count", image_count)
+    setattr(item, "star_count", star_count)
     item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
     return item

@@ -11,6 +11,7 @@ import {
   RefreshCcw,
   ShieldAlert,
   Sparkles,
+  Star,
   Tag,
   Trash2
 } from "lucide-react";
@@ -25,6 +26,7 @@ import {
   fieldApi,
   isApiError,
   itemApi,
+  starsApi,
   type CollectionResponse,
   type FieldDefinitionResponse,
   type ItemResponse
@@ -167,6 +169,9 @@ export default function ItemDetailPage() {
   const [deleteState, setDeleteState] = React.useState<DeleteState>({
     status: "idle"
   });
+  const [itemStarred, setItemStarred] = React.useState(false);
+  const [isUpdatingItemStar, setIsUpdatingItemStar] = React.useState(false);
+  const [itemStarError, setItemStarError] = React.useState<string | null>(null);
 
   const sortedFields = React.useMemo(
     () => sortFields(fieldsState.data),
@@ -290,6 +295,38 @@ export default function ItemDetailPage() {
     void loadFields();
   }, [loadCollection, loadFields, loadItem]);
 
+  const loadItemStarStatus = React.useCallback(async () => {
+    if (!collectionId || !itemId) {
+      return;
+    }
+    try {
+      const status = await starsApi.itemStatus(collectionId, itemId);
+      setItemStarred(status.starred);
+      setItemState((prev) => {
+        if (prev.status !== "ready" || !prev.data) {
+          return prev;
+        }
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            star_count: status.star_count
+          }
+        };
+      });
+    } catch (error) {
+      if (!isApiError(error) || error.status !== 404) {
+        setItemStarError(
+          isApiError(error) ? error.detail : "We couldn't update star status."
+        );
+      }
+    }
+  }, [collectionId, itemId]);
+
+  React.useEffect(() => {
+    void loadItemStarStatus();
+  }, [loadItemStarStatus]);
+
   React.useEffect(() => {
     if (!isEditing) {
       return;
@@ -302,6 +339,40 @@ export default function ItemDetailPage() {
     void loadCollection();
     void loadItem();
     void loadFields();
+    void loadItemStarStatus();
+    setItemStarError(null);
+  };
+
+  const handleToggleItemStar = async () => {
+    if (!collectionId || !itemId || isUpdatingItemStar) {
+      return;
+    }
+    setItemStarError(null);
+    setIsUpdatingItemStar(true);
+    try {
+      const status = itemStarred
+        ? await starsApi.unstarItem(collectionId, itemId)
+        : await starsApi.starItem(collectionId, itemId);
+      setItemStarred(status.starred);
+      setItemState((prev) => {
+        if (prev.status !== "ready" || !prev.data) {
+          return prev;
+        }
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            star_count: status.star_count
+          }
+        };
+      });
+    } catch (error) {
+      setItemStarError(
+        isApiError(error) ? error.detail : "We couldn't update stars."
+      );
+    } finally {
+      setIsUpdatingItemStar(false);
+    }
   };
 
   const handleSubmit = async (values: ItemFormValues) => {
@@ -386,6 +457,14 @@ export default function ItemDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Button
+            variant={itemStarred ? "secondary" : "outline"}
+            onClick={handleToggleItemStar}
+            disabled={isUpdatingItemStar}
+          >
+            <Star className={`h-4 w-4 ${itemStarred ? "fill-current" : ""}`} />
+            {itemStarred ? t("Starred") : t("Star")}
+          </Button>
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCcw className="h-4 w-4" />
             {t("Refresh")}
@@ -403,6 +482,9 @@ export default function ItemDetailPage() {
           ) : null}
         </div>
       </header>
+      {itemStarError ? (
+        <p className="text-sm text-rose-600">{t(itemStarError)}</p>
+      ) : null}
 
       {itemState.status === "loading" ? (
         <div
@@ -694,6 +776,15 @@ export default function ItemDetailPage() {
                         </div>
                       </div>
                     ) : null}
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                        <Star className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-stone-900">{t("Stars")}</p>
+                        <p>{t("{count} stars", { count: itemState.data?.star_count ?? 0 })}</p>
+                      </div>
+                    </div>
                     <div className="flex items-start gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
                         <Tag className="h-4 w-4" />

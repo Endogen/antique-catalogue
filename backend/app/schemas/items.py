@@ -71,6 +71,7 @@ class ItemResponse(BaseModel):
     notes: str | None
     primary_image_id: int | None = None
     image_count: int | None = None
+    star_count: int | None = None
     is_highlight: bool
     created_at: datetime
     updated_at: datetime

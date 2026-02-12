@@ -10,7 +10,8 @@ import {
   Globe2,
   LogOut,
   RefreshCcw,
-  Search
+  Search,
+  Star
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   imageApi,
   publicCollectionApi,
   publicItemApi,
+  starsApi,
   type CollectionResponse,
   type ItemResponse
 } from "@/lib/api";
@@ -130,6 +132,14 @@ export default function PublicCollectionPage() {
     alt: string;
   } | null>(null);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const [collectionStarred, setCollectionStarred] = React.useState(false);
+  const [isUpdatingCollectionStar, setIsUpdatingCollectionStar] = React.useState(false);
+  const [collectionStarError, setCollectionStarError] = React.useState<string | null>(null);
+  const [itemStarredMap, setItemStarredMap] = React.useState<Record<number, boolean>>({});
+  const [updatingItemStars, setUpdatingItemStars] = React.useState<Record<number, boolean>>({});
+  const [itemStarError, setItemStarError] = React.useState<string | null>(null);
+  const showAuthenticatedCtas =
+    authStatus === "authenticated" && isAuthenticated;
 
   const loadCollection = React.useCallback(async () => {
     if (!collectionId) {
@@ -223,9 +233,162 @@ export default function PublicCollectionPage() {
     };
   }, [collectionId, search, sort, refreshKey]);
 
+  const loadCollectionStarStatus = React.useCallback(async () => {
+    if (!collectionId || !showAuthenticatedCtas) {
+      setCollectionStarred(false);
+      return;
+    }
+    try {
+      const status = await starsApi.collectionStatus(collectionId);
+      setCollectionStarred(status.starred);
+      setCollectionState((prev) => {
+        if (prev.status !== "ready" || !prev.data) {
+          return prev;
+        }
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            star_count: status.star_count
+          }
+        };
+      });
+    } catch (error) {
+      if (!isApiError(error) || error.status !== 404) {
+        setCollectionStarError(
+          isApiError(error) ? error.detail : "We couldn't update star status."
+        );
+      }
+    }
+  }, [collectionId, showAuthenticatedCtas]);
+
+  React.useEffect(() => {
+    void loadCollectionStarStatus();
+  }, [loadCollectionStarStatus]);
+
+  const itemIds = React.useMemo(
+    () => itemsState.data.map((item) => item.id),
+    [itemsState.data]
+  );
+
+  React.useEffect(() => {
+    if (!collectionId || !showAuthenticatedCtas || itemsState.status !== "ready") {
+      setItemStarredMap({});
+      return;
+    }
+
+    let isActive = true;
+    void (async () => {
+      const statuses = await Promise.all(
+        itemIds.map(async (itemId) => {
+          try {
+            const status = await starsApi.itemStatus(collectionId, itemId);
+            return { itemId, status };
+          } catch {
+            return { itemId, status: null };
+          }
+        })
+      );
+      if (!isActive) {
+        return;
+      }
+      const nextMap: Record<number, boolean> = {};
+      statuses.forEach(({ itemId, status }) => {
+        nextMap[itemId] = Boolean(status?.starred);
+      });
+      setItemStarredMap(nextMap);
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [collectionId, itemIds, itemsState.status, showAuthenticatedCtas]);
+
   const handleRefresh = () => {
     void loadCollection();
+    void loadCollectionStarStatus();
+    setCollectionStarError(null);
+    setItemStarError(null);
     setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleToggleCollectionStar = async () => {
+    if (!collectionId || !showAuthenticatedCtas || isUpdatingCollectionStar) {
+      return;
+    }
+    setCollectionStarError(null);
+    setIsUpdatingCollectionStar(true);
+    try {
+      const status = collectionStarred
+        ? await starsApi.unstarCollection(collectionId)
+        : await starsApi.starCollection(collectionId);
+      setCollectionStarred(status.starred);
+      setCollectionState((prev) => {
+        if (prev.status !== "ready" || !prev.data) {
+          return prev;
+        }
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            star_count: status.star_count
+          }
+        };
+      });
+    } catch (error) {
+      setCollectionStarError(
+        isApiError(error) ? error.detail : "We couldn't update stars."
+      );
+    } finally {
+      setIsUpdatingCollectionStar(false);
+    }
+  };
+
+  const handleToggleItemStar = async (itemId: number) => {
+    if (!collectionId || !showAuthenticatedCtas || updatingItemStars[itemId]) {
+      return;
+    }
+    setItemStarError(null);
+    const currentlyStarred = Boolean(itemStarredMap[itemId]);
+    setUpdatingItemStars((prev) => ({
+      ...prev,
+      [itemId]: true
+    }));
+    try {
+      const status = currentlyStarred
+        ? await starsApi.unstarItem(collectionId, itemId)
+        : await starsApi.starItem(collectionId, itemId);
+      setItemStarredMap((prev) => ({
+        ...prev,
+        [itemId]: status.starred
+      }));
+      setItemsState((prev) => {
+        if (prev.status !== "ready") {
+          return prev;
+        }
+        return {
+          ...prev,
+          data: prev.data.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  star_count: status.star_count
+                }
+              : item
+          )
+        };
+      });
+    } catch (error) {
+      setItemStarError(
+        isApiError(error) ? error.detail : "We couldn't update stars."
+      );
+    } finally {
+      setUpdatingItemStars((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+    }
   };
 
   const handleLoadMore = async () => {
@@ -274,8 +437,6 @@ export default function PublicCollectionPage() {
     }
     return true;
   });
-  const showAuthenticatedCtas =
-    authStatus === "authenticated" && isAuthenticated;
 
   const handleLogout = async () => {
     if (isLoggingOut) {
@@ -356,11 +517,30 @@ export default function PublicCollectionPage() {
                 {t("Back to explore")}
               </Link>
             </Button>
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
-              <RefreshCcw className="h-4 w-4" />
-              {t("Refresh")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {showAuthenticatedCtas ? (
+                <Button
+                  variant={collectionStarred ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={handleToggleCollectionStar}
+                  disabled={isUpdatingCollectionStar}
+                >
+                  <Star className={`h-4 w-4 ${collectionStarred ? "fill-current" : ""}`} />
+                  {collectionStarred ? t("Starred") : t("Star")}
+                </Button>
+              ) : null}
+              <Button variant="outline" size="sm" onClick={handleRefresh}>
+                <RefreshCcw className="h-4 w-4" />
+                {t("Refresh")}
+              </Button>
+            </div>
           </div>
+          {collectionStarError ? (
+            <p className="text-sm text-rose-600">{t(collectionStarError)}</p>
+          ) : null}
+          {itemStarError ? (
+            <p className="text-sm text-rose-600">{t(itemStarError)}</p>
+          ) : null}
 
           {collectionState.status === "loading" ? (
             <div
@@ -406,6 +586,12 @@ export default function PublicCollectionPage() {
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
                     {t("{count} items loaded", { count: itemCount })}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
+                    <Star className="h-3.5 w-3.5 text-amber-600" />
+                    {t("{count} stars", {
+                      count: collectionState.data?.star_count ?? 0
+                    })}
                   </span>
                 </div>
               </div>
@@ -605,6 +791,8 @@ export default function PublicCollectionPage() {
                 {filteredItems.map((item) => {
                   const metadataEntries = Object.entries(item.metadata ?? {});
                   const imageId = item.primary_image_id ?? null;
+                  const starCount = item.star_count ?? 0;
+                  const itemIsStarred = Boolean(itemStarredMap[item.id]);
                   return (
                     <div
                       key={item.id}
@@ -641,9 +829,15 @@ export default function PublicCollectionPage() {
                             {item.name}
                           </h3>
                         </div>
-                        <span className="text-xs text-stone-500">
-                          {t("Added {date}", { date: formatDate(item.created_at) })}
-                        </span>
+                        <div className="flex items-center gap-2 text-xs text-stone-500">
+                          <span>
+                            {t("Added {date}", { date: formatDate(item.created_at) })}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
+                            <Star className="h-3 w-3 text-amber-600" />
+                            {starCount}
+                          </span>
+                        </div>
                       </div>
                       {item.notes ? (
                         <p className="mt-3 text-sm text-stone-600">
@@ -680,6 +874,21 @@ export default function PublicCollectionPage() {
                           </div>
                         )}
                       </div>
+                      {showAuthenticatedCtas ? (
+                        <div className="mt-4 flex justify-end">
+                          <Button
+                            size="sm"
+                            variant={itemIsStarred ? "secondary" : "outline"}
+                            disabled={Boolean(updatingItemStars[item.id])}
+                            onClick={() => handleToggleItemStar(item.id)}
+                          >
+                            <Star
+                              className={`h-4 w-4 ${itemIsStarred ? "fill-current" : ""}`}
+                            />
+                            {itemIsStarred ? t("Starred") : t("Star")}
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}

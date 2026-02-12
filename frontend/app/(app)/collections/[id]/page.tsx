@@ -11,6 +11,7 @@ import {
   RefreshCcw,
   Search,
   SlidersHorizontal,
+  Star,
   Tag,
   X
 } from "lucide-react";
@@ -23,6 +24,7 @@ import {
   fieldApi,
   isApiError,
   itemApi,
+  starsApi,
   type CollectionResponse,
   type FieldDefinitionResponse,
   type ItemResponse
@@ -138,6 +140,9 @@ export default function CollectionDetailPage() {
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
+  const [collectionStarred, setCollectionStarred] = React.useState(false);
+  const [isUpdatingCollectionStar, setIsUpdatingCollectionStar] = React.useState(false);
+  const [collectionStarError, setCollectionStarError] = React.useState<string | null>(null);
   const filterIdRef = React.useRef(0);
 
   const formatDate = React.useCallback(
@@ -304,6 +309,38 @@ export default function CollectionDetailPage() {
     void loadFields();
   }, [loadCollection, loadFields]);
 
+  const loadCollectionStarStatus = React.useCallback(async () => {
+    if (!collectionId) {
+      return;
+    }
+    try {
+      const status = await starsApi.collectionStatus(collectionId);
+      setCollectionStarred(status.starred);
+      setCollectionState((prev) => {
+        if (prev.status !== "ready" || !prev.data) {
+          return prev;
+        }
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            star_count: status.star_count
+          }
+        };
+      });
+    } catch (error) {
+      if (!isApiError(error) || error.status !== 404) {
+        setCollectionStarError(
+          isApiError(error) ? error.detail : "We couldn't update star status."
+        );
+      }
+    }
+  }, [collectionId]);
+
+  React.useEffect(() => {
+    void loadCollectionStarStatus();
+  }, [loadCollectionStarStatus]);
+
   const filterParams = React.useMemo(
     () => filters.map((filter) => `${filter.fieldName}=${filter.value}`),
     [filters]
@@ -372,7 +409,41 @@ export default function CollectionDetailPage() {
   const handleRefresh = () => {
     void loadCollection();
     void loadFields();
+    void loadCollectionStarStatus();
+    setCollectionStarError(null);
     setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleToggleCollectionStar = async () => {
+    if (!collectionId || isUpdatingCollectionStar) {
+      return;
+    }
+    setCollectionStarError(null);
+    setIsUpdatingCollectionStar(true);
+    try {
+      const status = collectionStarred
+        ? await starsApi.unstarCollection(collectionId)
+        : await starsApi.starCollection(collectionId);
+      setCollectionStarred(status.starred);
+      setCollectionState((prev) => {
+        if (prev.status !== "ready" || !prev.data) {
+          return prev;
+        }
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            star_count: status.star_count
+          }
+        };
+      });
+    } catch (error) {
+      setCollectionStarError(
+        isApiError(error) ? error.detail : "We couldn't update stars."
+      );
+    } finally {
+      setIsUpdatingCollectionStar(false);
+    }
   };
 
   const handleAddFilter = () => {
@@ -467,6 +538,14 @@ export default function CollectionDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Button
+            variant={collectionStarred ? "secondary" : "outline"}
+            onClick={handleToggleCollectionStar}
+            disabled={isUpdatingCollectionStar}
+          >
+            <Star className={`h-4 w-4 ${collectionStarred ? "fill-current" : ""}`} />
+            {collectionStarred ? t("Starred") : t("Star")}
+          </Button>
           <Button asChild>
             <Link href={`/collections/${collectionId}/items/new`}>
               <Plus className="h-4 w-4" />
@@ -532,7 +611,16 @@ export default function CollectionDetailPage() {
               <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-stone-600">
                 {t("{count} items loaded", { count: itemCount })}
               </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-stone-600">
+                <Star className="h-3.5 w-3.5 text-amber-600" />
+                {t("{count} stars", {
+                  count: collectionState.data?.star_count ?? 0
+                })}
+              </span>
             </div>
+            {collectionStarError ? (
+              <p className="mt-4 text-sm text-rose-600">{t(collectionStarError)}</p>
+            ) : null}
             <div className="mt-6 flex flex-wrap gap-4 text-sm text-stone-600">
               <span className="inline-flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-amber-600" />
@@ -860,6 +948,7 @@ export default function CollectionDetailPage() {
                 const metadataEntries = Object.entries(item.metadata ?? {});
                 const imageCount = item.image_count ?? 0;
                 const imageLabel = imageCount === 1 ? t("image") : t("images");
+                const starCount = item.star_count ?? 0;
                 return (
                   <div
                     key={item.id}
@@ -880,6 +969,10 @@ export default function CollectionDetailPage() {
                       <div className="flex flex-col items-end gap-2 text-xs text-stone-500">
                         <span>
                           {t("Added {date}", { date: formatDate(item.created_at) })}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
+                          <Star className="h-3 w-3 text-amber-600" />
+                          {starCount}
                         </span>
                         {imageCount > 0 ? (
                           <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
