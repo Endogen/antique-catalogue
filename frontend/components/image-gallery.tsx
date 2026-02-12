@@ -18,7 +18,6 @@ import {
   isApiError,
   type ItemImageResponse
 } from "@/lib/api";
-import { setRoundedDragPreview } from "@/lib/drag-preview";
 import { cn } from "@/lib/utils";
 
 const sortImages = (items: ItemImageResponse[]) =>
@@ -78,6 +77,7 @@ export function ImageGallery({
     src: string;
     alt: string;
   } | null>(null);
+  const hiddenDragPreviewRef = React.useRef<HTMLSpanElement | null>(null);
 
   const canInteract = Boolean(itemId) && !disabled;
   const canEdit = canInteract && editable;
@@ -183,7 +183,9 @@ export function ImageGallery({
     }
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", String(imageId));
-    setRoundedDragPreview(event);
+    if (hiddenDragPreviewRef.current) {
+      event.dataTransfer.setDragImage(hiddenDragPreviewRef.current, 0, 0);
+    }
     setDraggingId(imageId);
   };
 
@@ -377,7 +379,12 @@ export function ImageGallery({
                         "flex h-9 w-9 items-center justify-center rounded-xl border text-stone-500 transition",
                         draggingId === image.id
                           ? "border-amber-300 bg-amber-50 text-amber-700"
-                          : "border-stone-200 bg-stone-50 hover:border-stone-300"
+                          : "border-stone-200 bg-stone-50 hover:border-stone-300",
+                        canInteract && !isBusy
+                          ? draggingId === image.id
+                            ? "cursor-grabbing"
+                            : "cursor-ew-resize"
+                          : "cursor-default"
                       )}
                       draggable={canInteract && !isBusy}
                       aria-label={t("Drag to reorder {filename}", {
@@ -399,6 +406,7 @@ export function ImageGallery({
                     <button
                       type="button"
                       className="block w-full p-0"
+                      onDragStart={(event) => event.preventDefault()}
                       onClick={() =>
                         setLightboxImage({
                           src: imageApi.url(image.id, "original"),
@@ -410,6 +418,7 @@ export function ImageGallery({
                         src={imageApi.url(image.id, "medium")}
                         alt={image.filename || t("Item image")}
                         className="block h-36 w-full object-cover"
+                        draggable={false}
                         loading="lazy"
                       />
                     </button>
@@ -472,6 +481,11 @@ export function ImageGallery({
         src={lightboxImage?.src ?? null}
         alt={lightboxImage?.alt}
         onClose={() => setLightboxImage(null)}
+      />
+      <span
+        ref={hiddenDragPreviewRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
       />
     </div>
   );
