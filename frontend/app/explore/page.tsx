@@ -53,9 +53,11 @@ const filterCollections = (
   const normalized = query.toLowerCase();
   return collections.filter((collection) => {
     const description = collection.description ?? "";
+    const ownerUsername = collection.owner_username ?? "";
     return (
       collection.name.toLowerCase().includes(normalized) ||
-      description.toLowerCase().includes(normalized)
+      description.toLowerCase().includes(normalized) ||
+      ownerUsername.toLowerCase().includes(normalized)
     );
   });
 };
@@ -373,6 +375,17 @@ export default function ExplorePage() {
                   <h3 className="mt-4 text-xl font-semibold text-stone-900">
                     {collection.name}
                   </h3>
+                  {collection.owner_username ? (
+                    <p className="mt-1 text-xs text-stone-500">
+                      {t("By")}{" "}
+                      <Link
+                        href={`/profile/${encodeURIComponent(collection.owner_username)}`}
+                        className="font-medium text-amber-700 hover:text-amber-800"
+                      >
+                        @{collection.owner_username}
+                      </Link>
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-sm text-stone-600">
                     {collection.description ??
                       t("This collection is ready to be explored.")}

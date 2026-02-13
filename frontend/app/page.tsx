@@ -237,6 +237,17 @@ export default function Home() {
                     ? t("Loading featured collection...")
                     : featuredState.data?.name ?? t("No featured collection yet")}
                 </h2>
+                {featuredState.data?.owner_username ? (
+                  <p className="mt-2 text-xs text-stone-500">
+                    {t("By")}{" "}
+                    <Link
+                      href={`/profile/${encodeURIComponent(featuredState.data.owner_username)}`}
+                      className="font-medium text-amber-700 hover:text-amber-800"
+                    >
+                      @{featuredState.data.owner_username}
+                    </Link>
+                  </p>
+                ) : null}
                 <p className="mt-3 text-sm text-stone-600">
                   {featuredState.status === "error"
                     ? featuredState.error ??
@@ -295,6 +306,17 @@ export default function Home() {
                           <p className="mt-3 text-sm font-medium text-stone-800">
                             {item.name}
                           </p>
+                          {item.owner_username ? (
+                            <p className="mt-1 text-xs text-stone-500">
+                              {t("By")}{" "}
+                              <Link
+                                href={`/profile/${encodeURIComponent(item.owner_username)}`}
+                                className="font-medium text-amber-700 hover:text-amber-800"
+                              >
+                                @{item.owner_username}
+                              </Link>
+                            </p>
+                          ) : null}
                           <p className="text-xs text-stone-500">
                             {item.notes
                               ? item.notes.slice(0, 50)

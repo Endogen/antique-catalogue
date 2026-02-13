@@ -19,6 +19,8 @@ def _create_user(session_factory, *, email: str, password: str, verified: bool =
             is_verified=verified,
         )
         session.add(user)
+        session.flush()
+        user.username = str(user.id)
         session.commit()
         session.refresh(user)
         return user.id
@@ -101,6 +103,7 @@ def test_register_verify_login_and_me(app_with_db, db_session_factory) -> None:
             )
             assert me.status_code == 200
             assert me.json()["email"] == email
+            assert me.json()["username"] == str(user.id)
 
     asyncio.run(_flow())
 

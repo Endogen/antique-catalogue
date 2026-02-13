@@ -116,6 +116,7 @@ def list_collections(
     for collection, item_count, star_count in rows:
         setattr(collection, "item_count", item_count)
         setattr(collection, "star_count", star_count)
+        setattr(collection, "owner_username", current_user.username)
         collections.append(collection)
     return collections
 
@@ -199,6 +200,7 @@ def create_collection(
     db.refresh(collection)
     setattr(collection, "item_count", 0)
     setattr(collection, "star_count", 0)
+    setattr(collection, "owner_username", current_user.username)
     return collection
 
 
@@ -213,6 +215,7 @@ def get_collection(
     star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
     setattr(collection, "item_count", item_count)
     setattr(collection, "star_count", star_count)
+    setattr(collection, "owner_username", current_user.username)
     return collection
 
 
@@ -249,6 +252,7 @@ def update_collection(
     star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
     setattr(collection, "item_count", item_count)
     setattr(collection, "star_count", star_count)
+    setattr(collection, "owner_username", current_user.username)
     return collection
 
 
@@ -289,16 +293,19 @@ def list_public_collections(db: Session = Depends(get_db)) -> list[CollectionRes
             Collection,
             func.coalesce(item_counts.c.item_count, 0),
             func.coalesce(star_counts.c.star_count, 0),
+            User.username,
         )
+        .join(User, User.id == Collection.owner_id)
         .outerjoin(item_counts, item_counts.c.collection_id == Collection.id)
         .outerjoin(star_counts, star_counts.c.collection_id == Collection.id)
         .where(Collection.is_public.is_(True))
         .order_by(Collection.created_at.desc())
     ).all()
     collections: list[Collection] = []
-    for collection, item_count, star_count in rows:
+    for collection, item_count, star_count, owner_username in rows:
         setattr(collection, "item_count", item_count)
         setattr(collection, "star_count", star_count)
+        setattr(collection, "owner_username", owner_username)
         collections.append(collection)
     return collections
 
@@ -317,8 +324,12 @@ def get_featured_collection(db: Session = Depends(get_db)) -> CollectionResponse
     if collection:
         item_count = db.execute(_collection_item_count(collection.id)).scalar_one()
         star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
+        owner_username = db.execute(
+            select(User.username).where(User.id == collection.owner_id)
+        ).scalar_one_or_none()
         setattr(collection, "item_count", item_count)
         setattr(collection, "star_count", star_count)
+        setattr(collection, "owner_username", owner_username)
     return collection
 
 
@@ -332,6 +343,12 @@ def get_featured_collection_items(db: Session = Depends(get_db)) -> list[Feature
     if not collection_id:
         return []
 
+    owner_username = db.execute(
+        select(User.username)
+        .join(Collection, Collection.owner_id == User.id)
+        .where(Collection.id == collection_id)
+    ).scalar_one_or_none()
+
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
     rows = db.execute(
         select(Item, primary_image_id)
@@ -342,6 +359,7 @@ def get_featured_collection_items(db: Session = Depends(get_db)) -> list[Feature
     items: list[Item] = []
     for item, image_id in rows:
         setattr(item, "primary_image_id", image_id)
+        setattr(item, "owner_username", owner_username)
         items.append(item)
     return items
 
@@ -351,6 +369,10 @@ def get_public_collection(collection_id: int, db: Session = Depends(get_db)) -> 
     collection = _get_public_collection_or_404(db, collection_id)
     item_count = db.execute(_collection_item_count(collection.id)).scalar_one()
     star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
+    owner_username = db.execute(
+        select(User.username).where(User.id == collection.owner_id)
+    ).scalar_one_or_none()
     setattr(collection, "item_count", item_count)
     setattr(collection, "star_count", star_count)
+    setattr(collection, "owner_username", owner_username)
     return collection

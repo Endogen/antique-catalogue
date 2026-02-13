@@ -11,6 +11,7 @@ class FeaturedItemResponse(BaseModel):
     id: int
     collection_id: int
     name: str
+    owner_username: str | None = None
     notes: str | None
     primary_image_id: int | None = None
     is_highlight: bool

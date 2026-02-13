@@ -18,6 +18,8 @@ def _create_user(session_factory, *, email: str, password: str, verified: bool =
             is_verified=verified,
         )
         session.add(user)
+        session.flush()
+        user.username = str(user.id)
         session.commit()
         session.refresh(user)
         return user.id
@@ -161,7 +163,7 @@ def test_collections_are_owner_scoped(app_with_db, db_session_factory) -> None:
 def test_public_collections_endpoints(app_with_db, db_session_factory) -> None:
     email = "public@example.com"
     password = "strongpass"
-    _create_user(db_session_factory, email=email, password=password, verified=True)
+    owner_id = _create_user(db_session_factory, email=email, password=password, verified=True)
 
     created: dict[str, int] = {}
 
@@ -196,6 +198,7 @@ def test_public_collections_endpoints(app_with_db, db_session_factory) -> None:
             public_detail = await client.get(f"/public/collections/{created['public_id']}")
             assert public_detail.status_code == 200
             assert public_detail.json()["id"] == created["public_id"]
+            assert public_detail.json()["owner_username"] == str(owner_id)
 
             private_detail = await client.get(f"/public/collections/{created['private_id']}")
             assert private_detail.status_code == 404

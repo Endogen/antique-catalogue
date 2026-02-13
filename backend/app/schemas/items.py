@@ -67,6 +67,7 @@ class ItemResponse(BaseModel):
     id: int
     collection_id: int
     name: str
+    owner_username: str | None = None
     metadata: dict[str, object] | None = Field(None, validation_alias="metadata_")
     notes: str | None
     primary_image_id: int | None = None

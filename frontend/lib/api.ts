@@ -11,6 +11,7 @@ export type TokenResponse = {
 export type UserResponse = {
   id: number;
   email: string;
+  username: string;
   is_active: boolean;
   is_verified: boolean;
   created_at: string;
@@ -21,6 +22,7 @@ export type CollectionResponse = {
   id: number;
   name: string;
   description: string | null;
+  owner_username?: string | null;
   is_public: boolean;
   is_featured?: boolean;
   item_count?: number | null;
@@ -118,6 +120,7 @@ export type ItemResponse = {
   id: number;
   collection_id: number;
   name: string;
+  owner_username?: string | null;
   metadata: Record<string, unknown> | null;
   notes: string | null;
   primary_image_id?: number | null;
@@ -132,10 +135,21 @@ export type FeaturedItemResponse = {
   id: number;
   collection_id: number;
   name: string;
+  owner_username?: string | null;
   notes: string | null;
   primary_image_id?: number | null;
   is_highlight: boolean;
   created_at: string;
+};
+
+export type PublicProfileResponse = {
+  id: number;
+  username: string;
+  created_at: string;
+  public_collection_count: number;
+  public_item_count: number;
+  earned_star_count: number;
+  star_rank: number;
 };
 
 export type ItemImageResponse = {
@@ -679,6 +693,20 @@ export const authApi = {
   deleteAccount: () =>
     apiRequest<MessageResponse>("/auth/me", {
       method: "DELETE"
+    })
+};
+
+export const profileApi = {
+  me: () => apiRequest<PublicProfileResponse>("/profiles/me"),
+  updateMe: (payload: { username: string }) =>
+    apiRequest<PublicProfileResponse>("/profiles/me", {
+      method: "PATCH",
+      body: payload
+    }),
+  getPublic: (username: string) =>
+    apiRequest<PublicProfileResponse>(`/profiles/${encodeURIComponent(username)}`, {
+      skipAuth: true,
+      skipRefresh: true
     })
 };
 
