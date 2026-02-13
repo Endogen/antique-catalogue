@@ -30,7 +30,7 @@ type LoadState = {
 };
 
 const highlightCardClass =
-  "border-amber-200/70 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_12px_32px_-22px_rgba(251,191,36,0.55)]";
+  "border-amber-400 bg-amber-50/45 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_18px_36px_-20px_rgba(217,119,6,0.75)]";
 
 const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
@@ -115,7 +115,7 @@ export default function StarsPage() {
     };
   }, [query, refreshToken]);
 
-  const totalStars = state.collections.length + state.items.length;
+  const totalStarredEntries = state.collections.length + state.items.length;
 
   return (
     <div className="space-y-8">
@@ -152,23 +152,23 @@ export default function StarsPage() {
             />
           </div>
           <span className="text-xs text-stone-500">
-            {t("{count} total", { count: totalStars })}
+            {t("{count} stars", { count: totalStarredEntries })}
           </span>
         </div>
       </header>
 
-      {state.status === "loading" && totalStars === 0 ? (
+      {state.status === "loading" && totalStarredEntries === 0 ? (
         <div
           className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-8 text-sm text-stone-500"
           aria-busy="true"
         >
           {t("Loading your stars...")}
         </div>
-      ) : state.status === "error" && totalStars === 0 ? (
+      ) : state.status === "error" && totalStarredEntries === 0 ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50/70 p-6 text-sm text-rose-700">
           {t(state.error ?? "We couldn't load your stars.")}
         </div>
-      ) : totalStars === 0 ? (
+      ) : totalStarredEntries === 0 ? (
         <div className="rounded-3xl border border-stone-200 bg-white/80 p-8">
           <p className="text-sm font-medium text-stone-700">{t("No stars yet.")}</p>
           <p className="mt-2 text-sm text-stone-500">

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.collection_star import CollectionStar
     from app.models.email_token import EmailToken
     from app.models.item_star import ItemStar
+    from app.models.schema_template import SchemaTemplate
 
 
 class User(Base):
@@ -45,4 +46,7 @@ class User(Base):
     )
     starred_items: Mapped[list[ItemStar]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    schema_templates: Mapped[list[SchemaTemplate]] = relationship(
+        back_populates="owner", cascade="all, delete-orphan", passive_deletes=True
     )

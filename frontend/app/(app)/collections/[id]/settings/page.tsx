@@ -21,7 +21,9 @@ import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
   collectionApi,
+  fieldApi,
   isApiError,
+  schemaTemplateApi,
   type CollectionResponse
 } from "@/lib/api";
 
@@ -46,6 +48,11 @@ export default function CollectionSettingsPage() {
   });
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
+  const [templateName, setTemplateName] = React.useState("");
+  const [templateError, setTemplateError] = React.useState<string | null>(null);
+  const [templateMessage, setTemplateMessage] = React.useState<string | null>(null);
+  const [savedTemplateId, setSavedTemplateId] = React.useState<number | null>(null);
+  const [isSavingTemplate, setIsSavingTemplate] = React.useState(false);
 
   const formatDate = React.useCallback(
     (value?: string | null) => {
@@ -122,6 +129,46 @@ export default function CollectionSettingsPage() {
           ? error.detail
           : "We couldn't save changes. Please try again."
       );
+    }
+  };
+
+  const handleSaveSchemaTemplate = async () => {
+    if (!collectionId || isSavingTemplate) {
+      return;
+    }
+    const normalizedName = templateName.trim();
+    if (!normalizedName) {
+      setTemplateError("Template name is required.");
+      return;
+    }
+
+    setTemplateError(null);
+    setTemplateMessage(null);
+    setSavedTemplateId(null);
+    setIsSavingTemplate(true);
+    try {
+      const fields = await fieldApi.list(collectionId);
+      const created = await schemaTemplateApi.create({
+        name: normalizedName,
+        fields: fields.map((field) => ({
+          name: field.name,
+          field_type: field.field_type,
+          is_required: field.is_required,
+          is_private: field.is_private,
+          options: field.options
+        }))
+      });
+      setTemplateName("");
+      setSavedTemplateId(created.id);
+      setTemplateMessage("Schema template saved.");
+    } catch (error) {
+      setTemplateError(
+        isApiError(error)
+          ? error.detail
+          : "We couldn't save the schema template."
+      );
+    } finally {
+      setIsSavingTemplate(false);
     }
   };
 
@@ -281,6 +328,52 @@ export default function CollectionSettingsPage() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                {t("Save schema template")}
+              </p>
+              <h3 className="font-display mt-3 text-2xl text-stone-900">
+                {t("Reuse this schema later.")}
+              </h3>
+              <p className="mt-3 text-sm text-stone-600">
+                {t(
+                  "Save the current field setup as a template for future collections."
+                )}
+              </p>
+              <div className="mt-4 space-y-3">
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(event) => setTemplateName(event.target.value)}
+                  placeholder={t("Template name")}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                />
+                <Button
+                  type="button"
+                  onClick={handleSaveSchemaTemplate}
+                  disabled={isSavingTemplate}
+                >
+                  {isSavingTemplate ? t("Saving...") : t("Save template")}
+                </Button>
+                {templateError ? (
+                  <p className="text-xs text-rose-600">{t(templateError)}</p>
+                ) : null}
+                {templateMessage ? (
+                  <p className="text-xs text-emerald-700">
+                    {t(templateMessage)}{" "}
+                    {savedTemplateId ? (
+                      <Link
+                        href={`/schema-templates/${savedTemplateId}`}
+                        className="font-medium text-emerald-700 underline"
+                      >
+                        {t("Open")}
+                      </Link>
+                    ) : null}
+                  </p>
+                ) : null}
               </div>
             </div>
 

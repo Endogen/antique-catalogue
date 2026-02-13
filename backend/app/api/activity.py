@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.activity_log import ActivityLog
 from app.models.collection import Collection
 from app.models.item import Item
+from app.models.schema_template import SchemaTemplate
 from app.models.user import User
 from app.schemas.activity import ActivityLogResponse
 
@@ -43,6 +44,11 @@ def list_activity(
         for entry in entries
         if entry.resource_type == "item" and entry.resource_id is not None
     ]
+    template_ids = [
+        entry.resource_id
+        for entry in entries
+        if entry.resource_type == "schema_template" and entry.resource_id is not None
+    ]
 
     if collection_ids:
         collection_rows = db.execute(
@@ -66,6 +72,16 @@ def list_activity(
     else:
         item_collection_map = {}
 
+    if template_ids:
+        template_rows = db.execute(
+            select(SchemaTemplate.id, SchemaTemplate.owner_id).where(
+                SchemaTemplate.id.in_(template_ids)
+            )
+        ).all()
+        template_owner_map = {template_id: owner_id for template_id, owner_id in template_rows}
+    else:
+        template_owner_map = {}
+
     for entry in entries:
         target_path: str | None = None
         if entry.resource_type == "collection" and entry.resource_id is not None:
@@ -83,6 +99,10 @@ def list_activity(
                         target_path = f"/collections/{collection_id}/items/{entry.resource_id}"
                     else:
                         target_path = f"/explore/{collection_id}"
+        elif entry.resource_type == "schema_template" and entry.resource_id is not None:
+            owner_id = template_owner_map.get(entry.resource_id)
+            if owner_id == current_user.id:
+                target_path = f"/schema-templates/{entry.resource_id}"
         setattr(entry, "target_path", target_path)
 
     return entries

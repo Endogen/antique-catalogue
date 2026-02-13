@@ -56,6 +56,13 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
       match: ["/collections"]
     },
     {
+      label: t("Schema templates"),
+      href: "/schema-templates",
+      description: t("Reusable metadata schemas"),
+      icon: Sparkles,
+      match: ["/schema-templates"]
+    },
+    {
       label: t("Stars"),
       href: "/stars",
       description: t("Starred items and collections"),

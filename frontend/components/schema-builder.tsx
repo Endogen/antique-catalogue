@@ -22,7 +22,9 @@ import { cn } from "@/lib/utils";
 import {
   fieldApi,
   isApiError,
+  type FieldDefinitionCreatePayload,
   type FieldDefinitionResponse,
+  type FieldDefinitionUpdatePayload,
   type FieldOptions
 } from "@/lib/api";
 
@@ -94,7 +96,23 @@ const getTypeMeta = (
   fieldTypes.find((fieldType) => fieldType.value === (value as FieldType)) ??
   fieldTypes[0];
 
-const sortFields = (items: FieldDefinitionResponse[]) =>
+type SchemaFieldRecord = Omit<FieldDefinitionResponse, "collection_id"> & {
+  collection_id?: number;
+  schema_template_id?: number;
+};
+
+type SchemaBuilderApi = {
+  list: () => Promise<SchemaFieldRecord[]>;
+  create: (payload: FieldDefinitionCreatePayload) => Promise<SchemaFieldRecord>;
+  update: (
+    fieldId: number,
+    payload: FieldDefinitionUpdatePayload
+  ) => Promise<SchemaFieldRecord>;
+  delete: (fieldId: number) => Promise<unknown>;
+  reorder: (fieldIds: number[]) => Promise<SchemaFieldRecord[]>;
+};
+
+const sortFields = (items: SchemaFieldRecord[]) =>
   [...items].sort((a, b) => a.position - b.position || a.id - b.id);
 
 const arrayMove = <T,>(items: T[], fromIndex: number, toIndex: number) => {
@@ -105,15 +123,16 @@ const arrayMove = <T,>(items: T[], fromIndex: number, toIndex: number) => {
 };
 
 type SchemaBuilderProps = {
-  collectionId: number | string;
+  collectionId?: number | string;
+  api?: SchemaBuilderApi;
 };
 
-export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
+export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
   const { t } = useI18n();
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
     "loading"
   );
-  const [fields, setFields] = React.useState<FieldDefinitionResponse[]>([]);
+  const [fields, setFields] = React.useState<SchemaFieldRecord[]>([]);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
@@ -145,6 +164,21 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
   });
 
   const fieldType = watch("field_type");
+  const schemaApi = React.useMemo<SchemaBuilderApi | null>(() => {
+    if (api) {
+      return api;
+    }
+    if (!collectionId) {
+      return null;
+    }
+    return {
+      list: () => fieldApi.list(collectionId),
+      create: (payload) => fieldApi.create(collectionId, payload),
+      update: (fieldId, payload) => fieldApi.update(collectionId, fieldId, payload),
+      delete: (fieldId) => fieldApi.delete(collectionId, fieldId),
+      reorder: (fieldIds) => fieldApi.reorder(collectionId, fieldIds)
+    };
+  }, [api, collectionId]);
 
   const activeField = React.useMemo(
     () => fields.find((field) => field.id === activeFieldId) ?? null,
@@ -152,15 +186,15 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
   );
 
   const loadFields = React.useCallback(async () => {
-    if (!collectionId) {
+    if (!schemaApi) {
       setStatus("error");
-      setLoadError("Collection ID is missing.");
+      setLoadError("Schema source is missing.");
       return;
     }
     setStatus("loading");
     setLoadError(null);
     try {
-      const data = await fieldApi.list(collectionId);
+      const data = await schemaApi.list();
       setFields(sortFields(data));
       setStatus("ready");
     } catch (error) {
@@ -168,10 +202,10 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
       setLoadError(
         isApiError(error)
           ? error.detail
-          : "We couldn't load the collection schema."
+          : "We couldn't load schema fields."
       );
     }
-  }, [collectionId]);
+  }, [schemaApi]);
 
   React.useEffect(() => {
     void loadFields();
@@ -220,6 +254,10 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
   };
 
   const submitField = async (values: FieldFormValues) => {
+    if (!schemaApi) {
+      setFormError("Schema source is missing.");
+      return;
+    }
     setFormError(null);
     setActionMessage(null);
     setOptionsError(null);
@@ -244,11 +282,7 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
 
     try {
       if (activeFieldId) {
-        const updated = await fieldApi.update(
-          collectionId,
-          activeFieldId,
-          payload
-        );
+        const updated = await schemaApi.update(activeFieldId, payload);
         setFields((prev) =>
           sortFields(
             prev.map((field) => (field.id === updated.id ? updated : field))
@@ -256,7 +290,7 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
         );
         setActionMessage("Field updated.");
       } else {
-        const created = await fieldApi.create(collectionId, payload);
+        const created = await schemaApi.create(payload);
         setFields((prev) => sortFields([...prev, created]));
         setActionMessage("Field added.");
         reset(defaultValues);
@@ -273,6 +307,10 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
   };
 
   const handleDelete = async (fieldId: number) => {
+    if (!schemaApi) {
+      setFormError("Schema source is missing.");
+      return;
+    }
     const field = fields.find((item) => item.id === fieldId);
     if (!field) {
       return;
@@ -289,7 +327,7 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
     setFormError(null);
     setActionMessage(null);
     try {
-      await fieldApi.delete(collectionId, fieldId);
+      await schemaApi.delete(fieldId);
       setFields((prev) => prev.filter((item) => item.id !== fieldId));
       if (activeFieldId === fieldId) {
         setActiveFieldId(null);
@@ -306,15 +344,16 @@ export function SchemaBuilder({ collectionId }: SchemaBuilderProps) {
     }
   };
 
-  const commitReorder = async (nextFields: FieldDefinitionResponse[]) => {
+  const commitReorder = async (nextFields: SchemaFieldRecord[]) => {
+    if (!schemaApi) {
+      setReorderError("Schema source is missing.");
+      throw new Error("Schema source is missing.");
+    }
     setIsReordering(true);
     setReorderError(null);
     setActionMessage(null);
     try {
-      const updated = await fieldApi.reorder(
-        collectionId,
-        nextFields.map((field) => field.id)
-      );
+      const updated = await schemaApi.reorder(nextFields.map((field) => field.id));
       setFields(sortFields(updated));
       setActionMessage("Field order updated.");
     } catch (error) {

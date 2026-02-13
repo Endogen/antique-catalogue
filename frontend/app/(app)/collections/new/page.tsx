@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, FolderPlus, Sparkles } from "lucide-react";
+import { ArrowLeft, Camera, FolderPlus, Search, Sparkles } from "lucide-react";
 
 import {
   CollectionForm,
@@ -11,23 +11,98 @@ import {
 } from "@/components/collection-form";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { collectionApi, isApiError } from "@/lib/api";
+import {
+  collectionApi,
+  isApiError,
+  schemaTemplateApi,
+  type SchemaTemplateSummaryResponse
+} from "@/lib/api";
+import { cn } from "@/lib/utils";
 
-const buildPayload = (values: CollectionFormValues) => ({
+const buildPayload = (
+  values: CollectionFormValues,
+  schemaTemplateId: number | null
+) => ({
   name: values.name.trim(),
   description: values.description.trim() ? values.description.trim() : null,
-  is_public: values.is_public
+  is_public: values.is_public,
+  schema_template_id: schemaTemplateId
 });
 
 export default function NewCollectionPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [schemaMode, setSchemaMode] = React.useState<"scratch" | "template">(
+    "scratch"
+  );
+  const [templateQuery, setTemplateQuery] = React.useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = React.useState<
+    number | null
+  >(null);
+  const [templatesState, setTemplatesState] = React.useState<{
+    status: "idle" | "loading" | "ready" | "error";
+    data: SchemaTemplateSummaryResponse[];
+    error?: string;
+  }>({
+    status: "idle",
+    data: []
+  });
+
+  React.useEffect(() => {
+    if (schemaMode !== "template") {
+      return;
+    }
+    let isActive = true;
+    const handle = setTimeout(() => {
+      void (async () => {
+        setTemplatesState((prev) => ({
+          ...prev,
+          status: "loading",
+          error: undefined
+        }));
+        try {
+          const data = await schemaTemplateApi.list({
+            q: templateQuery.trim() || undefined,
+            limit: 50
+          });
+          if (!isActive) {
+            return;
+          }
+          setTemplatesState({
+            status: "ready",
+            data
+          });
+        } catch (error) {
+          if (!isActive) {
+            return;
+          }
+          setTemplatesState((prev) => ({
+            ...prev,
+            status: "error",
+            error: isApiError(error)
+              ? error.detail
+              : "We couldn't load schema templates."
+          }));
+        }
+      })();
+    }, 250);
+
+    return () => {
+      isActive = false;
+      clearTimeout(handle);
+    };
+  }, [schemaMode, templateQuery]);
 
   const handleSubmit = async (values: CollectionFormValues) => {
     setFormError(null);
+    const templateId = schemaMode === "template" ? selectedTemplateId : null;
+    if (schemaMode === "template" && !templateId) {
+      setFormError("Select a schema template before creating the collection.");
+      return;
+    }
     try {
-      const created = await collectionApi.create(buildPayload(values));
+      const created = await collectionApi.create(buildPayload(values, templateId));
       router.push(`/collections/${created.id}/settings`);
     } catch (error) {
       setFormError(
@@ -75,6 +150,121 @@ export default function NewCollectionPage() {
           <p className="mt-3 text-sm text-stone-600">
             {t("You can adjust the details later, including public visibility.")}
           </p>
+
+          <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+            <p className="text-xs uppercase tracking-[0.25em] text-stone-500">
+              {t("Schema setup")}
+            </p>
+            <p className="mt-2 text-sm text-stone-600">
+              {t(
+                "Choose whether to start with a blank schema or copy an existing template."
+              )}
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                className={cn(
+                  "rounded-2xl border p-4 text-left text-sm transition",
+                  schemaMode === "scratch"
+                    ? "border-amber-200 bg-amber-50/80 text-stone-900"
+                    : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                )}
+                onClick={() => {
+                  setSchemaMode("scratch");
+                  setFormError(null);
+                }}
+              >
+                <p className="font-medium text-stone-900">
+                  {t("Start from scratch")}
+                </p>
+                <p className="mt-1 text-xs text-stone-500">
+                  {t("Define fields manually after collection creation.")}
+                </p>
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "rounded-2xl border p-4 text-left text-sm transition",
+                  schemaMode === "template"
+                    ? "border-amber-200 bg-amber-50/80 text-stone-900"
+                    : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                )}
+                onClick={() => {
+                  setSchemaMode("template");
+                  setFormError(null);
+                }}
+              >
+                <p className="font-medium text-stone-900">{t("Use template")}</p>
+                <p className="mt-1 text-xs text-stone-500">
+                  {t("Copy fields from a saved schema template.")}
+                </p>
+              </button>
+            </div>
+
+            {schemaMode === "template" ? (
+              <div className="mt-4 space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="search"
+                    value={templateQuery}
+                    onChange={(event) => setTemplateQuery(event.target.value)}
+                    placeholder={t("Search schema templates")}
+                    className="h-10 w-full rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </div>
+
+                {templatesState.status === "loading" && templatesState.data.length === 0 ? (
+                  <p className="text-xs text-stone-500">
+                    {t("Loading schema templates...")}
+                  </p>
+                ) : templatesState.status === "error" ? (
+                  <p className="text-xs text-rose-600">
+                    {t(
+                      templatesState.error ?? "We couldn't load schema templates."
+                    )}
+                  </p>
+                ) : templatesState.data.length === 0 ? (
+                  <p className="text-xs text-stone-500">
+                    {t("No schema templates found.")}
+                  </p>
+                ) : (
+                  <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+                    {templatesState.data.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => setSelectedTemplateId(template.id)}
+                        className={cn(
+                          "w-full rounded-xl border p-3 text-left transition",
+                          selectedTemplateId === template.id
+                            ? "border-amber-300 bg-amber-50/80"
+                            : "border-stone-200 bg-white hover:border-stone-300"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-stone-900">
+                            {template.name}
+                          </p>
+                          <span className="text-xs text-stone-500">
+                            {t("{count} fields", { count: template.field_count })}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-xs text-stone-500">
+                  {t("Need a new template?")}
+                  {" "}
+                  <Link href="/schema-templates" className="font-medium text-amber-700">
+                    {t("Manage schema templates")}
+                  </Link>
+                </p>
+              </div>
+            ) : null}
+          </div>
 
           <div className="mt-6">
             <CollectionForm

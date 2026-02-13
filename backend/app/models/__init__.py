@@ -8,6 +8,8 @@ from app.models.field_definition import FieldDefinition
 from app.models.item import Item
 from app.models.item_image import ItemImage
 from app.models.item_star import ItemStar
+from app.models.schema_template import SchemaTemplate
+from app.models.schema_template_field import SchemaTemplateField
 from app.models.user import User
 
 __all__ = [
@@ -19,5 +21,7 @@ __all__ = [
     "Item",
     "ItemImage",
     "ItemStar",
+    "SchemaTemplate",
+    "SchemaTemplateField",
     "User",
 ]

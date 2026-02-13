@@ -23,6 +23,9 @@ class CollectionCreateRequest(BaseModel):
     name: str = Field(..., examples=["Vintage Cameras"])
     description: str | None = Field(None, examples=["Mid-century cameras and accessories"])
     is_public: bool = Field(False, description="Whether the collection is publicly visible")
+    schema_template_id: int | None = Field(
+        None, description="Optional schema template ID to copy when creating the collection"
+    )
 
     @field_validator("name")
     @classmethod
@@ -33,6 +36,15 @@ class CollectionCreateRequest(BaseModel):
     @classmethod
     def validate_description(cls, value: str | None) -> str | None:
         return _normalize_description(value)
+
+    @field_validator("schema_template_id")
+    @classmethod
+    def validate_schema_template_id(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        if value <= 0:
+            raise ValueError("Schema template ID must be positive")
+        return value
 
 
 class CollectionUpdateRequest(BaseModel):
