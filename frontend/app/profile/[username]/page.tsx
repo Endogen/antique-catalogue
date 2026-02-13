@@ -4,7 +4,15 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Award, CalendarDays, Folder, Search, Star } from "lucide-react";
+import {
+  ArrowLeft,
+  Award,
+  CalendarDays,
+  Folder,
+  Package,
+  Search,
+  Star
+} from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
@@ -202,50 +210,47 @@ export default function PublicProfilePage() {
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
-                <p className="text-xs text-stone-500">{t("Public collections")}</p>
-                <p className="mt-2 text-2xl font-semibold text-stone-900">
-                  {state.data.public_collection_count}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
-                <p className="text-xs text-stone-500">{t("Public items")}</p>
-                <p className="mt-2 text-2xl font-semibold text-stone-900">
-                  {state.data.public_item_count}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
-                <p className="text-xs text-stone-500">{t("Stars earned")}</p>
-                <p className="mt-2 text-2xl font-semibold text-stone-900">
-                  {state.data.earned_star_count}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
-                <p className="text-xs text-stone-500">{t("Star rank")}</p>
-                <p className="mt-2 text-2xl font-semibold text-stone-900">
-                  #{state.data.star_rank}
-                </p>
-              </div>
-            </div>
-
             <div className="rounded-3xl border border-stone-900 bg-stone-950 p-5 text-stone-100">
               <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
                 {t("Public summary")}
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-stone-300">
-                <span className="inline-flex items-center gap-2">
-                  <Folder className="h-4 w-4 text-amber-300" />
-                  {state.data.public_collection_count}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <Star className="h-4 w-4 text-amber-300" />
-                  {state.data.earned_star_count}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <Award className="h-4 w-4 text-amber-300" />
-                  #{state.data.star_rank}
-                </span>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-2xl border border-stone-800 bg-stone-900/70 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                    <Folder className="h-4 w-4 text-amber-300" />
+                    {t("Public collections")}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-stone-100">
+                    {state.data.public_collection_count}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-stone-800 bg-stone-900/70 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                    <Package className="h-4 w-4 text-amber-300" />
+                    {t("Public items")}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-stone-100">
+                    {state.data.public_item_count}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-stone-800 bg-stone-900/70 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                    <Star className="h-4 w-4 text-amber-300" />
+                    {t("Stars earned")}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-stone-100">
+                    {state.data.earned_star_count}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-stone-800 bg-stone-900/70 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                    <Award className="h-4 w-4 text-amber-300" />
+                    {t("Star rank")}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-stone-100">
+                    #{state.data.star_rank}
+                  </p>
+                </div>
               </div>
             </div>
 

@@ -2,7 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Award, ExternalLink, Folder, Loader2, Save, Star } from "lucide-react";
+import {
+  Award,
+  ExternalLink,
+  Folder,
+  Loader2,
+  Package,
+  Save,
+  Star
+} from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
@@ -190,34 +198,7 @@ export default function ProfilePage() {
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
             {t("Public stats")}
           </p>
-          <div className="mt-5 space-y-4">
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-              <p className="text-xs text-stone-500">{t("Public collections")}</p>
-              <p className="mt-2 text-xl font-semibold text-stone-900">
-                {profile?.public_collection_count ?? 0}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-              <p className="text-xs text-stone-500">{t("Public items")}</p>
-              <p className="mt-2 text-xl font-semibold text-stone-900">
-                {profile?.public_item_count ?? 0}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-              <p className="text-xs text-stone-500">{t("Stars earned")}</p>
-              <p className="mt-2 text-xl font-semibold text-stone-900">
-                {profile?.earned_star_count ?? 0}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-              <p className="text-xs text-stone-500">{t("Star rank")}</p>
-              <p className="mt-2 text-xl font-semibold text-stone-900">
-                {profile ? `#${profile.star_rank}` : "-"}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-stone-900 bg-stone-950 p-4 text-stone-100">
+          <div className="mt-5 rounded-2xl border border-stone-900 bg-stone-950 p-4 text-stone-100">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
               {t("Profile summary")}
             </p>
@@ -226,19 +207,43 @@ export default function ProfilePage() {
                 date: formatDate(profile?.created_at)
               })}
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-stone-300">
-              <span className="inline-flex items-center gap-1">
-                <Folder className="h-3.5 w-3.5 text-amber-300" />
-                {profile?.public_collection_count ?? 0}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Award className="h-3.5 w-3.5 text-amber-300" />
-                #{profile?.star_rank ?? 1}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Star className="h-3.5 w-3.5 text-amber-300" />
-                {profile?.earned_star_count ?? 0}
-              </span>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
+                <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                  <Folder className="h-3.5 w-3.5 text-amber-300" />
+                  {t("Public collections")}
+                </p>
+                <p className="mt-2 text-xl font-semibold text-stone-100">
+                  {profile?.public_collection_count ?? 0}
+                </p>
+              </div>
+              <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
+                <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                  <Package className="h-3.5 w-3.5 text-amber-300" />
+                  {t("Public items")}
+                </p>
+                <p className="mt-2 text-xl font-semibold text-stone-100">
+                  {profile?.public_item_count ?? 0}
+                </p>
+              </div>
+              <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
+                <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                  <Star className="h-3.5 w-3.5 text-amber-300" />
+                  {t("Stars earned")}
+                </p>
+                <p className="mt-2 text-xl font-semibold text-stone-100">
+                  {profile?.earned_star_count ?? 0}
+                </p>
+              </div>
+              <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
+                <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                  <Award className="h-3.5 w-3.5 text-amber-300" />
+                  {t("Star rank")}
+                </p>
+                <p className="mt-2 text-xl font-semibold text-stone-100">
+                  #{profile?.star_rank ?? 1}
+                </p>
+              </div>
             </div>
           </div>
         </div>
