@@ -313,3 +313,105 @@ def test_public_profile_stats_and_rank(app_with_db, db_session_factory) -> None:
             assert missing.json()["detail"] == "Profile not found"
 
     asyncio.run(_flow())
+
+
+def test_public_profile_collections_endpoint_returns_only_users_public_collections(
+    app_with_db,
+    db_session_factory,
+) -> None:
+    owner_email = "profile-collections-owner@example.com"
+    owner_password = "strongpass"
+    viewer_email = "profile-collections-viewer@example.com"
+    viewer_password = "strongpass"
+    other_email = "profile-collections-other@example.com"
+    other_password = "strongpass"
+    _create_user(db_session_factory, email=owner_email, password=owner_password, verified=True)
+    _create_user(db_session_factory, email=viewer_email, password=viewer_password, verified=True)
+    _create_user(db_session_factory, email=other_email, password=other_password, verified=True)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            owner_token = await _login(client, email=owner_email, password=owner_password)
+            owner_headers = {"Authorization": f"Bearer {owner_token}"}
+            viewer_token = await _login(client, email=viewer_email, password=viewer_password)
+            viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
+            other_token = await _login(client, email=other_email, password=other_password)
+            other_headers = {"Authorization": f"Bearer {other_token}"}
+
+            owner_profile = await client.patch(
+                "/profiles/me",
+                json={"username": "ownerlist"},
+                headers=owner_headers,
+            )
+            assert owner_profile.status_code == 200
+
+            owner_public_one = await _create_collection(
+                client,
+                owner_headers,
+                name="Owner Public A",
+                is_public=True,
+            )
+            owner_public_two = await _create_collection(
+                client,
+                owner_headers,
+                name="Owner Public B",
+                is_public=True,
+            )
+            await _create_collection(
+                client,
+                owner_headers,
+                name="Owner Private",
+                is_public=False,
+            )
+            other_public = await _create_collection(
+                client,
+                other_headers,
+                name="Other Public",
+                is_public=True,
+            )
+
+            owner_item = await _create_item(
+                client,
+                owner_headers,
+                owner_public_one,
+                name="Owner Item",
+            )
+            star_owner = await client.post(
+                f"/stars/collections/{owner_public_one}",
+                headers=viewer_headers,
+            )
+            assert star_owner.status_code == 200
+
+            collections_response = await client.get("/profiles/ownerlist/collections")
+            assert collections_response.status_code == 200
+            payload = collections_response.json()
+            returned_ids = {row["id"] for row in payload}
+            assert returned_ids == {owner_public_one, owner_public_two}
+            assert all(row["is_public"] is True for row in payload)
+            assert all(row["owner_username"] == "ownerlist" for row in payload)
+
+            first = next(row for row in payload if row["id"] == owner_public_one)
+            second = next(row for row in payload if row["id"] == owner_public_two)
+            assert first["item_count"] == 1
+            assert first["star_count"] == 1
+            assert second["item_count"] == 0
+            assert second["star_count"] == 0
+
+            all_public = await client.get("/public/collections")
+            assert all_public.status_code == 200
+            all_public_ids = {row["id"] for row in all_public.json()}
+            assert owner_public_one in all_public_ids
+            assert owner_public_two in all_public_ids
+            assert other_public in all_public_ids
+
+            missing = await client.get("/profiles/not_real/collections")
+            assert missing.status_code == 404
+            assert missing.json()["detail"] == "Profile not found"
+
+            item_detail = await client.get(
+                f"/public/collections/{owner_public_one}/items/{owner_item}",
+            )
+            assert item_detail.status_code == 200
+
+    asyncio.run(_flow())

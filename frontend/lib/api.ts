@@ -707,7 +707,15 @@ export const profileApi = {
     apiRequest<PublicProfileResponse>(`/profiles/${encodeURIComponent(username)}`, {
       skipAuth: true,
       skipRefresh: true
-    })
+    }),
+  listPublicCollections: (username: string) =>
+    apiRequest<CollectionResponse[]>(
+      `/profiles/${encodeURIComponent(username)}/collections`,
+      {
+        skipAuth: true,
+        skipRefresh: true
+      }
+    )
 };
 
 export const adminApi = {

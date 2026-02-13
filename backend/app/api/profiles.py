@@ -12,6 +12,7 @@ from app.models.collection_star import CollectionStar
 from app.models.item import Item
 from app.models.item_star import ItemStar
 from app.models.user import User
+from app.schemas.collections import CollectionResponse
 from app.schemas.profiles import ProfileUpdateRequest, PublicProfileResponse
 from app.services.activity import log_activity
 from app.services.usernames import normalize_username_lookup, validate_username_for_user
@@ -122,6 +123,28 @@ def _build_public_profile_response(db: Session, user: User) -> PublicProfileResp
     )
 
 
+def _collection_item_counts_subquery():
+    return (
+        select(
+            Item.collection_id,
+            func.count(Item.id).label("item_count"),
+        )
+        .group_by(Item.collection_id)
+        .subquery()
+    )
+
+
+def _collection_star_counts_subquery():
+    return (
+        select(
+            CollectionStar.collection_id,
+            func.count(CollectionStar.id).label("star_count"),
+        )
+        .group_by(CollectionStar.collection_id)
+        .subquery()
+    )
+
+
 @router.get("/me", response_model=PublicProfileResponse)
 def read_my_profile(
     current_user: User = Depends(get_current_user),
@@ -166,6 +189,36 @@ def update_my_profile(
         db.refresh(current_user)
 
     return _build_public_profile_response(db, current_user)
+
+
+@router.get("/{username}/collections", response_model=list[CollectionResponse])
+def list_public_profile_collections(
+    username: str,
+    db: Session = Depends(get_db),
+) -> list[CollectionResponse]:
+    user = _get_profile_user_or_404(db, username)
+
+    item_counts = _collection_item_counts_subquery()
+    star_counts = _collection_star_counts_subquery()
+    rows = db.execute(
+        select(
+            Collection,
+            func.coalesce(item_counts.c.item_count, 0),
+            func.coalesce(star_counts.c.star_count, 0),
+        )
+        .outerjoin(item_counts, item_counts.c.collection_id == Collection.id)
+        .outerjoin(star_counts, star_counts.c.collection_id == Collection.id)
+        .where(Collection.owner_id == user.id, Collection.is_public.is_(True))
+        .order_by(Collection.created_at.desc(), Collection.id.desc())
+    ).all()
+
+    collections: list[Collection] = []
+    for collection, item_count, star_count in rows:
+        setattr(collection, "item_count", item_count)
+        setattr(collection, "star_count", star_count)
+        setattr(collection, "owner_username", user.username)
+        collections.append(collection)
+    return collections
 
 
 @router.get("/{username}", response_model=PublicProfileResponse)

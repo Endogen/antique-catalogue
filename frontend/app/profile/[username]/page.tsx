@@ -4,16 +4,27 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Award, Folder, Star } from "lucide-react";
+import { ArrowLeft, Award, CalendarDays, Folder, Search, Star } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { isApiError, profileApi, type PublicProfileResponse } from "@/lib/api";
+import {
+  isApiError,
+  profileApi,
+  type CollectionResponse,
+  type PublicProfileResponse
+} from "@/lib/api";
 
 type LoadState = {
   status: "loading" | "ready" | "error";
   data: PublicProfileResponse | null;
+  error?: string;
+};
+
+type CollectionsState = {
+  status: "loading" | "ready" | "error";
+  data: CollectionResponse[];
   error?: string;
 };
 
@@ -28,6 +39,11 @@ export default function PublicProfilePage() {
     status: "loading",
     data: null
   });
+  const [collectionsState, setCollectionsState] = React.useState<CollectionsState>({
+    status: "loading",
+    data: []
+  });
+  const [collectionSearch, setCollectionSearch] = React.useState("");
 
   const formatDate = React.useCallback(
     (value: string | null | undefined) => {
@@ -76,11 +92,56 @@ export default function PublicProfilePage() {
     }
   }, [usernameParam]);
 
+  const loadCollections = React.useCallback(async () => {
+    if (!usernameParam) {
+      setCollectionsState({
+        status: "error",
+        data: [],
+        error: "Profile not found"
+      });
+      return;
+    }
+    setCollectionsState((prev) => ({
+      ...prev,
+      status: "loading",
+      error: undefined
+    }));
+    try {
+      const data = await profileApi.listPublicCollections(usernameParam);
+      setCollectionsState({
+        status: "ready",
+        data
+      });
+    } catch (error) {
+      setCollectionsState((prev) => ({
+        status: "error",
+        data: prev.data,
+        error: isApiError(error)
+          ? error.detail
+          : "We couldn't load public collections."
+      }));
+    }
+  }, [usernameParam]);
+
   React.useEffect(() => {
     void loadProfile();
-  }, [loadProfile]);
+    void loadCollections();
+  }, [loadCollections, loadProfile]);
 
   const isOwnProfile = state.data?.username === user?.username;
+  const filteredCollections = React.useMemo(() => {
+    const term = collectionSearch.trim().toLowerCase();
+    if (!term) {
+      return collectionsState.data;
+    }
+    return collectionsState.data.filter((collection) => {
+      const description = collection.description ?? "";
+      return (
+        collection.name.toLowerCase().includes(term) ||
+        description.toLowerCase().includes(term)
+      );
+    });
+  }, [collectionSearch, collectionsState.data]);
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-950">
@@ -186,6 +247,84 @@ export default function PublicProfilePage() {
                   #{state.data.star_rank}
                 </span>
               </div>
+            </div>
+
+            <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                    {t("Public collections")}
+                  </p>
+                  <h2 className="font-display mt-3 text-2xl text-stone-900">
+                    {t("Browse public collections")}
+                  </h2>
+                </div>
+                <span className="text-xs text-stone-500">
+                  {t("{count} total", {
+                    count: collectionsState.data.length
+                  })}
+                </span>
+              </div>
+
+              <div className="relative mt-4 max-w-xl">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="search"
+                  className="h-10 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  placeholder={t("Search collections")}
+                  value={collectionSearch}
+                  onChange={(event) => setCollectionSearch(event.target.value)}
+                />
+              </div>
+
+              {collectionsState.status === "loading" && collectionsState.data.length === 0 ? (
+                <p className="mt-6 text-sm text-stone-500">{t("Loading collections...")}</p>
+              ) : collectionsState.status === "error" && collectionsState.data.length === 0 ? (
+                <p className="mt-6 text-sm text-rose-600">
+                  {t(collectionsState.error ?? "We couldn't load public collections.")}
+                </p>
+              ) : filteredCollections.length === 0 ? (
+                <p className="mt-6 text-sm text-stone-600">
+                  {t("No collections available yet.")}
+                </p>
+              ) : (
+                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                  {filteredCollections.map((collection) => (
+                    <div
+                      key={collection.id}
+                      className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm"
+                    >
+                      <h3 className="text-base font-semibold text-stone-900">
+                        {collection.name}
+                      </h3>
+                      <p className="mt-1 text-xs text-stone-600">
+                        {collection.description ?? t("No description provided.")}
+                      </p>
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
+                            {t("Created {date}", {
+                              date: formatDate(collection.created_at)
+                            })}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Star className="h-3.5 w-3.5 text-amber-600" />
+                            {collection.star_count ?? 0}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Folder className="h-3.5 w-3.5 text-amber-600" />
+                            {collection.item_count ?? 0}
+                          </span>
+                        </div>
+                        <Button size="sm" variant="secondary" asChild>
+                          <Link href={`/explore/${collection.id}`}>{t("View collection")}</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
