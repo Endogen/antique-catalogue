@@ -379,6 +379,7 @@ def list_items(
         setattr(item, "primary_image_id", image_id)
         setattr(item, "image_count", count)
         setattr(item, "star_count", stars)
+        setattr(item, "owner_username", current_user.username)
         items.append(item)
     return items
 
@@ -422,6 +423,7 @@ def create_item(
     setattr(item, "primary_image_id", None)
     setattr(item, "image_count", 0)
     setattr(item, "star_count", 0)
+    setattr(item, "owner_username", current_user.username)
     return item
 
 
@@ -446,6 +448,7 @@ def get_item(
     setattr(item, "primary_image_id", image_id)
     setattr(item, "image_count", image_count)
     setattr(item, "star_count", star_count)
+    setattr(item, "owner_username", current_user.username)
     return item
 
 
@@ -497,6 +500,7 @@ def update_item(
     setattr(item, "primary_image_id", image_id)
     setattr(item, "image_count", image_count)
     setattr(item, "star_count", star_count)
+    setattr(item, "owner_username", current_user.username)
     return item
 
 
@@ -545,9 +549,12 @@ def list_public_items(
     limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
     db: Session = Depends(get_db),
 ) -> list[ItemResponse]:
-    _get_public_collection_or_404(db, collection_id)
+    collection = _get_public_collection_or_404(db, collection_id)
     filters = filters or []
     search_term = _parse_search_term(search)
+    owner_username = db.execute(
+        select(User.username).where(User.id == collection.owner_id)
+    ).scalar_one_or_none()
 
     field_definitions = _get_field_definitions(db, collection_id)
     public_fields = {field.name for field in field_definitions if not field.is_private}
@@ -576,6 +583,7 @@ def list_public_items(
         setattr(item, "primary_image_id", image_id)
         setattr(item, "image_count", count)
         setattr(item, "star_count", stars)
+        setattr(item, "owner_username", owner_username)
         item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
         items.append(item)
     return items
@@ -588,6 +596,11 @@ def get_public_item(
     db: Session = Depends(get_db),
 ) -> ItemResponse:
     item = _get_public_item_or_404(db, collection_id, item_id)
+    owner_username = db.execute(
+        select(User.username)
+        .join(Collection, Collection.owner_id == User.id)
+        .where(Collection.id == collection_id)
+    ).scalar_one_or_none()
     field_definitions = _get_field_definitions(db, collection_id)
     public_fields = {field.name for field in field_definitions if not field.is_private}
     image_id = db.execute(
@@ -603,5 +616,6 @@ def get_public_item(
     setattr(item, "primary_image_id", image_id)
     setattr(item, "image_count", image_count)
     setattr(item, "star_count", star_count)
+    setattr(item, "owner_username", owner_username)
     item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
     return item

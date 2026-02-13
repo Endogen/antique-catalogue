@@ -99,6 +99,7 @@ class UserResponse(BaseModel):
 
     id: int
     email: str
+    username: str
     is_active: bool
     is_verified: bool
     created_at: datetime

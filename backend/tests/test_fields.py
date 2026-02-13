@@ -17,6 +17,8 @@ def _create_user(session_factory, *, email: str, password: str, verified: bool =
             is_verified=verified,
         )
         session.add(user)
+        session.flush()
+        user.username = str(user.id)
         session.commit()
         session.refresh(user)
         return user.id

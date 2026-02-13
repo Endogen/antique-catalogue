@@ -71,6 +71,7 @@ class CollectionResponse(BaseModel):
     id: int
     name: str
     description: str | None
+    owner_username: str | None = None
     is_public: bool
     is_featured: bool
     item_count: int | None = None

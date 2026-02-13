@@ -15,6 +15,7 @@ import {
   Settings2,
   Star,
   Sparkles,
+  UserRound,
   X
 } from "lucide-react";
 
@@ -68,6 +69,13 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
       description: t("Starred items and collections"),
       icon: Star,
       match: ["/stars"]
+    },
+    {
+      label: t("Profile"),
+      href: "/profile",
+      description: t("Your public profile"),
+      icon: UserRound,
+      match: ["/profile"]
     },
     {
       label: t("Settings"),

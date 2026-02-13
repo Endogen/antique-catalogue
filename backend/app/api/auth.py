@@ -70,6 +70,8 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)) -> Message
     if settings.auto_verify_email:
         user.is_verified = True
     db.add(user)
+    db.flush()
+    user.username = str(user.id)
 
     token: str | None = None
     if not settings.auto_verify_email:

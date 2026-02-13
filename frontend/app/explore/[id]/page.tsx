@@ -575,6 +575,17 @@ export default function PublicCollectionPage() {
                 <h1 className="font-display mt-4 text-3xl text-stone-900">
                   {collectionState.data?.name}
                 </h1>
+                {collectionState.data?.owner_username ? (
+                  <p className="mt-2 text-sm text-stone-600">
+                    {t("By")}{" "}
+                    <Link
+                      href={`/profile/${encodeURIComponent(collectionState.data.owner_username)}`}
+                      className="font-medium text-amber-700 hover:text-amber-800"
+                    >
+                      @{collectionState.data.owner_username}
+                    </Link>
+                  </p>
+                ) : null}
                 <p className="mt-3 max-w-2xl text-sm text-stone-600">
                   {collectionState.data?.description ??
                     t("This collection is ready to explore.")}
@@ -828,6 +839,17 @@ export default function PublicCollectionPage() {
                           <h3 className="mt-3 text-xl font-semibold text-stone-900">
                             {item.name}
                           </h3>
+                          {item.owner_username ? (
+                            <p className="mt-2 text-xs text-stone-500">
+                              {t("By")}{" "}
+                              <Link
+                                href={`/profile/${encodeURIComponent(item.owner_username)}`}
+                                className="font-medium text-amber-700 hover:text-amber-800"
+                              >
+                                @{item.owner_username}
+                              </Link>
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-stone-500">
                           <span>

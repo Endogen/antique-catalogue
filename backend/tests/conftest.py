@@ -22,6 +22,7 @@ from app.api.images import router as images_router
 from app.api.images import serve_router as images_serve_router
 from app.api.items import public_router as public_items_router
 from app.api.items import router as items_router
+from app.api.profiles import router as profiles_router
 from app.api.schema_templates import router as schema_templates_router
 from app.api.search import router as search_router
 from app.api.stars import router as stars_router
@@ -87,6 +88,7 @@ def app_with_db(db_session_factory, monkeypatch):
     app.include_router(images_serve_router)
     app.include_router(public_collections_router)
     app.include_router(public_items_router)
+    app.include_router(profiles_router)
     app.include_router(search_router)
     app.include_router(stars_router)
     app.include_router(schema_templates_router)
