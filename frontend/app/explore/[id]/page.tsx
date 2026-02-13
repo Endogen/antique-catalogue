@@ -451,65 +451,67 @@ export default function PublicCollectionPage() {
   };
 
   return (
-    <main className="min-h-screen bg-stone-50 text-stone-950">
-      <header className="border-b border-stone-200/80 bg-stone-50/80 px-6 py-6 backdrop-blur lg:px-12">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="Antique Catalogue"
-              width={44}
-              height={44}
-              className="rounded-full"
-            />
-            <div>
-              <p className="font-display text-lg tracking-tight">
-                {t("Antique Catalogue")}
-              </p>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
-                {t("Studio Archive")}
-              </p>
+    <main className="relative min-h-screen overflow-hidden bg-stone-50 text-stone-950">
+      <div className="pointer-events-none absolute -top-32 right-0 h-72 w-72 rounded-full bg-amber-300/20 blur-[100px]" />
+      <div className="pointer-events-none absolute top-[35%] left-[-8%] h-72 w-72 rounded-full bg-amber-200/25 blur-[140px]" />
+      <div className="pointer-events-none absolute bottom-[-15%] right-[-8%] h-80 w-80 rounded-full bg-stone-900/10 blur-[160px]" />
+      <div className="relative z-10">
+        <header className="px-6 py-6 lg:px-12">
+          <div className="mx-auto flex max-w-6xl items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <Image
+                src="/logo.png"
+                alt="Antique Catalogue"
+                width={44}
+                height={44}
+                className="rounded-full"
+              />
+              <div>
+                <p className="font-display text-lg tracking-tight">
+                  {t("Antique Catalogue")}
+                </p>
+                <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+                  {t("Studio Archive")}
+                </p>
+              </div>
+            </Link>
+            <nav className="hidden items-center gap-6 text-sm text-stone-600 md:flex">
+              <Link href="/" className="hover:text-stone-900">
+                {t("Home")}
+              </Link>
+              <Link href="/explore" className="font-medium text-stone-900">
+                {t("Explore")}
+              </Link>
+              <Link href="/dashboard" className="hover:text-stone-900">
+                {t("Dashboard")}
+              </Link>
+            </nav>
+            <div className="flex items-center gap-3">
+              {showAuthenticatedCtas ? (
+                <Button
+                  variant="secondary"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  {isLoggingOut ? t("Logging out...") : t("Log out")}
+                </Button>
+              ) : (
+                <>
+                  <Button variant="ghost" className="hidden sm:inline-flex" asChild>
+                    <Link href="/login">{t("Log in")}</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href="/register">{t("Create account")}</Link>
+                  </Button>
+                </>
+              )}
             </div>
-          </Link>
-          <nav className="hidden items-center gap-6 text-sm text-stone-600 md:flex">
-            <Link href="/" className="hover:text-stone-900">
-              {t("Home")}
-            </Link>
-            <Link href="/explore" className="font-medium text-stone-900">
-              {t("Explore")}
-            </Link>
-            <Link href="/dashboard" className="hover:text-stone-900">
-              {t("Dashboard")}
-            </Link>
-          </nav>
-          <div className="flex items-center gap-3">
-            {showAuthenticatedCtas ? (
-              <Button
-                variant="secondary"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-              >
-                <LogOut className="h-4 w-4" />
-                {isLoggingOut ? t("Logging out...") : t("Log out")}
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" className="hidden sm:inline-flex" asChild>
-                  <Link href="/login">{t("Log in")}</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/register">{t("Create account")}</Link>
-                </Button>
-              </>
-            )}
           </div>
-        </div>
-      </header>
+        </header>
 
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-32 right-0 h-72 w-72 rounded-full bg-amber-300/20 blur-[100px]" />
-        <div className="pointer-events-none absolute bottom-0 left-10 h-64 w-64 rounded-full bg-stone-900/10 blur-[120px]" />
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-10 pt-8 lg:px-12">
+        <section>
+          <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-10 pt-8 lg:px-12">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/explore">
@@ -634,22 +636,6 @@ export default function PublicCollectionPage() {
                       </p>
                     </div>
                   </div>
-                </div>
-                <div className="mt-6 rounded-2xl border border-stone-900/90 bg-stone-950 px-4 py-3 text-stone-100">
-                  <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                    {t("Explore more")}
-                  </p>
-                  <p className="mt-2 text-sm text-stone-300">
-                    {t("Browse other public catalogues for inspiration.")}
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="mt-4"
-                    asChild
-                  >
-                    <Link href="/explore">{t("Back to directory")}</Link>
-                  </Button>
                 </div>
               </div>
             </div>
@@ -946,6 +932,7 @@ export default function PublicCollectionPage() {
         alt={lightboxImage?.alt}
         onClose={() => setLightboxImage(null)}
       />
+      </div>
     </main>
   );
 }
