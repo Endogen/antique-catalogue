@@ -82,7 +82,7 @@ const truncate = (value: string, maxLength: number) => {
 };
 
 const highlightCardClass =
-  "border-amber-200/70 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_12px_32px_-22px_rgba(251,191,36,0.55)]";
+  "border-amber-400 bg-amber-50/45 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_18px_36px_-20px_rgba(217,119,6,0.75)]";
 
 const sortFields = (items: FieldDefinitionResponse[]) =>
   [...items].sort((a, b) => a.position - b.position || a.id - b.id);

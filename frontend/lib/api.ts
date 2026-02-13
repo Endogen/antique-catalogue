@@ -33,6 +33,7 @@ export type CollectionCreatePayload = {
   name: string;
   description?: string | null;
   is_public?: boolean;
+  schema_template_id?: number | null;
 };
 
 export type CollectionUpdatePayload = {
@@ -72,6 +73,45 @@ export type FieldDefinitionUpdatePayload = {
   is_required?: boolean;
   is_private?: boolean;
   options?: FieldOptions | null;
+};
+
+export type SchemaTemplateFieldResponse = {
+  id: number;
+  schema_template_id: number;
+  name: string;
+  field_type: string;
+  is_required: boolean;
+  is_private: boolean;
+  options: FieldOptions | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SchemaTemplateSummaryResponse = {
+  id: number;
+  name: string;
+  field_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SchemaTemplateResponse = SchemaTemplateSummaryResponse & {
+  fields: SchemaTemplateFieldResponse[];
+};
+
+export type SchemaTemplateCreatePayload = {
+  name: string;
+  fields?: FieldDefinitionCreatePayload[];
+};
+
+export type SchemaTemplateUpdatePayload = {
+  name?: string;
+  fields?: FieldDefinitionCreatePayload[];
+};
+
+export type SchemaTemplateCopyPayload = {
+  name?: string;
 };
 
 export type ItemResponse = {
@@ -442,6 +482,25 @@ const buildStarsListQuery = (options: {
   return query ? `?${query}` : "";
 };
 
+const buildSchemaTemplateListQuery = (options: {
+  q?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (options.q) {
+    params.set("q", options.q);
+  }
+  if (typeof options.limit === "number") {
+    params.set("limit", String(options.limit));
+  }
+  if (typeof options.offset === "number") {
+    params.set("offset", String(options.offset));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+};
+
 const refreshAccessToken = async (): Promise<string | null> => {
   if (refreshPromise) {
     return refreshPromise;
@@ -684,6 +743,82 @@ export const collectionApi = {
       method: "PATCH",
       body: payload
     })
+};
+
+export const schemaTemplateApi = {
+  list: (options: { q?: string; limit?: number; offset?: number } = {}) =>
+    apiRequest<SchemaTemplateSummaryResponse[]>(
+      `/schema-templates${buildSchemaTemplateListQuery(options)}`
+    ),
+  create: (payload: SchemaTemplateCreatePayload) =>
+    apiRequest<SchemaTemplateResponse>("/schema-templates", {
+      method: "POST",
+      body: payload
+    }),
+  get: (templateId: number | string) =>
+    apiRequest<SchemaTemplateResponse>(`/schema-templates/${templateId}`),
+  update: (
+    templateId: number | string,
+    payload: SchemaTemplateUpdatePayload
+  ) =>
+    apiRequest<SchemaTemplateResponse>(`/schema-templates/${templateId}`, {
+      method: "PATCH",
+      body: payload
+    }),
+  delete: (templateId: number | string) =>
+    apiRequest<MessageResponse>(`/schema-templates/${templateId}`, {
+      method: "DELETE"
+    }),
+  copy: (
+    templateId: number | string,
+    payload: SchemaTemplateCopyPayload = {}
+  ) =>
+    apiRequest<SchemaTemplateResponse>(`/schema-templates/${templateId}/copy`, {
+      method: "POST",
+      body: payload
+    }),
+  listFields: (templateId: number | string) =>
+    apiRequest<SchemaTemplateFieldResponse[]>(
+      `/schema-templates/${templateId}/fields`
+    ),
+  createField: (
+    templateId: number | string,
+    payload: FieldDefinitionCreatePayload
+  ) =>
+    apiRequest<SchemaTemplateFieldResponse>(
+      `/schema-templates/${templateId}/fields`,
+      {
+        method: "POST",
+        body: payload
+      }
+    ),
+  updateField: (
+    templateId: number | string,
+    fieldId: number | string,
+    payload: FieldDefinitionUpdatePayload
+  ) =>
+    apiRequest<SchemaTemplateFieldResponse>(
+      `/schema-templates/${templateId}/fields/${fieldId}`,
+      {
+        method: "PATCH",
+        body: payload
+      }
+    ),
+  deleteField: (templateId: number | string, fieldId: number | string) =>
+    apiRequest<MessageResponse>(
+      `/schema-templates/${templateId}/fields/${fieldId}`,
+      {
+        method: "DELETE"
+      }
+    ),
+  reorderFields: (templateId: number | string, fieldIds: number[]) =>
+    apiRequest<SchemaTemplateFieldResponse[]>(
+      `/schema-templates/${templateId}/fields/reorder`,
+      {
+        method: "PATCH",
+        body: { field_ids: fieldIds }
+      }
+    )
 };
 
 export const activityApi = {

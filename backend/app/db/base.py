@@ -16,4 +16,6 @@ from app.models.field_definition import FieldDefinition  # noqa: E402,F401
 from app.models.item import Item  # noqa: E402,F401
 from app.models.item_image import ItemImage  # noqa: E402,F401
 from app.models.item_star import ItemStar  # noqa: E402,F401
+from app.models.schema_template import SchemaTemplate  # noqa: E402,F401
+from app.models.schema_template_field import SchemaTemplateField  # noqa: E402,F401
 from app.models.user import User  # noqa: E402,F401

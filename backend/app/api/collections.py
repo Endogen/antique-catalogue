@@ -8,8 +8,11 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.collection import Collection
 from app.models.collection_star import CollectionStar
+from app.models.field_definition import FieldDefinition
 from app.models.item import Item
 from app.models.item_image import ItemImage
+from app.models.schema_template import SchemaTemplate
+from app.models.schema_template_field import SchemaTemplateField
 from app.models.user import User
 from app.schemas.collections import (
     CollectionCreateRequest,
@@ -129,6 +132,34 @@ def create_collection(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> CollectionResponse:
+    template: SchemaTemplate | None = None
+    template_fields: list[SchemaTemplateField] = []
+    if request.schema_template_id is not None:
+        template = (
+            db.execute(
+                select(SchemaTemplate).where(
+                    SchemaTemplate.id == request.schema_template_id,
+                    SchemaTemplate.owner_id == current_user.id,
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if not template:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Schema template not found",
+            )
+        template_fields = (
+            db.execute(
+                select(SchemaTemplateField)
+                .where(SchemaTemplateField.schema_template_id == template.id)
+                .order_by(SchemaTemplateField.position.asc(), SchemaTemplateField.id.asc())
+            )
+            .scalars()
+            .all()
+        )
+
     collection = Collection(
         owner_id=current_user.id,
         name=request.name,
@@ -137,13 +168,32 @@ def create_collection(
     )
     db.add(collection)
     db.flush()
+
+    if template_fields:
+        copied_fields = [
+            FieldDefinition(
+                collection_id=collection.id,
+                name=field.name,
+                field_type=field.field_type,
+                is_required=field.is_required,
+                is_private=field.is_private,
+                options=field.options,
+                position=position,
+            )
+            for position, field in enumerate(template_fields, start=1)
+        ]
+        db.add_all(copied_fields)
+
+    summary = f'Created collection "{collection.name}".'
+    if template is not None:
+        summary = f'Created collection "{collection.name}" from template "{template.name}".'
     log_activity(
         db,
         user_id=current_user.id,
         action_type="collection.created",
         resource_type="collection",
         resource_id=collection.id,
-        summary=f'Created collection "{collection.name}".',
+        summary=summary,
     )
     db.commit()
     db.refresh(collection)
