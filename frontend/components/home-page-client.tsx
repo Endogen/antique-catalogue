@@ -41,7 +41,7 @@ const highlights = [
 ];
 
 const highlightCardClass =
-  "border-amber-400 bg-amber-50/45 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_18px_36px_-20px_rgba(217,119,6,0.75)]";
+  "border-amber-400 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_18px_36px_-20px_rgba(217,119,6,0.75)]";
 
 type HomePageClientProps = {
   featuredCollection: CollectionResponse | null;
