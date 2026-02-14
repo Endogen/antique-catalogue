@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
-  Image as ImageIcon,
   Plus,
   RefreshCcw,
   Search,
@@ -16,12 +15,13 @@ import {
   X
 } from "lucide-react";
 
+import { ItemPreviewCard } from "@/components/item-preview-card";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   collectionApi,
   fieldApi,
+  imageApi,
   isApiError,
   itemApi,
   starsApi,
@@ -73,13 +73,6 @@ const buildFieldTypeLabels = (t: (key: string) => string): Record<string, string
   checkbox: t("Checkbox"),
   select: t("Select")
 });
-
-const truncate = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return `${value.slice(0, maxLength)}...`;
-};
 
 const highlightCardClass =
   "border-amber-400 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_18px_36px_-20px_rgba(217,119,6,0.75)]";
@@ -947,84 +940,42 @@ export default function CollectionDetailPage() {
               {itemsState.data.map((item) => {
                 const metadataEntries = Object.entries(item.metadata ?? {});
                 const imageCount = item.image_count ?? 0;
-                const imageLabel = imageCount === 1 ? t("image") : t("images");
+                const imageLabel =
+                  imageCount === 1
+                    ? t("{count} image", { count: imageCount })
+                    : t("{count} images", { count: imageCount });
                 const starCount = item.star_count ?? 0;
+                const imageId = item.primary_image_id ?? null;
+                const metadata = metadataEntries.slice(0, 4).map(([key, value]) => ({
+                  label: key,
+                  value: formatMetadataValue(value)
+                }));
                 return (
-                  <div
+                  <ItemPreviewCard
                     key={item.id}
-                    className={cn(
-                      "rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm",
-                      item.is_highlight ? highlightCardClass : null
-                    )}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                          {t("Item")}
-                        </p>
-                        <h3 className="mt-3 text-xl font-semibold text-stone-900">
-                          {item.name}
-                        </h3>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 text-xs text-stone-500">
-                        <span>
-                          {t("Added {date}", { date: formatDate(item.created_at) })}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
-                          <Star className="h-3 w-3 text-amber-600" />
-                          {starCount}
-                        </span>
-                        {imageCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
-                            <ImageIcon className="h-3 w-3 text-amber-600" />
-                            {imageCount} {imageLabel}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    {item.notes ? (
-                      <p className="mt-3 text-sm text-stone-600">
-                        {truncate(item.notes, 160)}
-                      </p>
-                    ) : null}
-                    <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 text-sm text-stone-600">
-                      {metadataEntries.length === 0 ? (
-                        <p className="text-xs text-stone-500">
-                          {t("No metadata captured yet.")}
-                        </p>
-                      ) : (
-                        <div className="space-y-2 text-xs">
-                          {metadataEntries.slice(0, 3).map(([key, value]) => (
-                            <div
-                              key={key}
-                              className="flex items-center justify-between gap-3"
-                            >
-                              <span className="font-medium text-stone-700">
-                                {key}
-                              </span>
-                              <span className="text-stone-500">
-                                {formatMetadataValue(value)}
-                              </span>
-                            </div>
-                          ))}
-                          {metadataEntries.length > 3 ? (
-                            <p className="text-xs text-stone-400">
-                              {t("+{count} more fields", {
-                                count: metadataEntries.length - 3
-                              })}
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <Button size="sm" variant="secondary" asChild>
-                        <Link href={`/collections/${collectionId}/items/${item.id}`}>
-                          {t("View item")}
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
+                    href={`/collections/${collectionId}/items/${item.id}`}
+                    title={item.name}
+                    eyebrow={t("Item")}
+                    createdLabel={t("Added {date}", {
+                      date: formatDate(item.created_at)
+                    })}
+                    description={item.notes}
+                    descriptionFallback={t("No description provided.")}
+                    metadata={metadata}
+                    metadataFallback={t("No metadata captured yet.")}
+                    metadataOverflowLabel={t("+{count} more fields", {
+                      count: Math.max(metadataEntries.length - 2, 0)
+                    })}
+                    imageSrc={imageId ? imageApi.url(imageId, "medium") : null}
+                    imageAlt={item.name}
+                    imageFallbackLabel={t("No image")}
+                    starCount={starCount}
+                    imageCount={imageCount}
+                    imageCountLabel={imageLabel}
+                    isHighlighted={item.is_highlight}
+                    highlightClassName={highlightCardClass}
+                    openLabel={t("Open")}
+                  />
                 );
               })}
             </div>

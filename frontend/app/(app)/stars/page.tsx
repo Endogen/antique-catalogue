@@ -7,10 +7,10 @@ import {
   Folder,
   RefreshCcw,
   Search,
-  Sparkles,
   Star
 } from "lucide-react";
 
+import { ItemPreviewCard } from "@/components/item-preview-card";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,6 @@ import {
   type StarredCollectionResponse,
   type StarredItemResponse
 } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 type LoadState = {
   status: "loading" | "ready" | "error";
@@ -45,13 +44,6 @@ const formatDate = (value: string | null | undefined, locale: string) => {
     day: "numeric",
     year: "numeric"
   }).format(parsed);
-};
-
-const truncate = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return `${value.slice(0, maxLength)}...`;
 };
 
 export default function StarsPage() {
@@ -260,67 +252,47 @@ export default function StarsPage() {
                 {t("No starred items match this search.")}
               </div>
             ) : (
-              <div className="space-y-3">
-                {state.items.map((item) => (
-                  <div
-                    key={`${item.collection_id}-${item.id}`}
-                    className={cn(
-                      "rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm",
-                      item.is_highlight ? highlightCardClass : null
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-stone-400">
-                          {item.collection_name}
-                        </p>
-                        <h3 className="mt-2 text-base font-semibold text-stone-900">
-                          {item.name}
-                        </h3>
-                        <p className="mt-1 text-xs text-stone-500">
-                          {t("Starred {date}", {
-                            date: formatDate(item.starred_at, locale)
-                          })}
-                        </p>
-                      </div>
-                      {item.primary_image_id ? (
-                        <div className="h-14 w-14 overflow-hidden rounded-xl border border-stone-100 bg-stone-50">
-                          <img
-                            src={imageApi.url(item.primary_image_id, "thumb")}
-                            alt={item.name}
-                            className="block h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-stone-100 bg-stone-50 text-stone-400">
-                          <Sparkles className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-                    {item.notes ? (
-                      <p className="mt-3 text-sm text-stone-600">
-                        {truncate(item.notes, 130)}
-                      </p>
-                    ) : null}
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex items-center gap-1">
-                          <Star className="h-3.5 w-3.5 text-amber-600" />
-                          {item.star_count}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
-                          {t("Created {date}", {
-                            date: formatDate(item.created_at, locale)
-                          })}
-                        </span>
-                      </div>
-                      <Button size="sm" variant="secondary" asChild>
-                        <Link href={item.target_path}>{t("Open")}</Link>
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+              <div className="grid gap-4 lg:grid-cols-2">
+                {state.items.map((item) => {
+                  const imageCount = item.image_count ?? 0;
+                  const imageLabel =
+                    imageCount === 1
+                      ? t("{count} image", { count: imageCount })
+                      : t("{count} images", { count: imageCount });
+                  return (
+                    <ItemPreviewCard
+                      key={`${item.collection_id}-${item.id}`}
+                      href={item.target_path}
+                      title={item.name}
+                      eyebrow={item.collection_name}
+                      createdLabel={t("Starred {date}", {
+                        date: formatDate(item.starred_at, locale)
+                      })}
+                      description={item.notes}
+                      descriptionFallback={t("No description provided.")}
+                      metadata={[
+                        {
+                          label: t("Created"),
+                          value: formatDate(item.created_at, locale)
+                        }
+                      ]}
+                      metadataFallback={t("Open item details for full metadata.")}
+                      imageSrc={
+                        item.primary_image_id
+                          ? imageApi.url(item.primary_image_id, "medium")
+                          : null
+                      }
+                      imageAlt={item.name}
+                      imageFallbackLabel={t("No image")}
+                      starCount={item.star_count}
+                      imageCount={imageCount}
+                      imageCountLabel={imageLabel}
+                      isHighlighted={item.is_highlight}
+                      highlightClassName={highlightCardClass}
+                      openLabel={t("Open")}
+                    />
+                  );
+                })}
               </div>
             )}
           </section>
