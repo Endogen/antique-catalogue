@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FolderOpen, RefreshCcw, Search } from "lucide-react";
+import { RefreshCcw, Search } from "lucide-react";
 
+import { ItemPreviewCard } from "@/components/item-preview-card";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,6 @@ import {
   searchApi,
   type ItemSearchResponse
 } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 type LoadState = {
   status: "idle" | "loading" | "ready" | "error";
@@ -34,13 +33,6 @@ const formatDate = (value: string | null | undefined, locale: string) => {
     day: "numeric",
     year: "numeric"
   }).format(parsed);
-};
-
-const truncate = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return `${value.slice(0, maxLength)}...`;
 };
 
 const highlightCardClass =
@@ -178,60 +170,32 @@ function SearchContent() {
           <div className="grid gap-4 lg:grid-cols-2">
             {state.data.map((item) => {
               const imageId = item.primary_image_id ?? null;
+              const imageCount = item.image_count ?? 0;
+              const imageLabel =
+                imageCount === 1
+                  ? t("{count} image", { count: imageCount })
+                  : t("{count} images", { count: imageCount });
               return (
-                <div
+                <ItemPreviewCard
                   key={`${item.collection_id}-${item.id}`}
-                  className={cn(
-                    "rounded-3xl border border-stone-200 bg-white/80 p-5 shadow-sm",
-                    item.is_highlight ? highlightCardClass : null
-                  )}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                        {item.collection_name}
-                      </p>
-                      <h2 className="mt-2 text-lg font-semibold text-stone-900">
-                        {item.name}
-                      </h2>
-                      <p className="mt-2 text-xs text-stone-500">
-                        {t("Added {date}", { date: formatDate(item.created_at, locale) })}
-                      </p>
-                    </div>
-                    {imageId ? (
-                      <div className="h-16 w-16 overflow-hidden rounded-2xl border border-stone-100 bg-stone-50">
-                        <img
-                          src={imageApi.url(imageId, "thumb")}
-                          alt={item.name}
-                          className="block h-full w-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-stone-100 bg-stone-50 text-stone-400">
-                        <FolderOpen className="h-5 w-5" />
-                      </div>
-                    )}
-                  </div>
-                  {item.notes ? (
-                    <p className="mt-3 text-sm text-stone-600">
-                      {truncate(item.notes, 140)}
-                    </p>
-                  ) : null}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" variant="secondary" asChild>
-                      <Link
-                        href={`/collections/${item.collection_id}/items/${item.id}`}
-                      >
-                        {t("Open item")}
-                      </Link>
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link href={`/collections/${item.collection_id}`}>
-                        {t("View collection")}
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
+                  href={`/collections/${item.collection_id}/items/${item.id}`}
+                  title={item.name}
+                  eyebrow={item.collection_name}
+                  createdLabel={t("Added {date}", {
+                    date: formatDate(item.created_at, locale)
+                  })}
+                  description={item.notes}
+                  descriptionFallback={t("No description provided.")}
+                  metadataFallback={t("Open item details for full metadata.")}
+                  imageSrc={imageId ? imageApi.url(imageId, "medium") : null}
+                  imageAlt={item.name}
+                  imageFallbackLabel={t("No image")}
+                  imageCount={imageCount}
+                  imageCountLabel={imageLabel}
+                  isHighlighted={item.is_highlight}
+                  highlightClassName={highlightCardClass}
+                  openLabel={t("Open")}
+                />
               );
             })}
           </div>

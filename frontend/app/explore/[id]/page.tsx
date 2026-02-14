@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Lightbox } from "@/components/lightbox";
+import { ItemPreviewCard } from "@/components/item-preview-card";
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import {
@@ -27,7 +27,6 @@ import {
   type CollectionResponse,
   type ItemResponse
 } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 type LoadState = {
   status: "loading" | "ready" | "error";
@@ -50,13 +49,6 @@ const buildSortOptions = (t: (key: string) => string) => [
   { label: t("Name A to Z"), value: "name" },
   { label: t("Name Z to A"), value: "-name" }
 ];
-
-const truncate = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return `${value.slice(0, maxLength)}...`;
-};
 
 const highlightCardClass =
   "border-amber-400 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_18px_36px_-20px_rgba(217,119,6,0.75)]";
@@ -127,10 +119,6 @@ export default function PublicCollectionPage() {
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState<string | null>(null);
-  const [lightboxImage, setLightboxImage] = React.useState<{
-    src: string;
-    alt: string;
-  } | null>(null);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [collectionStarred, setCollectionStarred] = React.useState(false);
   const [isUpdatingCollectionStar, setIsUpdatingCollectionStar] = React.useState(false);
@@ -788,105 +776,54 @@ export default function PublicCollectionPage() {
                 {filteredItems.map((item) => {
                   const metadataEntries = Object.entries(item.metadata ?? {});
                   const imageId = item.primary_image_id ?? null;
+                  const imageCount = item.image_count ?? 0;
                   const starCount = item.star_count ?? 0;
                   const itemIsStarred = Boolean(itemStarredMap[item.id]);
+                  const imageLabel =
+                    imageCount === 1
+                      ? t("{count} image", { count: imageCount })
+                      : t("{count} images", { count: imageCount });
+                  const metadata = metadataEntries
+                    .slice(0, 4)
+                    .map(([key, value]) => ({
+                      label: key,
+                      value: formatMetadataValue(value)
+                    }));
                   return (
-                    <div
+                    <ItemPreviewCard
                       key={item.id}
-                      className={cn(
-                        "rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm",
-                        item.is_highlight ? highlightCardClass : null
-                      )}
-                    >
-                      {imageId ? (
-                        <button
-                          type="button"
-                          className="mb-4 w-full overflow-hidden rounded-2xl border border-stone-100 bg-stone-50"
-                          onClick={() =>
-                            setLightboxImage({
-                              src: imageApi.url(imageId, "original"),
-                              alt: item.name
-                            })
-                          }
-                        >
-                          <img
-                            src={imageApi.url(imageId, "medium")}
-                            alt={item.name}
-                            className="block h-48 w-full object-cover"
-                            loading="lazy"
-                          />
-                        </button>
-                      ) : null}
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-                            {t("Item")}
-                          </p>
-                          <h3 className="mt-3 text-xl font-semibold text-stone-900">
-                            {item.name}
-                          </h3>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-stone-500">
-                          <span>
-                            {t("Added {date}", { date: formatDate(item.created_at) })}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
-                            <Star className="h-3 w-3 text-amber-600" />
-                            {starCount}
-                          </span>
-                        </div>
-                      </div>
-                      {item.notes ? (
-                        <p className="mt-3 text-sm text-stone-600">
-                          {truncate(item.notes, 160)}
-                        </p>
-                      ) : null}
-                      <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 text-sm text-stone-600">
-                        {metadataEntries.length === 0 ? (
-                          <p className="text-xs text-stone-500">
-                            {t("No metadata shared.")}
-                          </p>
-                        ) : (
-                          <div className="space-y-2 text-xs">
-                            {metadataEntries.slice(0, 3).map(([key, value]) => (
-                              <div
-                                key={key}
-                                className="flex items-center justify-between gap-3"
-                              >
-                                <span className="font-medium text-stone-700">
-                                  {key}
-                                </span>
-                                <span className="text-stone-500">
-                                  {formatMetadataValue(value)}
-                                </span>
-                              </div>
-                            ))}
-                            {metadataEntries.length > 3 ? (
-                              <p className="text-xs text-stone-400">
-                                {t("+{count} more fields", {
-                                  count: metadataEntries.length - 3
-                                })}
-                              </p>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                      {showAuthenticatedCtas ? (
-                        <div className="mt-4 flex justify-end">
-                          <Button
-                            size="sm"
-                            variant={itemIsStarred ? "secondary" : "outline"}
-                            disabled={Boolean(updatingItemStars[item.id])}
-                            onClick={() => handleToggleItemStar(item.id)}
-                          >
-                            <Star
-                              className={`h-4 w-4 ${itemIsStarred ? "fill-current" : ""}`}
-                            />
-                            {itemIsStarred ? t("Starred") : t("Star")}
-                          </Button>
-                        </div>
-                      ) : null}
-                    </div>
+                      href={`/explore/${collectionId}/items/${item.id}`}
+                      title={item.name}
+                      eyebrow={t("Item")}
+                      createdLabel={t("Added {date}", {
+                        date: formatDate(item.created_at)
+                      })}
+                      description={item.notes}
+                      descriptionFallback={t("No description provided.")}
+                      metadata={metadata}
+                      metadataFallback={t("No metadata shared.")}
+                      metadataOverflowLabel={t("+{count} more fields", {
+                        count: Math.max(metadataEntries.length - 2, 0)
+                      })}
+                      imageSrc={imageId ? imageApi.url(imageId, "medium") : null}
+                      imageAlt={item.name}
+                      imageFallbackLabel={t("No image")}
+                      starCount={starCount}
+                      imageCount={imageCount}
+                      imageCountLabel={imageLabel}
+                      isHighlighted={item.is_highlight}
+                      highlightClassName={highlightCardClass}
+                      onToggleStar={
+                        showAuthenticatedCtas
+                          ? () => {
+                              void handleToggleItemStar(item.id);
+                            }
+                          : undefined
+                      }
+                      isStarred={itemIsStarred}
+                      starDisabled={Boolean(updatingItemStars[item.id])}
+                      openLabel={t("Open")}
+                    />
                   );
                 })}
               </div>
@@ -915,12 +852,6 @@ export default function PublicCollectionPage() {
         )}
       </section>
 
-      <Lightbox
-        open={Boolean(lightboxImage)}
-        src={lightboxImage?.src ?? null}
-        alt={lightboxImage?.alt}
-        onClose={() => setLightboxImage(null)}
-      />
       </div>
     </main>
   );
