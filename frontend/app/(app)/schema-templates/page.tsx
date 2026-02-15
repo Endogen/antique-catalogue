@@ -194,7 +194,7 @@ export default function SchemaTemplatesPage() {
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <div className="relative">
+          <div className="relative self-start">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
             <input
               type="search"
