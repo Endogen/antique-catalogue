@@ -65,7 +65,7 @@ def get_current_user(
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account disabled",
+            detail="Account locked",
         )
 
     if not user.is_verified:
@@ -131,7 +131,7 @@ def get_optional_user(
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account disabled",
+            detail="Account locked",
         )
 
     if not user.is_verified:

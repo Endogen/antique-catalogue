@@ -28,8 +28,10 @@ type LoadState = {
   error?: string;
 };
 
+type StarsTab = "collections" | "items";
+
 const highlightCardClass =
-  "border-amber-400 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_18px_36px_-20px_rgba(217,119,6,0.75)]";
+  "border-amber-400 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_0_28px_2px_rgba(217,119,6,0.25)]";
 
 const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
@@ -50,6 +52,7 @@ export default function StarsPage() {
   const { t, locale } = useI18n();
   const [query, setQuery] = React.useState("");
   const [refreshToken, setRefreshToken] = React.useState(0);
+  const [activeTab, setActiveTab] = React.useState<StarsTab>("collections");
   const [state, setState] = React.useState<LoadState>({
     status: "loading",
     collections: [],
@@ -108,6 +111,8 @@ export default function StarsPage() {
   }, [query, refreshToken]);
 
   const totalStarredEntries = state.collections.length + state.items.length;
+  const activeTabCount =
+    activeTab === "collections" ? state.collections.length : state.items.length;
 
   return (
     <div className="space-y-8">
@@ -173,23 +178,52 @@ export default function StarsPage() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-2xl text-stone-900">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div
+              className="inline-flex rounded-full border border-stone-200 bg-white p-1 shadow-sm"
+              role="tablist"
+              aria-label={t("Starred items and collections")}
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "collections"}
+                onClick={() => setActiveTab("collections")}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  activeTab === "collections"
+                    ? "bg-stone-900 text-white shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
                 {t("Collections")}
-              </h2>
-              <span className="text-xs text-stone-500">
-                {t("{count} total", { count: state.collections.length })}
-              </span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "items"}
+                onClick={() => setActiveTab("items")}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  activeTab === "items"
+                    ? "bg-stone-900 text-white shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                {t("Items")}
+              </button>
             </div>
+            <span className="text-xs text-stone-500">
+              {t("{count} total", { count: activeTabCount })}
+            </span>
+          </div>
 
-            {state.collections.length === 0 ? (
+          {activeTab === "collections" ? (
+            state.collections.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
                 {t("No starred collections match this search.")}
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid gap-4 lg:grid-cols-2">
                 {state.collections.map((collection) => (
                   <div
                     key={collection.id}
@@ -236,66 +270,55 @@ export default function StarsPage() {
                   </div>
                 ))}
               </div>
-            )}
-          </section>
-
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-2xl text-stone-900">{t("Items")}</h2>
-              <span className="text-xs text-stone-500">
-                {t("{count} total", { count: state.items.length })}
-              </span>
+            )
+          ) : state.items.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              {t("No starred items match this search.")}
             </div>
-
-            {state.items.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-                {t("No starred items match this search.")}
-              </div>
-            ) : (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {state.items.map((item) => {
-                  const imageCount = item.image_count ?? 0;
-                  const imageLabel =
-                    imageCount === 1
-                      ? t("{count} image", { count: imageCount })
-                      : t("{count} images", { count: imageCount });
-                  return (
-                    <ItemPreviewCard
-                      key={`${item.collection_id}-${item.id}`}
-                      href={item.target_path}
-                      title={item.name}
-                      eyebrow={item.collection_name}
-                      createdLabel={t("Starred {date}", {
-                        date: formatDate(item.starred_at, locale)
-                      })}
-                      description={item.notes}
-                      descriptionFallback={t("No description provided.")}
-                      metadata={[
-                        {
-                          label: t("Created"),
-                          value: formatDate(item.created_at, locale)
-                        }
-                      ]}
-                      metadataFallback={t("Open item details for full metadata.")}
-                      imageSrc={
-                        item.primary_image_id
-                          ? imageApi.url(item.primary_image_id, "medium")
-                          : null
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {state.items.map((item) => {
+                const imageCount = item.image_count ?? 0;
+                const imageLabel =
+                  imageCount === 1
+                    ? t("{count} image", { count: imageCount })
+                    : t("{count} images", { count: imageCount });
+                return (
+                  <ItemPreviewCard
+                    key={`${item.collection_id}-${item.id}`}
+                    href={item.target_path}
+                    title={item.name}
+                    eyebrow={item.collection_name}
+                    createdLabel={t("Starred {date}", {
+                      date: formatDate(item.starred_at, locale)
+                    })}
+                    description={item.notes}
+                    descriptionFallback={t("No description provided.")}
+                    metadata={[
+                      {
+                        label: t("Created"),
+                        value: formatDate(item.created_at, locale)
                       }
-                      imageAlt={item.name}
-                      imageFallbackLabel={t("No image")}
-                      starCount={item.star_count}
-                      imageCount={imageCount}
-                      imageCountLabel={imageLabel}
-                      isHighlighted={item.is_highlight}
-                      highlightClassName={highlightCardClass}
-                      openLabel={t("Open")}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </section>
+                    ]}
+                    metadataFallback={t("Open item details for full metadata.")}
+                    imageSrc={
+                      item.primary_image_id
+                        ? imageApi.url(item.primary_image_id, "medium")
+                        : null
+                    }
+                    imageAlt={item.name}
+                    imageFallbackLabel={t("No image")}
+                    starCount={item.star_count}
+                    imageCount={imageCount}
+                    imageCountLabel={imageLabel}
+                    isHighlighted={item.is_highlight}
+                    highlightClassName={highlightCardClass}
+                    openLabel={t("Open")}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

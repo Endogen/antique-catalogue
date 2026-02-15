@@ -195,11 +195,11 @@ export default function SchemaTemplatesPage() {
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
             <input
               type="search"
               placeholder={t("Search schema templates")}
-              className="h-11 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              className="block h-11 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
