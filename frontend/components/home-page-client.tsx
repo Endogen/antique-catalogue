@@ -228,10 +228,11 @@ export function HomePageClient({
                       }
                       const imageId = item.primary_image_id ?? null;
                       return (
-                        <div
+                        <Link
                           key={`${item.id}-${index}`}
+                          href={`/explore/${item.collection_id}/items/${item.id}`}
                           className={cn(
-                            "rounded-2xl border border-stone-100 bg-stone-50 p-4",
+                            "block rounded-2xl border border-stone-100 bg-stone-50 p-4 transition hover:border-amber-200 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
                             item.is_highlight ? highlightCardClass : null
                           )}
                         >
@@ -250,23 +251,12 @@ export function HomePageClient({
                           <p className="mt-3 text-sm font-medium text-stone-800">
                             {item.name}
                           </p>
-                          {item.owner_username ? (
-                            <p className="mt-1 text-xs text-stone-500">
-                              {t("By")}{" "}
-                              <Link
-                                href={`/profile/${encodeURIComponent(item.owner_username)}`}
-                                className="font-medium text-amber-700 hover:text-amber-800"
-                              >
-                                @{item.owner_username}
-                              </Link>
-                            </p>
-                          ) : null}
                           <p className="text-xs text-stone-500">
                             {item.notes
                               ? item.notes.slice(0, 50)
                               : t("Featured highlight")}
                           </p>
-                        </div>
+                        </Link>
                       );
                     }
                   )}
