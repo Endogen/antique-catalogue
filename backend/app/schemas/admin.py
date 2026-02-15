@@ -39,6 +39,30 @@ class AdminCollectionListResponse(BaseModel):
     items: list[AdminCollectionResponse]
 
 
+class AdminUserResponse(BaseModel):
+    id: int
+    email: str
+    username: str
+    is_active: bool
+    is_verified: bool
+    collection_count: int
+    item_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminUserListResponse(BaseModel):
+    total_count: int
+    items: list[AdminUserResponse]
+
+
+class AdminUserLockRequest(BaseModel):
+    locked: bool = Field(
+        ...,
+        description="Whether the user should be locked from signing in",
+    )
+
+
 class AdminFeatureRequest(BaseModel):
     collection_id: int | None = Field(
         None,
@@ -69,3 +93,23 @@ class AdminFeaturedItemsRequest(BaseModel):
         if len(set(value)) != len(value):
             raise ValueError("Duplicate item ids are not allowed")
         return value
+
+
+class AdminItemResponse(BaseModel):
+    id: int
+    collection_id: int
+    collection_name: str
+    owner_id: int
+    owner_email: str
+    name: str
+    notes: str | None
+    is_featured: bool
+    is_highlight: bool
+    image_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminItemListResponse(BaseModel):
+    total_count: int
+    items: list[AdminItemResponse]

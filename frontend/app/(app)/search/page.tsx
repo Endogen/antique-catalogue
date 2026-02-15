@@ -36,7 +36,7 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 };
 
 const highlightCardClass =
-  "border-amber-400 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_18px_36px_-20px_rgba(217,119,6,0.75)]";
+  "border-amber-400 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_0_28px_2px_rgba(217,119,6,0.25)]";
 
 function SearchContent() {
   const router = useRouter();

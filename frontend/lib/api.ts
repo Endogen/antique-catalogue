@@ -278,6 +278,23 @@ export type AdminCollectionListResponse = {
   items: AdminCollectionResponse[];
 };
 
+export type AdminUserResponse = {
+  id: number;
+  email: string;
+  username: string;
+  is_active: boolean;
+  is_verified: boolean;
+  collection_count: number;
+  item_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminUserListResponse = {
+  total_count: number;
+  items: AdminUserResponse[];
+};
+
 export type AdminFeaturedItemResponse = {
   id: number;
   collection_id: number;
@@ -286,6 +303,26 @@ export type AdminFeaturedItemResponse = {
   primary_image_id?: number | null;
   is_featured: boolean;
   created_at: string;
+};
+
+export type AdminItemResponse = {
+  id: number;
+  collection_id: number;
+  collection_name: string;
+  owner_id: number;
+  owner_email: string;
+  name: string;
+  notes: string | null;
+  is_featured: boolean;
+  is_highlight: boolean;
+  image_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminItemListResponse = {
+  total_count: number;
+  items: AdminItemResponse[];
 };
 
 const RAW_API_BASE_URL =
@@ -751,6 +788,67 @@ export const adminApi = {
       `/admin/collections${query ? `?${query}` : ""}`
     );
   },
+  deleteCollection: (collectionId: number) =>
+    adminRequest<MessageResponse>(`/admin/collections/${collectionId}`, {
+      method: "DELETE"
+    }),
+  users: (
+    options: { offset?: number; limit?: number; q?: string } = {}
+  ) => {
+    const params = new URLSearchParams();
+    if (typeof options.offset === "number") {
+      params.set("offset", String(options.offset));
+    }
+    if (typeof options.limit === "number") {
+      params.set("limit", String(options.limit));
+    }
+    if (options.q) {
+      params.set("q", options.q);
+    }
+    const query = params.toString();
+    return adminRequest<AdminUserListResponse>(
+      `/admin/users${query ? `?${query}` : ""}`
+    );
+  },
+  setUserLocked: (userId: number, locked: boolean) =>
+    adminRequest<AdminUserResponse>(`/admin/users/${userId}/lock`, {
+      method: "PATCH",
+      body: { locked }
+    }),
+  deleteUser: (userId: number) =>
+    adminRequest<MessageResponse>(`/admin/users/${userId}`, {
+      method: "DELETE"
+    }),
+  items: (
+    options: {
+      offset?: number;
+      limit?: number;
+      q?: string;
+      collectionId?: number;
+    } = {}
+  ) => {
+    const params = new URLSearchParams();
+    if (typeof options.offset === "number") {
+      params.set("offset", String(options.offset));
+    }
+    if (typeof options.limit === "number") {
+      params.set("limit", String(options.limit));
+    }
+    if (options.q) {
+      params.set("q", options.q);
+    }
+    if (typeof options.collectionId === "number") {
+      params.set("collection_id", String(options.collectionId));
+    }
+    const query = params.toString();
+    return adminRequest<AdminItemListResponse>(
+      `/admin/items${query ? `?${query}` : ""}`
+    );
+  },
+  deleteItem: (itemId: number) =>
+    adminRequest<MessageResponse>(`/admin/items/${itemId}`, {
+      method: "DELETE"
+    }),
   feature: (collectionId: number | null) =>
     adminRequest<MessageResponse>("/admin/featured", {
       method: "POST",
