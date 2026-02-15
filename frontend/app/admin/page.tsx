@@ -68,6 +68,8 @@ export default function AdminPage() {
     "idle"
   );
   const [usersError, setUsersError] = React.useState<string | null>(null);
+  const [usersSearchInput, setUsersSearchInput] = React.useState("");
+  const [usersSearchQuery, setUsersSearchQuery] = React.useState("");
 
   const [items, setItems] = React.useState<AdminItemResponse[]>([]);
   const [totalItems, setTotalItems] = React.useState(0);
@@ -76,6 +78,8 @@ export default function AdminPage() {
     "idle"
   );
   const [itemsError, setItemsError] = React.useState<string | null>(null);
+  const [itemsSearchInput, setItemsSearchInput] = React.useState("");
+  const [itemsSearchQuery, setItemsSearchQuery] = React.useState("");
 
   const [featuredItemsState, setFeaturedItemsState] = React.useState<{
     status: "idle" | "loading" | "ready" | "error";
@@ -118,9 +122,11 @@ export default function AdminPage() {
     setUsersStatus("loading");
     setUsersError(null);
     try {
+      const query = usersSearchQuery.trim();
       const response = await adminApi.users({
         offset: pageIndex * PAGE_SIZE,
-        limit: PAGE_SIZE
+        limit: PAGE_SIZE,
+        q: query || undefined
       });
       setUsers(response.items);
       setTotalUsers(response.total_count);
@@ -129,15 +135,17 @@ export default function AdminPage() {
       setUsersStatus("error");
       setUsersError(isApiError(error) ? error.detail : "Unable to load users.");
     }
-  }, []);
+  }, [usersSearchQuery]);
 
   const loadItems = React.useCallback(async (pageIndex: number) => {
     setItemsStatus("loading");
     setItemsError(null);
     try {
+      const query = itemsSearchQuery.trim();
       const response = await adminApi.items({
         offset: pageIndex * PAGE_SIZE,
-        limit: PAGE_SIZE
+        limit: PAGE_SIZE,
+        q: query || undefined
       });
       setItems(response.items);
       setTotalItems(response.total_count);
@@ -146,7 +154,7 @@ export default function AdminPage() {
       setItemsStatus("error");
       setItemsError(isApiError(error) ? error.detail : "Unable to load items.");
     }
-  }, []);
+  }, [itemsSearchQuery]);
 
   const loadFeaturedItems = React.useCallback(async (collectionId: number | null | undefined) => {
     if (!collectionId) {
@@ -252,6 +260,10 @@ export default function AdminPage() {
     setErrorMessage(null);
     setUsersError(null);
     setItemsError(null);
+    setUsersSearchInput("");
+    setUsersSearchQuery("");
+    setItemsSearchInput("");
+    setItemsSearchQuery("");
   };
 
   const handleRefreshAll = () => {
@@ -344,38 +356,60 @@ export default function AdminPage() {
   const selectionCount = featuredItemSelection.length;
   const selectionFull = selectionCount >= MAX_FEATURED_ITEMS;
 
-  const toggleFeaturedItem = (itemId: number) => {
-    setFeaturedItemsMessage(null);
-    setFeaturedItemsError(null);
-    setFeaturedItemSelection((prev) => {
-      if (prev.includes(itemId)) {
-        return prev.filter((id) => id !== itemId);
-      }
-      if (prev.length >= MAX_FEATURED_ITEMS) {
-        return prev;
-      }
-      return [...prev, itemId];
-    });
-  };
-
-  const handleSaveFeaturedItems = async () => {
+  const toggleFeaturedItem = async (itemId: number) => {
     if (!stats?.featured_collection_id || featuredItemsPending) {
       return;
     }
+    const previousSelection = featuredItemSelection;
+    const nextSelection = previousSelection.includes(itemId)
+      ? previousSelection.filter((id) => id !== itemId)
+      : previousSelection.length >= MAX_FEATURED_ITEMS
+        ? previousSelection
+        : [...previousSelection, itemId];
+
+    if (nextSelection === previousSelection) {
+      return;
+    }
+
     setFeaturedItemsPending(true);
     setFeaturedItemsMessage(null);
     setFeaturedItemsError(null);
+    setFeaturedItemSelection(nextSelection);
     try {
-      await adminApi.setFeaturedItems(featuredItemSelection);
-      await loadFeaturedItems(stats.featured_collection_id);
+      await adminApi.setFeaturedItems(nextSelection);
       setFeaturedItemsMessage("Featured items updated.");
     } catch (error) {
+      setFeaturedItemSelection(previousSelection);
       setFeaturedItemsError(
         isApiError(error) ? error.detail : "Unable to update featured items."
       );
     } finally {
       setFeaturedItemsPending(false);
     }
+  };
+
+  const handleUsersSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    setUsersPage(0);
+    setUsersSearchQuery(usersSearchInput.trim());
+  };
+
+  const handleClearUsersSearch = () => {
+    setUsersSearchInput("");
+    setUsersSearchQuery("");
+    setUsersPage(0);
+  };
+
+  const handleItemsSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    setItemsPage(0);
+    setItemsSearchQuery(itemsSearchInput.trim());
+  };
+
+  const handleClearItemsSearch = () => {
+    setItemsSearchInput("");
+    setItemsSearchQuery("");
+    setItemsPage(0);
   };
 
   if (!isReady) {
@@ -647,18 +681,11 @@ export default function AdminPage() {
                     count: MAX_FEATURED_ITEMS
                   })}
                 </span>
-                <Button
-                  variant="outline"
-                  onClick={handleSaveFeaturedItems}
-                  disabled={
-                    !stats?.featured_collection_id ||
-                    featuredItemsPending ||
-                    featuredItemsState.status !== "ready"
-                  }
-                >
-                  <Crown className="h-4 w-4" />
-                  {featuredItemsPending ? t("Saving...") : t("Save featured")}
-                </Button>
+                {featuredItemsPending ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
+                    {t("Saving...")}
+                  </span>
+                ) : null}
               </div>
             </div>
 
@@ -745,6 +772,35 @@ export default function AdminPage() {
               </span>
             </div>
 
+            <form className="mt-6 flex flex-wrap items-center gap-2" onSubmit={handleUsersSearch}>
+              <input
+                value={usersSearchInput}
+                onChange={(event) => setUsersSearchInput(event.target.value)}
+                placeholder={t("Search users by email or username")}
+                className="h-9 min-w-[220px] flex-1 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              />
+              <Button type="submit" size="sm" variant="outline" disabled={usersStatus === "loading"}>
+                {t("Search")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleClearUsersSearch}
+                disabled={
+                  usersStatus === "loading" || (!usersSearchInput && !usersSearchQuery)
+                }
+              >
+                {t("Clear")}
+              </Button>
+            </form>
+
+            {usersSearchQuery ? (
+              <p className="mt-3 text-xs text-stone-500">
+                {t('Showing results for "{query}"', { query: usersSearchQuery })}
+              </p>
+            ) : null}
+
             {usersError ? (
               <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {t(usersError)}
@@ -757,7 +813,7 @@ export default function AdminPage() {
               </div>
             ) : users.length === 0 ? (
               <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-                {t("No users available yet.")}
+                {usersSearchQuery ? t("No users match this search.") : t("No users available yet.")}
               </div>
             ) : (
               <div className="mt-6 space-y-3">
@@ -868,6 +924,35 @@ export default function AdminPage() {
               </span>
             </div>
 
+            <form className="mt-6 flex flex-wrap items-center gap-2" onSubmit={handleItemsSearch}>
+              <input
+                value={itemsSearchInput}
+                onChange={(event) => setItemsSearchInput(event.target.value)}
+                placeholder={t("Search items by name, notes, collection, or owner")}
+                className="h-9 min-w-[220px] flex-1 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              />
+              <Button type="submit" size="sm" variant="outline" disabled={itemsStatus === "loading"}>
+                {t("Search")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleClearItemsSearch}
+                disabled={
+                  itemsStatus === "loading" || (!itemsSearchInput && !itemsSearchQuery)
+                }
+              >
+                {t("Clear")}
+              </Button>
+            </form>
+
+            {itemsSearchQuery ? (
+              <p className="mt-3 text-xs text-stone-500">
+                {t('Showing results for "{query}"', { query: itemsSearchQuery })}
+              </p>
+            ) : null}
+
             {itemsError ? (
               <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {t(itemsError)}
@@ -880,7 +965,7 @@ export default function AdminPage() {
               </div>
             ) : items.length === 0 ? (
               <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
-                {t("No items available yet.")}
+                {itemsSearchQuery ? t("No items match this search.") : t("No items available yet.")}
               </div>
             ) : (
               <div className="mt-6 space-y-3">

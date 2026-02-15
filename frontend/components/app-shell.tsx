@@ -227,22 +227,6 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
         })}
       </nav>
 
-      <div className="space-y-3">
-        <div className="rounded-2xl border border-stone-800/70 bg-stone-900/60 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-              {t("Archive pulse")}
-            </p>
-            <Sparkles className="h-4 w-4 text-amber-200" />
-          </div>
-          <p className="mt-3 text-lg font-semibold text-stone-100">
-            {t("0 items catalogued")}
-          </p>
-          <p className="mt-1 text-xs text-stone-400">
-            {t("Start your first collection to unlock insights.")}
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
