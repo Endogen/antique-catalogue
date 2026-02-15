@@ -216,12 +216,12 @@ export function HomePageClient({
                             <p className="mt-3 text-sm font-medium text-stone-800">
                               {featuredCollection
                                 ? t("Featured item")
-                                : t("Collection preview")}
+                                : t("Item preview")}
                             </p>
                             <p className="text-xs text-stone-500">
                               {featuredCollection
                                 ? t("Curated highlight")
-                                : t("Select a collection to feature")}
+                                : t("Select an item to feature")}
                             </p>
                           </div>
                         );
