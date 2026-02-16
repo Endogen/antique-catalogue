@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -114,9 +115,13 @@ function LoginContent() {
       <div className="flex flex-col">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-stone-900 text-sm font-semibold text-stone-50">
-              AC
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Antique Catalogue"
+              width={44}
+              height={44}
+              className="rounded-full"
+            />
             <div>
               <p className="font-display text-lg tracking-tight">
                 {t("Antique Catalogue")}
