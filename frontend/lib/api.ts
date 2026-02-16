@@ -127,6 +127,7 @@ export type ItemResponse = {
   image_count?: number | null;
   star_count?: number | null;
   is_highlight: boolean;
+  is_draft: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -159,6 +160,27 @@ export type ItemImageResponse = {
   filename: string;
   position: number;
   created_at: string;
+};
+
+export type SpeedCaptureNewResponse = {
+  item_id: number;
+  item_name: string;
+  image_id: number;
+  image_count: number;
+  collection_id: number;
+};
+
+export type SpeedCaptureAddResponse = {
+  item_id: number;
+  image_id: number;
+  image_count: number;
+};
+
+export type SpeedCaptureSessionResponse = {
+  collection_id: number;
+  collection_name: string;
+  draft_count: number;
+  total_images: number;
 };
 
 export type ItemCreatePayload = {
@@ -1179,4 +1201,27 @@ export const imageApi = {
     }),
   url: (imageId: number | string, variant: "original" | "medium" | "thumb") =>
     buildApiUrl(`/images/${imageId}/${variant}.jpg`)
+};
+
+export const speedCaptureApi = {
+  newItem: (collectionId: number | string, file: File) => {
+    const payload = new FormData();
+    payload.append("file", file);
+    return apiRequest<SpeedCaptureNewResponse>(
+      `/speed-capture/${collectionId}/new`,
+      { method: "POST", body: payload }
+    );
+  },
+  addImage: (collectionId: number | string, itemId: number | string, file: File) => {
+    const payload = new FormData();
+    payload.append("file", file);
+    return apiRequest<SpeedCaptureAddResponse>(
+      `/speed-capture/${collectionId}/items/${itemId}/add`,
+      { method: "POST", body: payload }
+    );
+  },
+  session: (collectionId: number | string) =>
+    apiRequest<SpeedCaptureSessionResponse>(
+      `/speed-capture/${collectionId}/session`
+    ),
 };

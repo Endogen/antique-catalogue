@@ -14,6 +14,7 @@ from app.api.profiles import avatar_router as avatar_serve_router
 from app.api.profiles import router as profiles_router
 from app.api.schema_templates import router as schema_templates_router
 from app.api.search import router as search_router
+from app.api.speed_capture import router as speed_capture_router
 from app.api.stars import router as stars_router
 from app.core.exceptions import register_exception_handlers
 from app.core.settings import settings
@@ -35,6 +36,7 @@ app.include_router(public_items_router)
 app.include_router(profiles_router)
 app.include_router(avatar_serve_router)
 app.include_router(search_router)
+app.include_router(speed_capture_router)
 app.include_router(stars_router)
 app.include_router(schema_templates_router)
 

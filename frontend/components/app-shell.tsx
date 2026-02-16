@@ -16,7 +16,8 @@ import {
   Star,
   Sparkles,
   UserRound,
-  X
+  X,
+  Zap,
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
@@ -48,6 +49,13 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
       description: t("Your private archive"),
       icon: LayoutGrid,
       match: ["/dashboard"]
+    },
+    {
+      label: t("Speed Capture"),
+      href: "/speed-capture",
+      description: t("Quick photo-first cataloguing"),
+      icon: Zap,
+      match: ["/speed-capture"]
     },
     {
       label: t("Collections"),

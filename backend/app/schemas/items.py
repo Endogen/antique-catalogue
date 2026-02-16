@@ -74,5 +74,6 @@ class ItemResponse(BaseModel):
     image_count: int | None = None
     star_count: int | None = None
     is_highlight: bool
+    is_draft: bool = False
     created_at: datetime
     updated_at: datetime

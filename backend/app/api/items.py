@@ -344,6 +344,10 @@ def list_items(
             "Sort by 'name', 'created_at', or 'metadata:<field>' (prefix with '-' for desc)"
         ),
     ),
+    include_drafts: bool = Query(
+        False,
+        description="Include draft items created via speed capture",
+    ),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
     current_user: User = Depends(get_current_user),
@@ -364,6 +368,8 @@ def list_items(
     query = select(Item, primary_image_id, image_count, star_count).where(
         Item.collection_id == collection_id
     )
+    if not include_drafts:
+        query = query.where(Item.is_draft.is_(False))
     if search_term:
         pattern = f"%{search_term}%"
         query = query.where(or_(Item.name.ilike(pattern), Item.notes.ilike(pattern)))
@@ -474,6 +480,9 @@ def update_item(
         item.metadata_ = metadata
     if "is_highlight" in data:
         item.is_highlight = data["is_highlight"]
+
+    if item.is_draft and ("name" in data or "metadata" in data):
+        item.is_draft = False
 
     db.add(item)
     if data:
