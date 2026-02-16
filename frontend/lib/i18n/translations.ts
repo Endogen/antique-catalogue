@@ -53,6 +53,7 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "Browse directory": "Verzeichnis durchsuchen",
   "Browse files": "Dateien auswählen",
   "Browse other public catalogues for inspiration.": "Stöbere in anderen öffentlichen Katalogen zur Inspiration.",
+  "Browse": "Stöbern",
   "Browse public": "Öffentlich stöbern",
   "Browse public catalogues": "Öffentliche Kataloge durchsuchen",
   "Browse public catalogues to discover provenance notes, condition details, and restoration history from collectors worldwide.": "Öffentliche Kataloge durchsuchen und Herkunft, Zustand und Restaurierungen entdecken.",

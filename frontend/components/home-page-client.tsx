@@ -282,7 +282,7 @@ export function HomePageClient({
                     >
                       {featuredCollection
                         ? t("View collection")
-                        : t("Browse public")}
+                        : t("Browse")}
                     </Link>
                   </Button>
                 </div>
