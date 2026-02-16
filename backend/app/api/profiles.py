@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from importlib.util import find_spec
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import and_, func, select, union_all
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.settings import settings
 from app.db.session import get_db
 from app.models.collection import Collection
 from app.models.collection_star import CollectionStar
@@ -14,10 +19,21 @@ from app.models.item_star import ItemStar
 from app.models.user import User
 from app.schemas.collections import CollectionResponse
 from app.schemas.profiles import ProfileUpdateRequest, PublicProfileResponse
+from app.schemas.responses import MessageResponse
 from app.services.activity import log_activity
+from app.services.image_processing import (
+    ImageProcessingError,
+    build_variant_filename,
+    generate_image_variants,
+    save_image_variants,
+)
 from app.services.usernames import normalize_username_lookup, validate_username_for_user
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
+avatar_router = APIRouter(prefix="/avatars", tags=["profiles"])
+
+MAX_AVATAR_BYTES = 5 * 1024 * 1024
+MULTIPART_AVAILABLE = find_spec("multipart") is not None
 
 
 def _get_profile_user_or_404(db: Session, username: str) -> User:
@@ -115,6 +131,7 @@ def _build_public_profile_response(db: Session, user: User) -> PublicProfileResp
     return PublicProfileResponse(
         id=user.id,
         username=user.username,
+        has_avatar=user.avatar_filename is not None,
         created_at=user.created_at,
         public_collection_count=public_collection_count,
         public_item_count=public_item_count,
@@ -225,3 +242,128 @@ def list_public_profile_collections(
 def read_public_profile(username: str, db: Session = Depends(get_db)) -> PublicProfileResponse:
     user = _get_profile_user_or_404(db, username)
     return _build_public_profile_response(db, user)
+
+
+# ---------------------------------------------------------------------------
+# Avatar upload / delete / serve
+# ---------------------------------------------------------------------------
+
+
+def _avatar_dir(user_id: int) -> Path:
+    return settings.uploads_dir / "avatars" / str(user_id)
+
+
+def _cleanup_avatar_files(user_id: int) -> None:
+    directory = _avatar_dir(user_id)
+    if not directory.exists():
+        return
+    for path in directory.glob("avatar_*.jpg"):
+        path.unlink(missing_ok=True)
+
+
+def _read_avatar_upload(file: UploadFile) -> bytes:
+    data = file.file.read(MAX_AVATAR_BYTES + 1)
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Image file is empty",
+        )
+    if len(data) > MAX_AVATAR_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Avatar image exceeds 5MB limit",
+        )
+    return data
+
+
+if MULTIPART_AVAILABLE:
+
+    @router.post("/me/avatar", response_model=PublicProfileResponse)
+    def upload_avatar(
+        file: UploadFile = File(..., description="Avatar image file"),
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> PublicProfileResponse:
+        try:
+            payload = _read_avatar_upload(file)
+
+            try:
+                variants = generate_image_variants(payload)
+            except ImageProcessingError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=str(exc),
+                ) from exc
+
+            # Clean up any previous avatar files
+            _cleanup_avatar_files(current_user.id)
+
+            output_dir = _avatar_dir(current_user.id)
+            try:
+                save_image_variants(variants.as_dict(), output_dir, "avatar")
+            except Exception as exc:
+                _cleanup_avatar_files(current_user.id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to store avatar",
+                ) from exc
+
+            filename = file.filename or "avatar.jpg"
+            current_user.avatar_filename = Path(filename).name
+            db.add(current_user)
+            log_activity(
+                db,
+                user_id=current_user.id,
+                action_type="profile.avatar_updated",
+                resource_type="user",
+                resource_id=current_user.id,
+                summary="Updated profile avatar.",
+            )
+            db.commit()
+            db.refresh(current_user)
+
+            return _build_public_profile_response(db, current_user)
+        finally:
+            file.file.close()
+
+
+@router.delete("/me/avatar", response_model=MessageResponse)
+def delete_avatar(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    if not current_user.avatar_filename:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No avatar to remove",
+        )
+
+    _cleanup_avatar_files(current_user.id)
+    current_user.avatar_filename = None
+    db.add(current_user)
+    log_activity(
+        db,
+        user_id=current_user.id,
+        action_type="profile.avatar_removed",
+        resource_type="user",
+        resource_id=current_user.id,
+        summary="Removed profile avatar.",
+    )
+    db.commit()
+    return MessageResponse(message="Avatar removed")
+
+
+@avatar_router.get("/{user_id}/{variant}.jpg")
+def serve_avatar(user_id: int, variant: str) -> FileResponse:
+    try:
+        filename = build_variant_filename("avatar", variant)
+    except ImageProcessingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    path = _avatar_dir(user_id) / filename
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avatar not found")
+    return FileResponse(path, media_type="image/jpeg", filename=filename)

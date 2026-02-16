@@ -30,6 +30,7 @@ class User(Base):
         String(12), unique=True, nullable=False, default=_temporary_username
     )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    avatar_filename: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=true(), nullable=False
     )

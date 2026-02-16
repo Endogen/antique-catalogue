@@ -1,21 +1,26 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   Award,
+  Camera,
   ExternalLink,
   Folder,
   Loader2,
   Package,
   Save,
-  Star
+  Star,
+  Trash2,
+  User
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
+  avatarUrl,
   isApiError,
   profileApi,
   type PublicProfileResponse
@@ -39,6 +44,12 @@ export default function ProfilePage() {
     status: "idle" | "saving" | "saved" | "error";
     message?: string;
   }>({ status: "idle" });
+  const [avatarState, setAvatarState] = React.useState<{
+    status: "idle" | "uploading" | "deleting" | "error";
+    message?: string;
+  }>({ status: "idle" });
+  const [avatarKey, setAvatarKey] = React.useState(0);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const formatDate = React.useCallback(
     (value: string | null | undefined) => {
@@ -107,6 +118,44 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setAvatarState({ status: "uploading" });
+    try {
+      const data = await profileApi.uploadAvatar(file);
+      setProfileState({ status: "ready", data });
+      setAvatarKey((prev) => prev + 1);
+      setAvatarState({ status: "idle" });
+    } catch (error) {
+      setAvatarState({
+        status: "error",
+        message: isApiError(error) ? error.detail : "We couldn't upload your avatar."
+      });
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    setAvatarState({ status: "deleting" });
+    try {
+      await profileApi.deleteAvatar();
+      setProfileState((prev) =>
+        prev.data
+          ? { ...prev, data: { ...prev.data, has_avatar: false } }
+          : prev
+      );
+      setAvatarState({ status: "idle" });
+    } catch (error) {
+      setAvatarState({
+        status: "error",
+        message: isApiError(error) ? error.detail : "We couldn't remove your avatar."
+      });
+    }
+  };
+
   const profile = profileState.data;
 
   return (
@@ -130,6 +179,83 @@ export default function ProfilePage() {
           </div>
         ) : null}
       </header>
+
+      <section className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+        <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          {t("Profile picture")}
+        </p>
+        <h2 className="font-display mt-3 text-2xl text-stone-900">
+          {t("Set your avatar")}
+        </h2>
+        <p className="mt-2 text-sm text-stone-600">
+          {t("Upload a photo that represents you. Max 5MB, JPEG or PNG.")}
+        </p>
+
+        <div className="mt-6 flex flex-wrap items-center gap-6">
+          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-stone-200 bg-stone-100">
+            {profile?.has_avatar ? (
+              <Image
+                key={avatarKey}
+                src={avatarUrl(profile.id, "medium")}
+                alt={profile.username}
+                width={96}
+                height={96}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <User className="h-10 w-10 text-stone-300" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarState.status === "uploading" || avatarState.status === "deleting"}
+            >
+              {avatarState.status === "uploading" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4" />
+              )}
+              {avatarState.status === "uploading"
+                ? t("Uploading...")
+                : t("Upload photo")}
+            </Button>
+            {profile?.has_avatar ? (
+              <Button
+                variant="outline"
+                onClick={handleAvatarDelete}
+                disabled={avatarState.status === "uploading" || avatarState.status === "deleting"}
+                className="text-rose-600 hover:text-rose-700"
+              >
+                {avatarState.status === "deleting" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                {avatarState.status === "deleting" ? t("Removing...") : t("Remove")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        {avatarState.status === "error" && avatarState.message ? (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {t(avatarState.message)}
+          </div>
+        ) : null}
+      </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">

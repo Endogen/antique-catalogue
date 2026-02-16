@@ -145,6 +145,7 @@ export type FeaturedItemResponse = {
 export type PublicProfileResponse = {
   id: number;
   username: string;
+  has_avatar: boolean;
   created_at: string;
   public_collection_count: number;
   public_item_count: number;
@@ -733,6 +734,13 @@ export const authApi = {
     })
 };
 
+export function avatarUrl(
+  userId: number,
+  variant: "thumb" | "medium" | "original" = "medium"
+): string {
+  return `${API_BASE_URL}/avatars/${userId}/${variant}.jpg`;
+}
+
 export const profileApi = {
   me: () => apiRequest<PublicProfileResponse>("/profiles/me"),
   updateMe: (payload: { username: string }) =>
@@ -752,7 +760,19 @@ export const profileApi = {
         skipAuth: true,
         skipRefresh: true
       }
-    )
+    ),
+  uploadAvatar: (file: File) => {
+    const payload = new FormData();
+    payload.append("file", file);
+    return apiRequest<PublicProfileResponse>("/profiles/me/avatar", {
+      method: "POST",
+      body: payload
+    });
+  },
+  deleteAvatar: () =>
+    apiRequest<MessageResponse>("/profiles/me/avatar", {
+      method: "DELETE"
+    })
 };
 
 export const adminApi = {

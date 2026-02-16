@@ -22,6 +22,7 @@ class ProfileUpdateRequest(BaseModel):
 class PublicProfileResponse(BaseModel):
     id: int
     username: str
+    has_avatar: bool
     created_at: datetime
     public_collection_count: int
     public_item_count: int

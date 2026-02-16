@@ -18,6 +18,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
+  avatarUrl,
   isApiError,
   profileApi,
   type CollectionResponse,
@@ -202,12 +203,32 @@ export default function PublicProfilePage() {
           <div className="space-y-6">
             <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
               <p className="text-xs uppercase tracking-[0.4em] text-amber-700">{t("Profile")}</p>
-              <h1 className="font-display mt-4 text-3xl text-stone-900">
-                @{state.data.username}
-              </h1>
-              <p className="mt-3 text-sm text-stone-600">
-                {t("Member since {date}", { date: formatDate(state.data.created_at) })}
-              </p>
+              <div className="mt-4 flex items-center gap-5">
+                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-stone-200 bg-stone-100">
+                  {state.data.has_avatar ? (
+                    <Image
+                      src={avatarUrl(state.data.id, "medium")}
+                      alt={state.data.username}
+                      width={80}
+                      height={80}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-stone-900 text-lg font-semibold text-stone-50">
+                      {state.data.username.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h1 className="font-display text-3xl text-stone-900">
+                    @{state.data.username}
+                  </h1>
+                  <p className="mt-1 text-sm text-stone-600">
+                    {t("Member since {date}", { date: formatDate(state.data.created_at) })}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-3xl border border-stone-900 bg-stone-950 p-5 text-stone-100">
