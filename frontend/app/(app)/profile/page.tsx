@@ -180,81 +180,53 @@ export default function ProfilePage() {
         ) : null}
       </header>
 
-      <section className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-        <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-          {t("Profile picture")}
+      <section className="rounded-3xl border border-stone-900 bg-stone-950 p-6 text-stone-100">
+        <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+          {t("Profile summary")}
         </p>
-        <h2 className="font-display mt-3 text-2xl text-stone-900">
-          {t("Set your avatar")}
-        </h2>
-        <p className="mt-2 text-sm text-stone-600">
-          {t("Upload a photo that represents you. Max 5MB, JPEG or PNG.")}
+        <p className="mt-3 text-sm text-stone-300">
+          {t("Member since {date}", {
+            date: formatDate(profile?.created_at)
+          })}
         </p>
-
-        <div className="mt-6 flex flex-wrap items-center gap-6">
-          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-stone-200 bg-stone-100">
-            {profile?.has_avatar ? (
-              <Image
-                key={avatarKey}
-                src={avatarUrl(profile.id, "medium")}
-                alt={profile.username}
-                width={96}
-                height={96}
-                className="h-full w-full object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                <User className="h-10 w-10 text-stone-300" />
-              </div>
-            )}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
+            <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+              <Folder className="h-3.5 w-3.5 text-amber-300" />
+              {t("Public collections")}
+            </p>
+            <p className="mt-2 text-xl font-semibold text-stone-100">
+              {profile?.public_collection_count ?? 0}
+            </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleAvatarUpload}
-            />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={avatarState.status === "uploading" || avatarState.status === "deleting"}
-            >
-              {avatarState.status === "uploading" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Camera className="h-4 w-4" />
-              )}
-              {avatarState.status === "uploading"
-                ? t("Uploading...")
-                : t("Upload photo")}
-            </Button>
-            {profile?.has_avatar ? (
-              <Button
-                variant="outline"
-                onClick={handleAvatarDelete}
-                disabled={avatarState.status === "uploading" || avatarState.status === "deleting"}
-                className="text-rose-600 hover:text-rose-700"
-              >
-                {avatarState.status === "deleting" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-                {avatarState.status === "deleting" ? t("Removing...") : t("Remove")}
-              </Button>
-            ) : null}
+          <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
+            <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+              <Package className="h-3.5 w-3.5 text-amber-300" />
+              {t("Public items")}
+            </p>
+            <p className="mt-2 text-xl font-semibold text-stone-100">
+              {profile?.public_item_count ?? 0}
+            </p>
+          </div>
+          <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
+            <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+              <Star className="h-3.5 w-3.5 text-amber-300" />
+              {t("Stars earned")}
+            </p>
+            <p className="mt-2 text-xl font-semibold text-stone-100">
+              {profile?.earned_star_count ?? 0}
+            </p>
+          </div>
+          <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
+            <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+              <Award className="h-3.5 w-3.5 text-amber-300" />
+              {t("Star rank")}
+            </p>
+            <p className="mt-2 text-xl font-semibold text-stone-100">
+              #{profile?.star_rank ?? 1}
+            </p>
           </div>
         </div>
-
-        {avatarState.status === "error" && avatarState.message ? (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {t(avatarState.message)}
-          </div>
-        ) : null}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -322,56 +294,79 @@ export default function ProfilePage() {
 
         <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-            {t("Public stats")}
+            {t("Profile picture")}
           </p>
-          <div className="mt-5 rounded-2xl border border-stone-900 bg-stone-950 p-4 text-stone-100">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
-              {t("Profile summary")}
-            </p>
-            <p className="mt-3 text-sm text-stone-300">
-              {t("Member since {date}", {
-                date: formatDate(profile?.created_at)
-              })}
-            </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
-                <p className="inline-flex items-center gap-2 text-xs text-stone-300">
-                  <Folder className="h-3.5 w-3.5 text-amber-300" />
-                  {t("Public collections")}
-                </p>
-                <p className="mt-2 text-xl font-semibold text-stone-100">
-                  {profile?.public_collection_count ?? 0}
-                </p>
-              </div>
-              <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
-                <p className="inline-flex items-center gap-2 text-xs text-stone-300">
-                  <Package className="h-3.5 w-3.5 text-amber-300" />
-                  {t("Public items")}
-                </p>
-                <p className="mt-2 text-xl font-semibold text-stone-100">
-                  {profile?.public_item_count ?? 0}
-                </p>
-              </div>
-              <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
-                <p className="inline-flex items-center gap-2 text-xs text-stone-300">
-                  <Star className="h-3.5 w-3.5 text-amber-300" />
-                  {t("Stars earned")}
-                </p>
-                <p className="mt-2 text-xl font-semibold text-stone-100">
-                  {profile?.earned_star_count ?? 0}
-                </p>
-              </div>
-              <div className="rounded-xl border border-stone-800 bg-stone-900/70 p-3">
-                <p className="inline-flex items-center gap-2 text-xs text-stone-300">
-                  <Award className="h-3.5 w-3.5 text-amber-300" />
-                  {t("Star rank")}
-                </p>
-                <p className="mt-2 text-xl font-semibold text-stone-100">
-                  #{profile?.star_rank ?? 1}
-                </p>
-              </div>
+          <h2 className="font-display mt-3 text-2xl text-stone-900">
+            {t("Set your avatar")}
+          </h2>
+          <p className="mt-2 text-sm text-stone-600">
+            {t("Upload a photo that represents you. Max 5MB, JPEG or PNG.")}
+          </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-6">
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-stone-200 bg-stone-100">
+              {profile?.has_avatar ? (
+                <Image
+                  key={avatarKey}
+                  src={avatarUrl(profile.id, "medium")}
+                  alt={profile.username}
+                  width={96}
+                  height={96}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <User className="h-10 w-10 text-stone-300" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarState.status === "uploading" || avatarState.status === "deleting"}
+              >
+                {avatarState.status === "uploading" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+                {avatarState.status === "uploading"
+                  ? t("Uploading...")
+                  : t("Upload photo")}
+              </Button>
+              {profile?.has_avatar ? (
+                <Button
+                  variant="outline"
+                  onClick={handleAvatarDelete}
+                  disabled={avatarState.status === "uploading" || avatarState.status === "deleting"}
+                  className="text-rose-600 hover:text-rose-700"
+                >
+                  {avatarState.status === "deleting" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  {avatarState.status === "deleting" ? t("Removing...") : t("Remove")}
+                </Button>
+              ) : null}
             </div>
           </div>
+
+          {avatarState.status === "error" && avatarState.message ? (
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {t(avatarState.message)}
+            </div>
+          ) : null}
         </div>
       </section>
     </div>
