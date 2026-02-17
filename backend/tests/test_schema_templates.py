@@ -295,6 +295,74 @@ def test_schema_template_field_crud_and_reorder(app_with_db, db_session_factory)
     asyncio.run(_flow())
 
 
+def test_apply_schema_template_to_existing_collection(app_with_db, db_session_factory) -> None:
+    email = "apply-template@example.com"
+    password = "strongpass"
+    _create_user(db_session_factory, email=email, password=password, verified=True)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            access_token = await _login(client, email=email, password=password)
+            headers = {"Authorization": f"Bearer {access_token}"}
+
+            create_template = await client.post(
+                "/schema-templates",
+                json={
+                    "name": "Apply template",
+                    "fields": [
+                        {"name": "Condition", "field_type": "text"},
+                        {"name": "Era", "field_type": "date", "is_private": True},
+                    ],
+                },
+                headers=headers,
+            )
+            assert create_template.status_code == 201
+            template_id = create_template.json()["id"]
+
+            create_collection = await client.post(
+                "/collections",
+                json={"name": "Blank collection"},
+                headers=headers,
+            )
+            assert create_collection.status_code == 201
+            collection_id = create_collection.json()["id"]
+
+            initial_fields = await client.get(
+                f"/collections/{collection_id}/fields",
+                headers=headers,
+            )
+            assert initial_fields.status_code == 200
+            assert initial_fields.json() == []
+
+            apply_template = await client.post(
+                f"/collections/{collection_id}/apply-template",
+                json={"schema_template_id": template_id},
+                headers=headers,
+            )
+            assert apply_template.status_code == 200
+            assert apply_template.json()["message"] == "Schema template applied"
+
+            fields_after_apply = await client.get(
+                f"/collections/{collection_id}/fields",
+                headers=headers,
+            )
+            assert fields_after_apply.status_code == 200
+            applied_payload = fields_after_apply.json()
+            assert [field["name"] for field in applied_payload] == ["Condition", "Era"]
+            assert [field["position"] for field in applied_payload] == [1, 2]
+
+            apply_again = await client.post(
+                f"/collections/{collection_id}/apply-template",
+                json={"schema_template_id": template_id},
+                headers=headers,
+            )
+            assert apply_again.status_code == 409
+            assert apply_again.json()["detail"] == "Field name already exists"
+
+    asyncio.run(_flow())
+
+
 def test_schema_templates_require_auth(app_with_db) -> None:
     async def _flow() -> None:
         transport = httpx.ASGITransport(app=app_with_db)
@@ -330,6 +398,12 @@ def test_schema_templates_require_auth(app_with_db) -> None:
                 )
             ).status_code == 401
             assert (await client.delete("/schema-templates/1/fields/1")).status_code == 401
+            assert (
+                await client.post(
+                    "/collections/1/apply-template",
+                    json={"schema_template_id": 1},
+                )
+            ).status_code == 401
 
     asyncio.run(_flow())
 
@@ -395,5 +469,20 @@ def test_schema_templates_are_owner_scoped(app_with_db, db_session_factory) -> N
                 headers=other_headers,
             )
             assert use_owner_template_for_collection.status_code == 404
+
+            other_collection = await client.post(
+                "/collections",
+                json={"name": "Other blank collection"},
+                headers=other_headers,
+            )
+            assert other_collection.status_code == 201
+            other_collection_id = other_collection.json()["id"]
+
+            other_apply_owner_template = await client.post(
+                f"/collections/{other_collection_id}/apply-template",
+                json={"schema_template_id": template_id},
+                headers=other_headers,
+            )
+            assert other_apply_owner_template.status_code == 404
 
     asyncio.run(_flow())

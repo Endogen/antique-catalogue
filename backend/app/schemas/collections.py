@@ -65,6 +65,20 @@ class CollectionUpdateRequest(BaseModel):
         return _normalize_description(value)
 
 
+class CollectionApplyTemplateRequest(BaseModel):
+    schema_template_id: int = Field(
+        ...,
+        description="Schema template ID to copy into an existing collection",
+    )
+
+    @field_validator("schema_template_id")
+    @classmethod
+    def validate_schema_template_id(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("Schema template ID must be positive")
+        return value
+
+
 class CollectionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

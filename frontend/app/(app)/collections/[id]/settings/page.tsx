@@ -9,6 +9,7 @@ import {
   Globe2,
   Lock,
   RefreshCcw,
+  Search,
   Settings2
 } from "lucide-react";
 
@@ -24,8 +25,10 @@ import {
   fieldApi,
   isApiError,
   schemaTemplateApi,
-  type CollectionResponse
+  type CollectionResponse,
+  type SchemaTemplateSummaryResponse
 } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const buildPayload = (values: CollectionFormValues) => ({
   name: values.name.trim(),
@@ -53,6 +56,26 @@ export default function CollectionSettingsPage() {
   const [templateMessage, setTemplateMessage] = React.useState<string | null>(null);
   const [savedTemplateId, setSavedTemplateId] = React.useState<number | null>(null);
   const [isSavingTemplate, setIsSavingTemplate] = React.useState(false);
+  const [schemaBuilderKey, setSchemaBuilderKey] = React.useState(0);
+  const [applyTemplateQuery, setApplyTemplateQuery] = React.useState("");
+  const [selectedApplyTemplateId, setSelectedApplyTemplateId] = React.useState<
+    number | null
+  >(null);
+  const [applyTemplatesState, setApplyTemplatesState] = React.useState<{
+    status: "idle" | "loading" | "ready" | "error";
+    data: SchemaTemplateSummaryResponse[];
+    error?: string;
+  }>({
+    status: "idle",
+    data: []
+  });
+  const [applyTemplateError, setApplyTemplateError] = React.useState<string | null>(
+    null
+  );
+  const [applyTemplateMessage, setApplyTemplateMessage] = React.useState<
+    string | null
+  >(null);
+  const [isApplyingTemplate, setIsApplyingTemplate] = React.useState(false);
 
   const formatDate = React.useCallback(
     (value?: string | null) => {
@@ -106,6 +129,56 @@ export default function CollectionSettingsPage() {
   React.useEffect(() => {
     void loadCollection();
   }, [loadCollection]);
+
+  React.useEffect(() => {
+    if (!collectionId) {
+      return;
+    }
+    let isActive = true;
+    const handle = setTimeout(() => {
+      void (async () => {
+        setApplyTemplatesState((prev) => ({
+          ...prev,
+          status: "loading",
+          error: undefined
+        }));
+        try {
+          const data = await schemaTemplateApi.list({
+            q: applyTemplateQuery.trim() || undefined,
+            limit: 50
+          });
+          if (!isActive) {
+            return;
+          }
+          setApplyTemplatesState({
+            status: "ready",
+            data
+          });
+          setSelectedApplyTemplateId((prev) =>
+            prev !== null && data.some((template) => template.id === prev)
+              ? prev
+              : null
+          );
+        } catch (error) {
+          if (!isActive) {
+            return;
+          }
+          setApplyTemplatesState((prev) => ({
+            ...prev,
+            status: "error",
+            error: isApiError(error)
+              ? error.detail
+              : "We couldn't load schema templates."
+          }));
+        }
+      })();
+    }, 250);
+
+    return () => {
+      isActive = false;
+      clearTimeout(handle);
+    };
+  }, [applyTemplateQuery, collectionId]);
 
   const handleSubmit = async (values: CollectionFormValues) => {
     if (!collectionId) {
@@ -169,6 +242,35 @@ export default function CollectionSettingsPage() {
       );
     } finally {
       setIsSavingTemplate(false);
+    }
+  };
+
+  const handleApplySchemaTemplate = async () => {
+    if (!collectionId || isApplyingTemplate) {
+      return;
+    }
+    if (!selectedApplyTemplateId) {
+      setApplyTemplateError("Select a schema template to apply.");
+      return;
+    }
+
+    setApplyTemplateError(null);
+    setApplyTemplateMessage(null);
+    setIsApplyingTemplate(true);
+    try {
+      const result = await collectionApi.applyTemplate(collectionId, {
+        schema_template_id: selectedApplyTemplateId
+      });
+      setApplyTemplateMessage(result.message);
+      setSchemaBuilderKey((prev) => prev + 1);
+    } catch (error) {
+      setApplyTemplateError(
+        isApiError(error)
+          ? error.detail
+          : "We couldn't apply the schema template."
+      );
+    } finally {
+      setIsApplyingTemplate(false);
     }
   };
 
@@ -275,7 +377,7 @@ export default function CollectionSettingsPage() {
               </div>
             </div>
 
-            <SchemaBuilder collectionId={collectionId ?? ""} />
+            <SchemaBuilder key={schemaBuilderKey} collectionId={collectionId ?? ""} />
           </div>
 
           <aside className="space-y-6">
@@ -328,6 +430,107 @@ export default function CollectionSettingsPage() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                {t("Apply schema template")}
+              </p>
+              <h3 className="font-display mt-3 text-2xl text-stone-900">
+                {t("Copy fields from a saved schema template.")}
+              </h3>
+              <p className="mt-3 text-sm text-stone-600">
+                {t(
+                  "Append fields from one of your saved templates to this collection schema."
+                )}
+              </p>
+
+              <div className="mt-4 space-y-3">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="search"
+                    value={applyTemplateQuery}
+                    onChange={(event) => setApplyTemplateQuery(event.target.value)}
+                    placeholder={t("Search schema templates")}
+                    className="h-10 w-full rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </div>
+
+                {applyTemplatesState.status === "loading" &&
+                applyTemplatesState.data.length === 0 ? (
+                  <p className="text-xs text-stone-500">
+                    {t("Loading schema templates...")}
+                  </p>
+                ) : applyTemplatesState.status === "error" ? (
+                  <p className="text-xs text-rose-600">
+                    {t(
+                      applyTemplatesState.error ??
+                        "We couldn't load schema templates."
+                    )}
+                  </p>
+                ) : applyTemplatesState.data.length === 0 ? (
+                  <p className="text-xs text-stone-500">
+                    {t("No schema templates found.")}
+                  </p>
+                ) : (
+                  <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+                    {applyTemplatesState.data.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedApplyTemplateId(template.id);
+                          setApplyTemplateError(null);
+                          setApplyTemplateMessage(null);
+                        }}
+                        className={cn(
+                          "w-full rounded-xl border p-3 text-left transition",
+                          selectedApplyTemplateId === template.id
+                            ? "border-amber-300 bg-amber-50/80"
+                            : "border-stone-200 bg-white hover:border-stone-300"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-stone-900">
+                            {template.name}
+                          </p>
+                          <span className="text-xs text-stone-500">
+                            {t("{count} fields", { count: template.field_count })}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <Button
+                  type="button"
+                  onClick={handleApplySchemaTemplate}
+                  disabled={isApplyingTemplate || !selectedApplyTemplateId}
+                >
+                  {isApplyingTemplate ? t("Applying...") : t("Apply template")}
+                </Button>
+
+                {applyTemplateError ? (
+                  <p className="text-xs text-rose-600">{t(applyTemplateError)}</p>
+                ) : null}
+                {applyTemplateMessage ? (
+                  <p className="text-xs text-emerald-700">
+                    {t(applyTemplateMessage)}
+                  </p>
+                ) : null}
+
+                <p className="text-xs text-stone-500">
+                  {t("Need a new template?")}{" "}
+                  <Link
+                    href="/schema-templates"
+                    className="font-medium text-amber-700"
+                  >
+                    {t("Manage schema templates")}
+                  </Link>
+                </p>
               </div>
             </div>
 

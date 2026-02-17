@@ -27,3 +27,12 @@ uploads/
 *.db
 .env
 .ralph/
+.pytest_cache/
+.ruff_cache/
+
+# Ralph loop artifacts
+AGENTS.md
+PROMPT.md
+IMPLEMENTATION_PLAN.md
+ralph.sh
+specs/

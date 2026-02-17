@@ -44,6 +44,10 @@ export type CollectionUpdatePayload = {
   is_public?: boolean;
 };
 
+export type CollectionApplyTemplatePayload = {
+  schema_template_id: number;
+};
+
 export type FieldOptions = {
   options: string[];
 };
@@ -921,6 +925,14 @@ export const collectionApi = {
   update: (collectionId: number | string, payload: CollectionUpdatePayload) =>
     apiRequest<CollectionResponse>(`/collections/${collectionId}`, {
       method: "PATCH",
+      body: payload
+    }),
+  applyTemplate: (
+    collectionId: number | string,
+    payload: CollectionApplyTemplatePayload
+  ) =>
+    apiRequest<MessageResponse>(`/collections/${collectionId}/apply-template`, {
+      method: "POST",
       body: payload
     })
 };

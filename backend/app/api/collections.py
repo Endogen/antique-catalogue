@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -15,6 +16,7 @@ from app.models.schema_template import SchemaTemplate
 from app.models.schema_template_field import SchemaTemplateField
 from app.models.user import User
 from app.schemas.collections import (
+    CollectionApplyTemplateRequest,
     CollectionCreateRequest,
     CollectionResponse,
     CollectionUpdateRequest,
@@ -261,6 +263,94 @@ def update_collection(
     setattr(collection, "star_count", star_count)
     setattr(collection, "owner_username", current_user.username)
     return collection
+
+
+@router.post("/{collection_id}/apply-template", response_model=MessageResponse)
+def apply_schema_template(
+    collection_id: int,
+    request: CollectionApplyTemplateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    collection = _get_collection_or_404(db, collection_id, current_user.id)
+    template = (
+        db.execute(
+            select(SchemaTemplate).where(
+                SchemaTemplate.id == request.schema_template_id,
+                SchemaTemplate.owner_id == current_user.id,
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Schema template not found",
+        )
+
+    template_fields = (
+        db.execute(
+            select(SchemaTemplateField)
+            .where(SchemaTemplateField.schema_template_id == template.id)
+            .order_by(SchemaTemplateField.position.asc(), SchemaTemplateField.id.asc())
+        )
+        .scalars()
+        .all()
+    )
+
+    existing_names = set(
+        db.execute(
+            select(FieldDefinition.name).where(FieldDefinition.collection_id == collection.id)
+        )
+        .scalars()
+        .all()
+    )
+    if any(field.name in existing_names for field in template_fields):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Field name already exists",
+        )
+
+    max_position = db.execute(
+        select(func.max(FieldDefinition.position)).where(
+            FieldDefinition.collection_id == collection.id
+        )
+    ).scalar()
+    start_position = (max_position or 0) + 1
+
+    copied_fields = [
+        FieldDefinition(
+            collection_id=collection.id,
+            name=field.name,
+            field_type=field.field_type,
+            is_required=field.is_required,
+            is_private=field.is_private,
+            options=field.options,
+            position=position,
+        )
+        for position, field in enumerate(template_fields, start=start_position)
+    ]
+    if copied_fields:
+        db.add_all(copied_fields)
+
+    log_activity(
+        db,
+        user_id=current_user.id,
+        action_type="collection.updated",
+        resource_type="collection",
+        resource_id=collection.id,
+        summary=(f'Applied schema template "{template.name}" to collection "{collection.name}".'),
+    )
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Field name already exists",
+        )
+    return MessageResponse(message="Schema template applied")
 
 
 @router.delete("/{collection_id}", response_model=MessageResponse)
