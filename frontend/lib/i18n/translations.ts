@@ -831,7 +831,7 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "Unverified": "Nicht verifiziert",
   "User management": "Benutzerverwaltung",
   "Speed Capture": "Schnellerfassung",
-  "Quick photo-first cataloguing": "Schnelles Fotografieren zuerst",
+  "Quick photo-first cataloguing": "Schnelles Fotografieren",
   "Pick a collection to start capturing. You can add metadata later.": "Wähle eine Sammlung zum Erfassen. Metadaten kannst du später ergänzen.",
   "No collections yet. Create one first.": "Noch keine Sammlungen. Erstelle zuerst eine.",
   "New Item": "Neues Objekt",
@@ -852,5 +852,6 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "Hide drafts": "Entwürfe ausblenden",
   "Draft": "Entwurf",
   "{count} drafts": "{count} Entwürfe",
+  "Existing drafts": "Vorhandene Entwürfe",
   "Exit": "Beenden",
 };

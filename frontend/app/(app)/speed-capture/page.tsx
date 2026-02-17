@@ -20,8 +20,10 @@ import {
   collectionApi,
   imageApi,
   isApiError,
+  itemApi,
   speedCaptureApi,
   type CollectionResponse,
+  type ItemResponse,
 } from "@/lib/api";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
@@ -52,6 +54,8 @@ type CaptureState = {
   uploading: boolean;
   uploadError: string | null;
   stats: { items: number; images: number };
+  existingDrafts: ItemResponse[];
+  existingDraftsLoading: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -194,6 +198,8 @@ function CaptureScreen({
   uploading,
   uploadError,
   stats,
+  existingDrafts,
+  existingDraftsLoading,
   onCapture,
   onExit,
   onReview,
@@ -204,6 +210,8 @@ function CaptureScreen({
   uploading: boolean;
   uploadError: string | null;
   stats: { items: number; images: number };
+  existingDrafts: ItemResponse[];
+  existingDraftsLoading: boolean;
   onCapture: (file: File, mode: "new" | "same") => void;
   onExit: () => void;
   onReview: () => void;
@@ -274,6 +282,43 @@ function CaptureScreen({
       <div className="min-h-[3.75rem] px-4">
         <ThumbnailStrip items={items} currentItemId={currentItemId} />
       </div>
+
+      {/* Existing drafts */}
+      {existingDraftsLoading ? (
+        <div className="flex items-center justify-center px-4 py-2">
+          <Loader2 className="h-4 w-4 animate-spin text-stone-400" />
+        </div>
+      ) : existingDrafts.length > 0 ? (
+        <div className="px-4 pt-2">
+          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-stone-400">
+            {t("Existing drafts")}
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {existingDrafts.map((draft) => (
+              <Link
+                key={draft.id}
+                href={`/collections/${collection.id}/items/${draft.id}`}
+                className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-stone-100 shadow-sm"
+              >
+                {draft.primary_image_id ? (
+                  <img
+                    src={imageApi.url(draft.primary_image_id, "thumb")}
+                    alt={draft.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Camera className="h-5 w-5 text-stone-400" />
+                )}
+                {(draft.image_count ?? 0) > 1 ? (
+                  <span className="absolute bottom-0.5 right-0.5 rounded-full bg-stone-900/70 px-1 py-px text-[10px] font-medium text-white">
+                    {draft.image_count}
+                  </span>
+                ) : null}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Spacer / center area */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
@@ -465,6 +510,8 @@ export default function SpeedCapturePage() {
     uploading: false,
     uploadError: null,
     stats: { items: 0, images: 0 },
+    existingDrafts: [],
+    existingDraftsLoading: false,
   });
 
   const loadCollections = React.useCallback(async () => {
@@ -495,12 +542,28 @@ export default function SpeedCapturePage() {
     void loadCollections();
   }, [loadCollections]);
 
-  const handleSelectCollection = (c: CollectionResponse) => {
+  const handleSelectCollection = async (c: CollectionResponse) => {
     setState((s) => ({
       ...s,
       status: "capturing",
       selectedCollection: c,
+      existingDraftsLoading: true,
     }));
+    try {
+      const drafts = await itemApi.list(c.id, {
+        includeDrafts: true,
+        limit: 100,
+        sort: "-created_at",
+      });
+      const draftItems = drafts.filter((item) => item.is_draft);
+      setState((s) => ({
+        ...s,
+        existingDrafts: draftItems,
+        existingDraftsLoading: false,
+      }));
+    } catch {
+      setState((s) => ({ ...s, existingDraftsLoading: false }));
+    }
   };
 
   const handleCapture = async (file: File, mode: "new" | "same") => {
@@ -643,6 +706,8 @@ export default function SpeedCapturePage() {
         uploading={state.uploading}
         uploadError={state.uploadError}
         stats={state.stats}
+        existingDrafts={state.existingDrafts}
+        existingDraftsLoading={state.existingDraftsLoading}
         onCapture={handleCapture}
         onExit={handleExit}
         onReview={handleReview}
