@@ -851,5 +851,6 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "Show drafts": "Entwürfe anzeigen",
   "Hide drafts": "Entwürfe ausblenden",
   "Draft": "Entwurf",
+  "{count} drafts": "{count} Entwürfe",
   "Exit": "Beenden",
 };

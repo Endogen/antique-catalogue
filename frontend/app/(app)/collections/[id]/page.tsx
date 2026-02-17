@@ -25,6 +25,7 @@ import {
   imageApi,
   isApiError,
   itemApi,
+  speedCaptureApi,
   starsApi,
   type CollectionResponse,
   type FieldDefinitionResponse,
@@ -141,6 +142,7 @@ export default function CollectionDetailPage() {
   const [showDrafts, setShowDrafts] = React.useState(
     searchParams.get("include_drafts") === "true"
   );
+  const [draftCount, setDraftCount] = React.useState<number | null>(null);
   const filterIdRef = React.useRef(0);
 
   const formatDate = React.useCallback(
@@ -338,6 +340,18 @@ export default function CollectionDetailPage() {
   React.useEffect(() => {
     void loadCollectionStarStatus();
   }, [loadCollectionStarStatus]);
+
+  React.useEffect(() => {
+    if (!collectionId) return;
+    void (async () => {
+      try {
+        const session = await speedCaptureApi.session(collectionId);
+        setDraftCount(session.draft_count);
+      } catch {
+        // Non-critical — just won't show draft count
+      }
+    })();
+  }, [collectionId, refreshKey]);
 
   const filterParams = React.useMemo(
     () => filters.map((filter) => `${filter.fieldName}=${filter.value}`),
@@ -552,13 +566,17 @@ export default function CollectionDetailPage() {
               {t("Add item")}
             </Link>
           </Button>
-          <Button
-            variant={showDrafts ? "secondary" : "outline"}
-            onClick={() => setShowDrafts((prev) => !prev)}
-          >
-            <FileEdit className="h-4 w-4" />
-            {showDrafts ? t("Hide drafts") : t("Show drafts")}
-          </Button>
+          {(draftCount ?? 0) > 0 ? (
+            <Button
+              variant={showDrafts ? "secondary" : "outline"}
+              onClick={() => setShowDrafts((prev) => !prev)}
+            >
+              <FileEdit className="h-4 w-4" />
+              {showDrafts
+                ? t("Hide drafts")
+                : t("{count} drafts", { count: draftCount ?? 0 })}
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCcw className="h-4 w-4" />
             {t("Refresh")}

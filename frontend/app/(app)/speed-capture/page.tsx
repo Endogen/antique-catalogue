@@ -25,7 +25,6 @@ import {
 } from "@/lib/api";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
-import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -54,35 +53,6 @@ type CaptureState = {
   uploadError: string | null;
   stats: { items: number; images: number };
 };
-
-/* ------------------------------------------------------------------ */
-/*  AuthImage — img that fetches with auth token                       */
-/* ------------------------------------------------------------------ */
-
-function AuthImage({
-  imageId,
-  variant,
-  alt,
-  className,
-}: {
-  imageId: number;
-  variant: "original" | "medium" | "thumb";
-  alt: string;
-  className?: string;
-}) {
-  const url = imageApi.url(imageId, variant);
-  const blobUrl = useAuthenticatedImageUrl(url);
-
-  if (!blobUrl) {
-    return (
-      <div className={cn("flex items-center justify-center bg-stone-100 text-stone-300", className)}>
-        <Loader2 className="h-4 w-4 animate-spin" />
-      </div>
-    );
-  }
-
-  return <img src={blobUrl} alt={alt} className={className} />;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Collection Picker                                                  */
@@ -202,9 +172,8 @@ function ThumbnailStrip({
           key={img.id}
           className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-sm"
         >
-          <AuthImage
-            imageId={img.imageId}
-            variant="thumb"
+          <img
+            src={imageApi.url(img.imageId, "thumb")}
             alt=""
             className="h-full w-full object-cover"
           />
@@ -433,9 +402,8 @@ function ReviewScreen({
           >
             {item.images[0] ? (
               <div className="aspect-square overflow-hidden bg-stone-100">
-                <AuthImage
-                  imageId={item.images[0].imageId}
-                  variant="thumb"
+                <img
+                  src={imageApi.url(item.images[0].imageId, "thumb")}
                   alt={item.name}
                   className="h-full w-full object-cover transition group-hover:scale-105"
                 />
