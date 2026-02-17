@@ -550,16 +550,23 @@ export default function SpeedCapturePage() {
       existingDraftsLoading: true,
     }));
     try {
-      const drafts = await itemApi.list(c.id, {
-        includeDrafts: true,
-        limit: 100,
-        sort: "-created_at",
-      });
+      const [drafts, session] = await Promise.all([
+        itemApi.list(c.id, {
+          includeDrafts: true,
+          limit: 100,
+          sort: "-created_at",
+        }),
+        speedCaptureApi.session(c.id),
+      ]);
       const draftItems = drafts.filter((item) => item.is_draft);
       setState((s) => ({
         ...s,
         existingDrafts: draftItems,
         existingDraftsLoading: false,
+        stats: {
+          items: session.draft_count,
+          images: session.total_images,
+        },
       }));
     } catch {
       setState((s) => ({ ...s, existingDraftsLoading: false }));
@@ -595,8 +602,8 @@ export default function SpeedCapturePage() {
             items,
             currentItemId: result.item_id,
             stats: {
-              items: items.length,
-              images: items.reduce((sum, i) => sum + i.images.length, 0),
+              items: s.stats.items + 1,
+              images: s.stats.images + 1,
             },
           };
         });
@@ -626,8 +633,8 @@ export default function SpeedCapturePage() {
             uploading: false,
             items,
             stats: {
-              items: items.length,
-              images: items.reduce((sum, i) => sum + i.images.length, 0),
+              items: s.stats.items,
+              images: s.stats.images + 1,
             },
           };
         });
