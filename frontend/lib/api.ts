@@ -207,6 +207,7 @@ export type ItemListOptions = {
   limit?: number;
   offset?: number;
   filters?: string[];
+  includeDrafts?: boolean;
 };
 
 export type ItemSearchResponse = {
@@ -531,6 +532,9 @@ const buildItemListQuery = (options?: ItemListOptions) => {
       .map((filter) => filter.trim())
       .filter(Boolean)
       .forEach((filter) => params.append("filter", filter));
+  }
+  if (options.includeDrafts) {
+    params.set("include_drafts", "true");
   }
 
   const query = params.toString();

@@ -323,7 +323,7 @@ export const AppShell = ({ children }: AppShellProps) => {
       </div>
 
       <div className="relative flex min-h-screen">
-        <aside className="relative hidden h-screen w-72 flex-col border-r border-stone-900/80 bg-stone-950 text-stone-100 lg:sticky lg:top-0 lg:flex">
+        <aside className="relative hidden h-screen w-72 flex-col overflow-y-auto overscroll-contain border-r border-stone-900/80 bg-stone-950 text-stone-100 lg:sticky lg:top-0 lg:flex">
           <div className="pointer-events-none absolute -top-24 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-[90px]" />
           <div className="relative flex h-full flex-col p-6">
             <SidebarContent />
@@ -411,7 +411,7 @@ export const AppShell = ({ children }: AppShellProps) => {
             className="absolute inset-0 bg-stone-950/60"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] border-r border-stone-900 bg-stone-950 p-6 text-stone-100 shadow-2xl">
+          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] overflow-y-auto overscroll-contain border-r border-stone-900 bg-stone-950 p-6 text-stone-100 shadow-2xl">
             <SidebarContent
               onNavigate={() => setMobileOpen(false)}
               onClose={() => setMobileOpen(false)}

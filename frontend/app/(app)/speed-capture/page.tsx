@@ -12,7 +12,6 @@ import {
   Layers,
   Loader2,
   Plus,
-  X,
   Zap,
 } from "lucide-react";
 
@@ -23,10 +22,10 @@ import {
   isApiError,
   speedCaptureApi,
   type CollectionResponse,
-  type SpeedCaptureNewResponse,
 } from "@/lib/api";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -35,7 +34,6 @@ import { cn } from "@/lib/utils";
 type CapturedImage = {
   id: string;
   imageId: number;
-  thumbUrl: string;
 };
 
 type CapturedItem = {
@@ -56,6 +54,35 @@ type CaptureState = {
   uploadError: string | null;
   stats: { items: number; images: number };
 };
+
+/* ------------------------------------------------------------------ */
+/*  AuthImage — img that fetches with auth token                       */
+/* ------------------------------------------------------------------ */
+
+function AuthImage({
+  imageId,
+  variant,
+  alt,
+  className,
+}: {
+  imageId: number;
+  variant: "original" | "medium" | "thumb";
+  alt: string;
+  className?: string;
+}) {
+  const url = imageApi.url(imageId, variant);
+  const blobUrl = useAuthenticatedImageUrl(url);
+
+  if (!blobUrl) {
+    return (
+      <div className={cn("flex items-center justify-center bg-stone-100 text-stone-300", className)}>
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </div>
+    );
+  }
+
+  return <img src={blobUrl} alt={alt} className={className} />;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Collection Picker                                                  */
@@ -175,8 +202,9 @@ function ThumbnailStrip({
           key={img.id}
           className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-sm"
         >
-          <img
-            src={img.thumbUrl}
+          <AuthImage
+            imageId={img.imageId}
+            variant="thumb"
             alt=""
             className="h-full w-full object-cover"
           />
@@ -187,7 +215,7 @@ function ThumbnailStrip({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Capture Screen                                                     */
+/*  Capture Screen (viewport-fitted, no scroll)                        */
 /* ------------------------------------------------------------------ */
 
 function CaptureScreen({
@@ -230,7 +258,7 @@ function CaptureScreen({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col bg-stone-50">
       {/* Hidden camera input */}
       <input
         ref={cameraRef}
@@ -241,8 +269,8 @@ function CaptureScreen({
         onChange={handleFileChange}
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-4 pb-2 pt-[max(env(safe-area-inset-top),0.75rem)]">
         <button
           type="button"
           className="flex items-center gap-2 text-sm text-stone-600 transition hover:text-stone-900"
@@ -251,15 +279,13 @@ function CaptureScreen({
           <ArrowLeft className="h-4 w-4" />
           {t("Exit")}
         </button>
-        <div className="text-right">
-          <p className="text-xs uppercase tracking-[0.2em] text-amber-700">
-            {collection.name}
-          </p>
-        </div>
+        <p className="truncate text-xs uppercase tracking-[0.2em] text-amber-700">
+          {collection.name}
+        </p>
       </div>
 
       {/* Stats bar */}
-      <div className="mt-4 flex items-center justify-center gap-6">
+      <div className="flex items-center justify-center gap-6 py-2">
         <div className="text-center">
           <p className="font-display text-2xl text-stone-900">{stats.items}</p>
           <p className="text-xs text-stone-500">
@@ -275,13 +301,13 @@ function CaptureScreen({
         </div>
       </div>
 
-      {/* Current item thumbnail strip */}
-      <div className="mt-4 min-h-[3.75rem]">
+      {/* Thumbnail strip */}
+      <div className="min-h-[3.75rem] px-4">
         <ThumbnailStrip items={items} currentItemId={currentItemId} />
       </div>
 
-      {/* Main capture area */}
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 py-8">
+      {/* Spacer / center area */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
         {uploading ? (
           <div className="flex flex-col items-center gap-3">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-50">
@@ -291,8 +317,8 @@ function CaptureScreen({
           </div>
         ) : (
           <>
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-stone-100 text-stone-400">
-              <Camera className="h-12 w-12" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+              <Camera className="h-10 w-10" />
             </div>
             <p className="max-w-xs text-center text-sm text-stone-500">
               {hasCurrentItem
@@ -309,8 +335,8 @@ function CaptureScreen({
         ) : null}
       </div>
 
-      {/* Action buttons */}
-      <div className="space-y-3 pb-6">
+      {/* Bottom action buttons — always visible */}
+      <div className="space-y-3 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-2">
         <div className="flex gap-3">
           <Button
             className="flex-1 gap-2 rounded-2xl py-6 text-base"
@@ -407,8 +433,9 @@ function ReviewScreen({
           >
             {item.images[0] ? (
               <div className="aspect-square overflow-hidden bg-stone-100">
-                <img
-                  src={item.images[0].thumbUrl}
+                <AuthImage
+                  imageId={item.images[0].imageId}
+                  variant="thumb"
                   alt={item.name}
                   className="h-full w-full object-cover transition group-hover:scale-105"
                 />
@@ -519,7 +546,6 @@ export default function SpeedCapturePage() {
           state.selectedCollection.id,
           file
         );
-        const thumbUrl = imageApi.url(result.image_id, "thumb");
         const newItem: CapturedItem = {
           itemId: result.item_id,
           name: result.item_name,
@@ -527,7 +553,6 @@ export default function SpeedCapturePage() {
             {
               id: `${result.image_id}`,
               imageId: result.image_id,
-              thumbUrl,
             },
           ],
         };
@@ -550,7 +575,6 @@ export default function SpeedCapturePage() {
           state.currentItemId,
           file
         );
-        const thumbUrl = imageApi.url(result.image_id, "thumb");
         setState((s) => {
           const items = s.items.map((item) =>
             item.itemId === s.currentItemId
@@ -561,7 +585,6 @@ export default function SpeedCapturePage() {
                     {
                       id: `${result.image_id}`,
                       imageId: result.image_id,
-                      thumbUrl,
                     },
                   ],
                 }

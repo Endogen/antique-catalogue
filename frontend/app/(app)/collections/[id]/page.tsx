@@ -2,17 +2,18 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
+  FileEdit,
   Plus,
   RefreshCcw,
   Search,
   SlidersHorizontal,
   Star,
   Tag,
-  X
+  X,
 } from "lucide-react";
 
 import { ItemPreviewCard } from "@/components/item-preview-card";
@@ -106,6 +107,7 @@ const extractOptions = (options?: { options?: unknown } | null) => {
 
 export default function CollectionDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const { t, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
@@ -136,6 +138,9 @@ export default function CollectionDetailPage() {
   const [collectionStarred, setCollectionStarred] = React.useState(false);
   const [isUpdatingCollectionStar, setIsUpdatingCollectionStar] = React.useState(false);
   const [collectionStarError, setCollectionStarError] = React.useState<string | null>(null);
+  const [showDrafts, setShowDrafts] = React.useState(
+    searchParams.get("include_drafts") === "true"
+  );
   const filterIdRef = React.useRef(0);
 
   const formatDate = React.useCallback(
@@ -367,7 +372,8 @@ export default function CollectionDetailPage() {
             sort,
             offset: 0,
             limit: PAGE_SIZE,
-            filters: filterParams
+            filters: filterParams,
+            includeDrafts: showDrafts,
           });
           if (!isActive) {
             return;
@@ -397,7 +403,7 @@ export default function CollectionDetailPage() {
       isActive = false;
       clearTimeout(handle);
     };
-  }, [collectionId, search, sort, filterParams, refreshKey]);
+  }, [collectionId, search, sort, filterParams, refreshKey, showDrafts]);
 
   const handleRefresh = () => {
     void loadCollection();
@@ -488,7 +494,8 @@ export default function CollectionDetailPage() {
         sort,
         offset: itemsState.data.length,
         limit: PAGE_SIZE,
-        filters: filterParams
+        filters: filterParams,
+        includeDrafts: showDrafts,
       });
       setItemsState((prev) => ({
         ...prev,
@@ -544,6 +551,13 @@ export default function CollectionDetailPage() {
               <Plus className="h-4 w-4" />
               {t("Add item")}
             </Link>
+          </Button>
+          <Button
+            variant={showDrafts ? "secondary" : "outline"}
+            onClick={() => setShowDrafts((prev) => !prev)}
+          >
+            <FileEdit className="h-4 w-4" />
+            {showDrafts ? t("Hide drafts") : t("Show drafts")}
           </Button>
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCcw className="h-4 w-4" />
@@ -955,7 +969,7 @@ export default function CollectionDetailPage() {
                     key={item.id}
                     href={`/collections/${collectionId}/items/${item.id}`}
                     title={item.name}
-                    eyebrow={t("Item")}
+                    eyebrow={item.is_draft ? t("Draft") : t("Item")}
                     createdLabel={t("Added {date}", {
                       date: formatDate(item.created_at)
                     })}
