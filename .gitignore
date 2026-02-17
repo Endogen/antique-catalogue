@@ -26,4 +26,4 @@ local.properties
 uploads/
 *.db
 .env
-.ralph/ralph.log
+.ralph/
