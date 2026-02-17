@@ -2,14 +2,44 @@
 
 A responsive web platform for cataloguing antique items with custom metadata schemas, image management, and public collection sharing.
 
+<!-- Add a screenshot: place it at docs/screenshot.png and uncomment below -->
+<!-- ![Antique Catalogue](docs/screenshot.png) -->
+
 ## Features
 
-- **Custom Metadata Schemas**: Define per-collection fields (text, number, date, select, etc.)
-- **Image Management**: Upload, resize, and organize item photos from desktop or mobile
-- **Camera Capture**: Take photos directly from your browser on mobile devices
-- **Public Collections**: Share curated collections publicly while keeping others private
-- **User Authentication**: Email verification, password reset, JWT-based sessions
-- **Search & Filter**: Full-text search with filtering and sorting across items
+### Core
+- **Custom Metadata Schemas** — Define per-collection fields (text, number, date, select, checkbox, timestamp) with validation, ordering, and privacy controls
+- **Image Management** — Upload, resize (original/medium/thumb), and reorder item photos with drag support
+- **Camera Capture** — Take photos directly from your browser on mobile devices
+- **Public Collections** — Share curated collections publicly while keeping others private
+- **User Authentication** — Email verification, password reset, JWT-based sessions with refresh tokens
+- **Search & Filter** — Full-text search with metadata filtering and multi-field sorting
+- **Stars** — Star collections and items; leaderboard ranking by earned stars
+- **Activity Log** — Track item/collection creation, updates, and deletions
+- **Schema Templates** — Create reusable metadata schemas, copy between collections
+
+### Speed Capture ⚡
+A mobile-optimized capture-first workflow for fast cataloguing:
+- Full-screen camera interface — no distractions, buttons always visible
+- Two-tap flow: **New Item** creates a draft, **Same Item** adds another photo
+- Live stats counter (items + photos captured)
+- Existing drafts shown as scrollable thumbnails when re-entering a collection
+- Drafts auto-graduate to regular items when you add a name or metadata
+- Draft toggle on collection pages with count indicator
+
+### Profiles & Public Pages
+- **User Profiles** — Custom username, avatar upload (with auto-generated variants)
+- **Public Profile Pages** — `/profile/{username}` showing public collections and star stats
+- **Featured Collections** — Admin-curated featured collection on the homepage
+
+### Admin Panel
+- User management (list, search, activate/deactivate)
+- Collection management (featured collection, public/private toggle)
+- Item management with bulk operations
+- Stats dashboard (total users, collections, featured status)
+
+### Internationalization
+- English and German (auto-detected from browser, switchable in settings)
 
 ## Architecture
 
@@ -33,18 +63,18 @@ A responsive web platform for cataloguing antique items with custom metadata sch
 ## Tech Stack
 
 ### Backend
-- **FastAPI** - Modern Python web framework
-- **SQLAlchemy** - ORM with async support
-- **Alembic** - Database migrations
-- **Pillow** - Image processing (resize, convert to JPG)
-- **SQLite** - Database (easily swappable to PostgreSQL)
+- **FastAPI** — Modern Python web framework
+- **SQLAlchemy** — ORM with type-annotated models
+- **Alembic** — Database migrations (14 migrations)
+- **Pillow** — Image processing (resize, EXIF transpose, JPEG optimization)
+- **SQLite** — Database (easily swappable to PostgreSQL)
+- **Pydantic v2** — Request/response validation
 
 ### Frontend
-- **Next.js 14** - React framework with App Router
-- **Tailwind CSS** - Utility-first styling
-- **shadcn/ui** - Accessible component library
-- **React Query** - Server state management
-- **React Hook Form** - Form handling with Zod validation
+- **Next.js 14** — React framework with App Router
+- **Tailwind CSS** — Utility-first styling
+- **Lucide React** — Icon library
+- **TypeScript** — Full type safety across the frontend
 
 ## Quick Start
 
@@ -62,7 +92,6 @@ A responsive web platform for cataloguing antique items with custom metadata sch
 
 2. Configure environment (optional):
    ```bash
-   # Create .env file for sensitive values
    cat > .env << 'EOF'
    JWT_SECRET=your-secure-random-secret
    SMTP_HOST=mail.example.com
@@ -79,13 +108,11 @@ A responsive web platform for cataloguing antique items with custom metadata sch
    ```
 
 4. Access the application:
-   - Frontend: http://localhost:3010
-   - Backend API: http://localhost:8000
-   - Health check: http://localhost:8000/health
+   - Frontend: `http://localhost:3010`
+   - Backend API: `http://localhost:8000`
+   - Health check: `http://localhost:8000/health`
 
-### Nginx Reverse Proxy (Production)
-
-Example nginx configuration for a domain:
+### Nginx Reverse Proxy
 
 ```nginx
 server {
@@ -115,7 +142,7 @@ server {
 }
 ```
 
-Then enable SSL with certbot:
+Then enable SSL:
 ```bash
 sudo certbot --nginx -d antique.example.com
 ```
@@ -126,18 +153,10 @@ sudo certbot --nginx -d antique.example.com
 
 ```bash
 cd backend
-
-# Create virtual environment
 python3.12 -m venv .venv
 source .venv/bin/activate
-
-# Install dependencies
 pip install -e ".[dev]"
-
-# Run migrations
 alembic upgrade head
-
-# Start development server
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -145,87 +164,122 @@ uvicorn app.main:app --reload --port 8000
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Set API URL for local development
 export NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# Start development server
 npm run dev
 ```
 
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/register` - Create account
-- `POST /auth/verify` - Verify email
-- `POST /auth/login` - Get access token
-- `POST /auth/refresh` - Refresh token
-- `POST /auth/forgot-password` - Request password reset
-- `POST /auth/reset-password` - Reset password
-- `GET /auth/me` - Get current user
-- `DELETE /auth/me` - Delete account
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/register` | Create account |
+| POST | `/auth/verify` | Verify email |
+| POST | `/auth/login` | Get access token |
+| POST | `/auth/refresh` | Refresh token |
+| POST | `/auth/forgot-password` | Request password reset |
+| POST | `/auth/reset-password` | Reset password |
+| GET | `/auth/me` | Get current user |
+| DELETE | `/auth/me` | Delete account |
 
 ### Collections
-- `GET /collections` - List user's collections
-- `POST /collections` - Create collection
-- `GET /collections/{id}` - Get collection
-- `PUT /collections/{id}` - Update collection
-- `DELETE /collections/{id}` - Delete collection
-- `GET /public/collections` - List public collections
-
-### Schema (Field Definitions)
-- `GET /collections/{id}/fields` - List fields
-- `POST /collections/{id}/fields` - Create field
-- `PUT /collections/{id}/fields/{field_id}` - Update field
-- `DELETE /collections/{id}/fields/{field_id}` - Delete field
-- `POST /collections/{id}/fields/reorder` - Reorder fields
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/collections` | List user's collections |
+| POST | `/collections` | Create collection |
+| GET | `/collections/{id}` | Get collection |
+| PATCH | `/collections/{id}` | Update collection |
+| DELETE | `/collections/{id}` | Delete collection |
+| GET | `/public/collections` | List public collections |
+| GET | `/public/collections/featured` | Get featured collection |
 
 ### Items
-- `GET /collections/{id}/items` - List items (with search/filter/sort)
-- `POST /collections/{id}/items` - Create item
-- `GET /collections/{id}/items/{item_id}` - Get item
-- `PUT /collections/{id}/items/{item_id}` - Update item
-- `DELETE /collections/{id}/items/{item_id}` - Delete item
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/collections/{id}/items` | List items (search/filter/sort, `?include_drafts=true`) |
+| POST | `/collections/{id}/items` | Create item |
+| GET | `/collections/{id}/items/{item_id}` | Get item |
+| PATCH | `/collections/{id}/items/{item_id}` | Update item (clears draft flag) |
+| DELETE | `/collections/{id}/items/{item_id}` | Delete item |
+
+### Speed Capture
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/speed-capture/{collection_id}/new` | Create draft item + upload first photo |
+| POST | `/speed-capture/{collection_id}/items/{item_id}/add` | Add photo to existing draft |
+| GET | `/speed-capture/{collection_id}/session` | Get capture session stats |
 
 ### Images
-- `GET /items/{item_id}/images` - List images
-- `POST /items/{item_id}/images` - Upload image
-- `DELETE /items/{item_id}/images/{image_id}` - Delete image
-- `POST /items/{item_id}/images/reorder` - Reorder images
-- `GET /images/{image_id}/{variant}` - Serve image (original/medium/thumb)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/items/{item_id}/images` | Upload image |
+| GET | `/items/{item_id}/images` | List images |
+| PATCH | `/items/{item_id}/images/{image_id}` | Reorder image |
+| DELETE | `/items/{item_id}/images/{image_id}` | Delete image |
+| GET | `/images/{image_id}/{variant}.jpg` | Serve image (`?token=` for private) |
+
+### Profiles
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/profiles/me` | Get own profile |
+| PATCH | `/profiles/me` | Update username |
+| POST | `/profiles/me/avatar` | Upload avatar |
+| DELETE | `/profiles/me/avatar` | Delete avatar |
+| GET | `/profiles/{username}` | Get public profile |
+| GET | `/avatars/{user_id}/{variant}.jpg` | Serve avatar |
+
+### Stars
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/stars/collections` | List starred collections |
+| GET | `/stars/items` | List starred items |
+| POST | `/stars/collections/{id}` | Star collection |
+| DELETE | `/stars/collections/{id}` | Unstar collection |
+| POST | `/stars/collections/{id}/items/{item_id}` | Star item |
+| DELETE | `/stars/collections/{id}/items/{item_id}` | Unstar item |
+
+### Schema & Templates
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/collections/{id}/fields` | List fields |
+| POST | `/collections/{id}/fields` | Create field |
+| PATCH | `/collections/{id}/fields/{field_id}` | Update field |
+| DELETE | `/collections/{id}/fields/{field_id}` | Delete field |
+| PATCH | `/collections/{id}/fields/reorder` | Reorder fields |
+| GET | `/schema-templates` | List templates |
+| POST | `/schema-templates` | Create template |
+| POST | `/schema-templates/{id}/copy` | Copy template |
+
+### Other
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/activity` | Activity log |
+| GET | `/search/items` | Global item search |
+| GET | `/health` | Health check |
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///./data/antique_catalogue.db` | Database connection string |
+| `DATABASE_URL` | auto-detected SQLite | Database connection string |
 | `UPLOADS_PATH` | `./uploads` | Path for uploaded images |
-| `JWT_SECRET` | `change-me` | Secret for JWT signing (change in production!) |
+| `JWT_SECRET` | `change-me` | Secret for JWT signing (**change in production**) |
 | `JWT_ALGORITHM` | `HS256` | JWT algorithm |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token expiry |
-| `AUTO_VERIFY_EMAIL` | `false` | Auto-verify accounts on registration (useful for local/dev) |
-| `REFRESH_TOKEN_COOKIE_PATH` | `/` | Path scope for the refresh token cookie |
-| `ADMIN_EMAIL` | - | Admin login email for /admin |
-| `ADMIN_PASSWORD` | - | Admin login password for /admin |
+| `AUTO_VERIFY_EMAIL` | `false` | Auto-verify on registration (dev only) |
+| `REFRESH_TOKEN_COOKIE_PATH` | `/` | Refresh token cookie scope |
+| `ADMIN_EMAIL` | — | Admin login email |
+| `ADMIN_PASSWORD` | — | Admin login password |
 | `ADMIN_TOKEN_EXPIRE_MINUTES` | `60` | Admin token expiry |
-| `SMTP_HOST` | - | SMTP server hostname |
+| `SMTP_HOST` | — | SMTP server hostname |
 | `SMTP_PORT` | `587` | SMTP server port |
-| `SMTP_USER` | - | SMTP username |
-| `SMTP_PASSWORD` | - | SMTP password |
-| `SMTP_FROM` | - | From address for emails |
+| `SMTP_USER` | — | SMTP username |
+| `SMTP_PASSWORD` | — | SMTP password |
+| `SMTP_FROM` | — | From address for emails |
 | `SMTP_USE_TLS` | `true` | Use STARTTLS |
 
-Note: When `DATABASE_URL` is not set and SQLite is used, the backend resolves
-relative SQLite paths against the backend directory (not the current working
-directory). The default database file lives at `backend/data/antique_catalogue.db`
-in this repository.
-
 ## Testing
-
-### Backend Tests
 
 ```bash
 cd backend
@@ -238,15 +292,8 @@ pytest
 pytest --cov=app --cov-report=term-missing
 
 # Run specific test file
-pytest tests/test_auth.py -v
+pytest tests/test_items.py -v
 ```
-
-### Test Coverage
-
-The backend maintains ~80% test coverage with:
-- Unit tests for services (auth, email, image processing)
-- Integration tests for all API endpoints
-- E2E smoke test covering the full user flow
 
 ## Project Structure
 
@@ -254,20 +301,24 @@ The backend maintains ~80% test coverage with:
 antique-catalogue/
 ├── backend/
 │   ├── app/
-│   │   ├── api/           # Route handlers
-│   │   ├── core/          # Settings, security
+│   │   ├── api/           # Route handlers (auth, items, images, speed_capture, ...)
+│   │   ├── core/          # Settings, security, exceptions
 │   │   ├── db/            # Database setup
 │   │   ├── models/        # SQLAlchemy models
 │   │   ├── schemas/       # Pydantic schemas
-│   │   └── services/      # Business logic
+│   │   └── services/      # Business logic (image processing, metadata, activity)
 │   ├── alembic/           # Database migrations
 │   ├── tests/             # Backend tests
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── frontend/
-│   ├── app/               # Next.js App Router pages
-│   ├── components/        # React components
-│   ├── lib/               # API client, utilities
+│   ├── app/
+│   │   ├── (app)/         # Authenticated pages (dashboard, collections, speed-capture, ...)
+│   │   ├── (auth)/        # Auth pages (login, register, verify, ...)
+│   │   ├── explore/       # Public collection browser
+│   │   └── profile/       # Public profile pages
+│   ├── components/        # React components (app-shell, image-gallery, lightbox, ...)
+│   ├── lib/               # API client, i18n, utilities
 │   ├── Dockerfile
 │   └── package.json
 ├── docker-compose.yml
@@ -280,4 +331,4 @@ MIT
 
 ## Credits
 
-Built with [Codex](https://github.com/openai/codex) using the [Ralph Loop](https://github.com/Endogen/ralph-loop) pattern.
+Built with [Codex](https://github.com/openai/codex) and [Claude](https://claude.ai) using the [Ralph Loop](https://github.com/Endogen/ralph-loop) pattern.
