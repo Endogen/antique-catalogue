@@ -2,8 +2,7 @@
 
 A responsive web platform for cataloguing antique items with custom metadata schemas, image management, and public collection sharing.
 
-<!-- Add a screenshot: place it at docs/screenshot.png and uncomment below -->
-<!-- ![Antique Catalogue](docs/screenshot.png) -->
+![Antique Catalogue](docs/screenshot.png)
 
 ## Features
 
