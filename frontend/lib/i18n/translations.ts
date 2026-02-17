@@ -778,6 +778,7 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "By": "Von",
   "Edit profile": "Profil bearbeiten",
   "Loading profile...": "Profil wird geladen...",
+  "Loading image...": "Bild wird geladen...",
   "Manage how your public archive identity appears to everyone.": "Verwalte, wie deine öffentliche Archiv-Identität für alle erscheint.",
   "Member since {date}": "Mitglied seit {date}",
   "Profile": "Profil",

@@ -81,6 +81,7 @@ def _get_public_item_or_404(db: Session, collection_id: int, item_id: int) -> It
             .where(
                 Item.id == item_id,
                 Item.collection_id == collection_id,
+                Item.is_draft.is_(False),
                 Collection.is_public.is_(True),
             )
         )
@@ -575,7 +576,8 @@ def list_public_items(
     image_count = _image_count_subquery().label("image_count")
     star_count = _item_star_count_subquery().label("star_count")
     query = select(Item, primary_image_id, image_count, star_count).where(
-        Item.collection_id == collection_id
+        Item.collection_id == collection_id,
+        Item.is_draft.is_(False),
     )
     if search_term:
         pattern = f"%{search_term}%"

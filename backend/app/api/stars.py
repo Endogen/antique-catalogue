@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -56,7 +56,10 @@ def _get_item_for_star_or_404(db: Session, collection_id: int, item_id: int, use
             .where(
                 Item.id == item_id,
                 Item.collection_id == collection_id,
-                or_(Collection.owner_id == user_id, Collection.is_public.is_(True)),
+                or_(
+                    Collection.owner_id == user_id,
+                    and_(Collection.is_public.is_(True), Item.is_draft.is_(False)),
+                ),
             )
         )
         .scalars()
@@ -91,6 +94,7 @@ def list_starred_collections(
 ) -> list[StarredCollectionResponse]:
     item_counts = (
         select(Item.collection_id, func.count(Item.id).label("item_count"))
+        .where(Item.is_draft.is_(False))
         .group_by(Item.collection_id)
         .subquery()
     )
@@ -184,7 +188,10 @@ def list_starred_items(
         .outerjoin(star_counts, star_counts.c.item_id == Item.id)
         .where(
             ItemStar.user_id == current_user.id,
-            or_(Collection.owner_id == current_user.id, Collection.is_public.is_(True)),
+            or_(
+                Collection.owner_id == current_user.id,
+                and_(Collection.is_public.is_(True), Item.is_draft.is_(False)),
+            ),
         )
     )
 

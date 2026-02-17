@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { X } from "lucide-react";
 
 import { useI18n } from "@/components/i18n-provider";
+import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
 
 type LightboxProps = {
@@ -15,6 +17,7 @@ type LightboxProps = {
 
 export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
   const { t } = useI18n();
+  const resolvedSrc = useAuthenticatedImageUrl(src);
   React.useEffect(() => {
     if (!open) {
       return;
@@ -59,11 +62,20 @@ export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
         )}
         onClick={(event) => event.stopPropagation()}
       >
-        <img
-          src={src}
-          alt={alt ?? t("Expanded image")}
-          className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain"
-        />
+        {resolvedSrc ? (
+          <Image
+            src={resolvedSrc}
+            alt={alt ?? t("Expanded image")}
+            width={1600}
+            height={1200}
+            className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain"
+            unoptimized
+          />
+        ) : (
+          <p className="px-6 py-12 text-center text-sm text-stone-200">
+            {t("Loading image...")}
+          </p>
+        )}
         {alt ? (
           <p className="mt-3 text-center text-xs text-stone-200">{alt}</p>
         ) : null}

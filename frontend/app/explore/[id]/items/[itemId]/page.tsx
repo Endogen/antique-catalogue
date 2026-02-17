@@ -530,10 +530,13 @@ export default function PublicItemDetailPage() {
                         className="block w-full overflow-hidden rounded-2xl border border-stone-200 bg-stone-50"
                         onClick={() => setLightboxOpen(true)}
                       >
-                        <img
+                        <Image
                           src={imageApi.url(selectedImage.id, "medium")}
-                          alt={itemState.data?.name}
+                          alt={itemState.data?.name ?? t("Item image")}
+                          width={1200}
+                          height={720}
                           className="block h-[360px] w-full object-cover"
+                          unoptimized
                         />
                       </button>
                     ) : null}
@@ -549,10 +552,13 @@ export default function PublicItemDetailPage() {
                           }`}
                           onClick={() => setSelectedImageId(image.id)}
                         >
-                          <img
+                          <Image
                             src={imageApi.url(image.id, "thumb")}
-                            alt={itemState.data?.name}
+                            alt={itemState.data?.name ?? t("Item image")}
+                            width={320}
+                            height={80}
                             className="block h-20 w-full object-cover"
+                            unoptimized
                           />
                         </button>
                       ))}

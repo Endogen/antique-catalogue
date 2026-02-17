@@ -5,6 +5,7 @@ import asyncio
 import httpx
 
 from app.core.security import hash_password
+from app.models.item import Item
 from app.models.user import User
 
 
@@ -76,6 +77,18 @@ async def _create_item(
     )
     assert response.status_code == 201
     return response.json()
+
+
+def _set_item_draft(session_factory, item_id: int, *, is_draft: bool) -> None:
+    session = session_factory()
+    try:
+        item = session.get(Item, item_id)
+        assert item is not None
+        item.is_draft = is_draft
+        session.add(item)
+        session.commit()
+    finally:
+        session.close()
 
 
 def test_item_crud_and_queries(app_with_db, db_session_factory) -> None:
@@ -412,6 +425,99 @@ def test_public_items_endpoints(app_with_db, db_session_factory) -> None:
                 f"/public/collections/{private_collection_id}/items/{public_item['id']}",
             )
             assert private_detail.status_code == 404
+
+    asyncio.run(_flow())
+
+
+def test_item_draft_visibility_and_promotion(app_with_db, db_session_factory) -> None:
+    email = "draft-items@example.com"
+    password = "strongpass"
+    _create_user(db_session_factory, email=email, password=password, verified=True)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            access_token = await _login(client, email=email, password=password)
+            headers = {"Authorization": f"Bearer {access_token}"}
+
+            collection_id = await _create_collection(
+                client,
+                headers,
+                name="Draft Visibility",
+                is_public=True,
+            )
+            await _create_field(
+                client,
+                headers,
+                collection_id,
+                {
+                    "name": "Condition",
+                    "field_type": "select",
+                    "is_required": True,
+                    "options": {"options": ["Excellent"]},
+                },
+            )
+
+            published_item = await _create_item(
+                client,
+                headers,
+                collection_id,
+                {
+                    "name": "Published Item",
+                    "metadata": {"Condition": "Excellent"},
+                },
+            )
+            draft_item = await _create_item(
+                client,
+                headers,
+                collection_id,
+                {
+                    "name": "Draft Item",
+                    "metadata": {"Condition": "Excellent"},
+                },
+            )
+            _set_item_draft(db_session_factory, int(draft_item["id"]), is_draft=True)
+
+            owner_default = await client.get(
+                f"/collections/{collection_id}/items",
+                headers=headers,
+            )
+            assert owner_default.status_code == 200
+            assert [row["id"] for row in owner_default.json()] == [published_item["id"]]
+
+            owner_with_drafts = await client.get(
+                f"/collections/{collection_id}/items?include_drafts=true",
+                headers=headers,
+            )
+            assert owner_with_drafts.status_code == 200
+            assert [row["id"] for row in owner_with_drafts.json()] == [
+                draft_item["id"],
+                published_item["id"],
+            ]
+            assert owner_with_drafts.json()[0]["is_draft"] is True
+
+            public_list = await client.get(f"/public/collections/{collection_id}/items")
+            assert public_list.status_code == 200
+            assert [row["id"] for row in public_list.json()] == [published_item["id"]]
+
+            public_draft = await client.get(
+                f"/public/collections/{collection_id}/items/{draft_item['id']}",
+            )
+            assert public_draft.status_code == 404
+
+            promote = await client.patch(
+                f"/collections/{collection_id}/items/{draft_item['id']}",
+                headers=headers,
+                json={"name": "Published Draft"},
+            )
+            assert promote.status_code == 200
+            assert promote.json()["is_draft"] is False
+
+            public_after_promote = await client.get(
+                f"/public/collections/{collection_id}/items/{draft_item['id']}",
+            )
+            assert public_after_promote.status_code == 200
+            assert public_after_promote.json()["id"] == draft_item["id"]
 
     asyncio.run(_flow())
 

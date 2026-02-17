@@ -238,11 +238,13 @@ export function HomePageClient({
                         >
                           <div className="h-20 overflow-hidden rounded-xl">
                             {imageId ? (
-                              <img
+                              <Image
                                 src={imageApi.url(imageId, "medium")}
                                 alt={item.name}
+                                width={320}
+                                height={80}
                                 className="block h-full w-full object-cover"
-                                loading="lazy"
+                                unoptimized
                               />
                             ) : (
                               <div className="h-full w-full bg-gradient-to-br from-stone-200 via-stone-100 to-amber-100" />

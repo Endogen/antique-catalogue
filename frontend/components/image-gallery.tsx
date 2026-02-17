@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,6 +19,7 @@ import {
   isApiError,
   type ItemImageResponse
 } from "@/lib/api";
+import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
 
 const sortImages = (items: ItemImageResponse[]) =>
@@ -44,6 +46,35 @@ const formatDate = (value: string | null | undefined, locale: string) => {
     year: "numeric"
   }).format(parsed);
 };
+
+function GalleryPreviewImage({
+  src,
+  alt
+}: {
+  src: string;
+  alt: string;
+}) {
+  const resolvedSrc = useAuthenticatedImageUrl(src);
+  if (!resolvedSrc) {
+    return (
+      <div
+        aria-hidden="true"
+        className="block h-36 w-full bg-gradient-to-br from-stone-100 to-stone-200"
+      />
+    );
+  }
+  return (
+    <Image
+      src={resolvedSrc}
+      alt={alt}
+      width={640}
+      height={360}
+      className="block h-36 w-full object-cover"
+      draggable={false}
+      unoptimized
+    />
+  );
+}
 
 type ImageGalleryProps = {
   itemId?: number | string | null;
@@ -413,12 +444,9 @@ export function ImageGallery({
                         })
                       }
                     >
-                      <img
+                      <GalleryPreviewImage
                         src={imageApi.url(image.id, "medium")}
                         alt={image.filename || t("Item image")}
-                        className="block h-36 w-full object-cover"
-                        draggable={false}
-                        loading="lazy"
                       />
                     </button>
                   </div>

@@ -5,8 +5,9 @@ Revises: 0013_add_avatar_to_users
 Create Date: 2026-02-17 01:00:00
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "0014_add_is_draft_to_items"
 down_revision = "0013_add_avatar_to_users"

@@ -69,6 +69,13 @@ def _collection_item_count(collection_id: int):
     return select(func.count(Item.id)).where(Item.collection_id == collection_id)
 
 
+def _public_collection_item_count(collection_id: int):
+    return select(func.count(Item.id)).where(
+        Item.collection_id == collection_id,
+        Item.is_draft.is_(False),
+    )
+
+
 def _collection_star_count(collection_id: int):
     return select(func.count(CollectionStar.id)).where(
         CollectionStar.collection_id == collection_id
@@ -284,6 +291,7 @@ def list_public_collections(db: Session = Depends(get_db)) -> list[CollectionRes
             Item.collection_id,
             func.count(Item.id).label("item_count"),
         )
+        .where(Item.is_draft.is_(False))
         .group_by(Item.collection_id)
         .subquery()
     )
@@ -322,7 +330,7 @@ def get_featured_collection(db: Session = Depends(get_db)) -> CollectionResponse
         .first()
     )
     if collection:
-        item_count = db.execute(_collection_item_count(collection.id)).scalar_one()
+        item_count = db.execute(_public_collection_item_count(collection.id)).scalar_one()
         star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
         owner_username = db.execute(
             select(User.username).where(User.id == collection.owner_id)
@@ -352,7 +360,11 @@ def get_featured_collection_items(db: Session = Depends(get_db)) -> list[Feature
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
     rows = db.execute(
         select(Item, primary_image_id)
-        .where(Item.collection_id == collection_id, Item.is_featured.is_(True))
+        .where(
+            Item.collection_id == collection_id,
+            Item.is_featured.is_(True),
+            Item.is_draft.is_(False),
+        )
         .order_by(Item.created_at.desc(), Item.id.desc())
         .limit(4)
     ).all()
@@ -367,7 +379,7 @@ def get_featured_collection_items(db: Session = Depends(get_db)) -> list[Feature
 @public_router.get("/{collection_id}", response_model=CollectionResponse)
 def get_public_collection(collection_id: int, db: Session = Depends(get_db)) -> CollectionResponse:
     collection = _get_public_collection_or_404(db, collection_id)
-    item_count = db.execute(_collection_item_count(collection.id)).scalar_one()
+    item_count = db.execute(_public_collection_item_count(collection.id)).scalar_one()
     star_count = db.execute(_collection_star_count(collection.id)).scalar_one()
     owner_username = db.execute(
         select(User.username).where(User.id == collection.owner_id)

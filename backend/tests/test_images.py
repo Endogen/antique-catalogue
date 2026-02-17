@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import contextmanager
+from importlib.util import find_spec
 from io import BytesIO
 from pathlib import Path
 
@@ -20,7 +21,12 @@ from app.core.security import hash_password
 from app.core.settings import settings
 from app.models.user import User
 
-pytestmark = pytest.mark.skipif(not PIL_AVAILABLE, reason="Pillow not installed")
+MULTIPART_AVAILABLE = find_spec("multipart") is not None
+
+pytestmark = pytest.mark.skipif(
+    not PIL_AVAILABLE or not MULTIPART_AVAILABLE,
+    reason="Pillow or python-multipart not installed",
+)
 
 
 def _create_user(session_factory, *, email: str, password: str, verified: bool = True) -> int:

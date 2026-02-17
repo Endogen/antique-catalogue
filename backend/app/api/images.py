@@ -3,12 +3,12 @@ from __future__ import annotations
 from importlib.util import find_spec
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_optional_user, resolve_user_from_token
+from app.api.deps import get_current_user, get_optional_user
 from app.core.settings import settings
 from app.db.session import get_db
 from app.models.collection import Collection
@@ -301,15 +301,11 @@ def delete_image(
 def serve_image(
     image_id: int,
     variant: str,
-    token: str | None = Query(None, description="Bearer token for img-tag access"),
     current_user: User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ) -> FileResponse:
-    user = current_user
-    if user is None and token:
-        user = resolve_user_from_token(token, db)
     image, item, collection = _get_image_with_context(db, image_id)
-    _require_item_access(collection, user)
+    _require_item_access(collection, current_user)
 
     try:
         filename = build_variant_filename(image.id, variant)

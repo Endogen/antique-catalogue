@@ -77,7 +77,7 @@ def _earned_stars_leaderboard_subquery():
                 ItemStar.user_id != Collection.owner_id,
             ),
         )
-        .where(Collection.is_public.is_(True))
+        .where(Collection.is_public.is_(True), Item.is_draft.is_(False))
         .group_by(Collection.owner_id)
     )
 
@@ -106,6 +106,7 @@ def _build_public_profile_response(db: Session, user: User) -> PublicProfileResp
         .where(
             Collection.owner_id == user.id,
             Collection.is_public.is_(True),
+            Item.is_draft.is_(False),
         )
     ).scalar_one()
 
@@ -146,6 +147,7 @@ def _collection_item_counts_subquery():
             Item.collection_id,
             func.count(Item.id).label("item_count"),
         )
+        .where(Item.is_draft.is_(False))
         .group_by(Item.collection_id)
         .subquery()
     )

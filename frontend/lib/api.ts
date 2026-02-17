@@ -1203,13 +1203,8 @@ export const imageApi = {
     apiRequest<MessageResponse>(`/items/${itemId}/images/${imageId}`, {
       method: "DELETE"
     }),
-  url: (imageId: number | string, variant: "original" | "medium" | "thumb") => {
-    const base = buildApiUrl(`/images/${imageId}/${variant}.jpg`);
-    const token = isBrowser()
-      ? window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)
-      : null;
-    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
-  },
+  url: (imageId: number | string, variant: "original" | "medium" | "thumb") =>
+    buildApiUrl(`/images/${imageId}/${variant}.jpg`),
 };
 
 export const speedCaptureApi = {

@@ -77,33 +77,6 @@ def get_current_user(
     return user
 
 
-def resolve_user_from_token(token: str, db: Session) -> User | None:
-    """Resolve a user from a raw Bearer token string (for query-param auth)."""
-    token = token.strip()
-    if not token:
-        return None
-
-    try:
-        payload = decode_token(token)
-    except TokenError:
-        return None
-
-    if payload.get("type") != "access":
-        return None
-
-    subject = payload.get("sub")
-    try:
-        user_id = int(subject)
-    except (TypeError, ValueError):
-        return None
-
-    user = db.get(User, user_id)
-    if not user or not user.is_active or not user.is_verified:
-        return None
-
-    return user
-
-
 def get_optional_user(
     authorization: str | None = Header(default=None),
     db: Session = Depends(get_db),

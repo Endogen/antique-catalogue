@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowUpRight, Image as ImageIcon, Star } from "lucide-react";
 
+import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
 
 type ItemPreviewMetadataEntry = {
@@ -68,6 +70,7 @@ export function ItemPreviewCard({
     : descriptionFallback;
   const visibleMetadata = metadata.slice(0, 2);
   const hasOverflowMetadata = metadata.length > visibleMetadata.length;
+  const resolvedImageSrc = useAuthenticatedImageUrl(imageSrc ?? null);
 
   return (
     <article
@@ -79,12 +82,14 @@ export function ItemPreviewCard({
     >
       <Link href={href} className="flex flex-1 flex-col">
         <div className="h-44 overflow-hidden rounded-2xl border border-stone-100 bg-stone-50">
-          {imageSrc ? (
-            <img
-              src={imageSrc}
+          {resolvedImageSrc ? (
+            <Image
+              src={resolvedImageSrc}
               alt={imageAlt ?? title}
+              width={640}
+              height={352}
               className="block h-full w-full object-cover"
-              loading="lazy"
+              unoptimized
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-stone-100 via-stone-50 to-amber-100/50 text-stone-500">

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -26,6 +27,7 @@ import {
   type ItemResponse,
 } from "@/lib/api";
 import { useI18n } from "@/components/i18n-provider";
+import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -57,6 +59,31 @@ type CaptureState = {
   existingDrafts: ItemResponse[];
   existingDraftsLoading: boolean;
 };
+
+function AuthenticatedImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+}) {
+  const resolvedSrc = useAuthenticatedImageUrl(src);
+  if (!resolvedSrc) {
+    return <div aria-hidden="true" className={cn("bg-stone-100", className)} />;
+  }
+  return (
+    <Image
+      src={resolvedSrc}
+      alt={alt}
+      width={512}
+      height={512}
+      className={className}
+      unoptimized
+    />
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Collection Picker                                                  */
@@ -176,7 +203,7 @@ function ThumbnailStrip({
           key={img.id}
           className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-sm"
         >
-          <img
+          <AuthenticatedImage
             src={imageApi.url(img.imageId, "thumb")}
             alt=""
             className="h-full w-full object-cover"
@@ -301,7 +328,7 @@ function CaptureScreen({
                 className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-stone-100 shadow-sm"
               >
                 {draft.primary_image_id ? (
-                  <img
+                  <AuthenticatedImage
                     src={imageApi.url(draft.primary_image_id, "thumb")}
                     alt={draft.name}
                     className="h-full w-full object-cover"
@@ -447,7 +474,7 @@ function ReviewScreen({
           >
             {item.images[0] ? (
               <div className="aspect-square overflow-hidden bg-stone-100">
-                <img
+                <AuthenticatedImage
                   src={imageApi.url(item.images[0].imageId, "thumb")}
                   alt={item.name}
                   className="h-full w-full object-cover transition group-hover:scale-105"
@@ -547,26 +574,24 @@ export default function SpeedCapturePage() {
       ...s,
       status: "capturing",
       selectedCollection: c,
+      items: [],
+      currentItemId: null,
+      uploadError: null,
+      stats: { items: 0, images: 0 },
+      existingDrafts: [],
       existingDraftsLoading: true,
     }));
     try {
-      const [drafts, session] = await Promise.all([
-        itemApi.list(c.id, {
-          includeDrafts: true,
-          limit: 100,
-          sort: "-created_at",
-        }),
-        speedCaptureApi.session(c.id),
-      ]);
+      const drafts = await itemApi.list(c.id, {
+        includeDrafts: true,
+        limit: 100,
+        sort: "-created_at",
+      });
       const draftItems = drafts.filter((item) => item.is_draft);
       setState((s) => ({
         ...s,
         existingDrafts: draftItems,
         existingDraftsLoading: false,
-        stats: {
-          items: session.draft_count,
-          images: session.total_images,
-        },
       }));
     } catch {
       setState((s) => ({ ...s, existingDraftsLoading: false }));
@@ -658,6 +683,12 @@ export default function SpeedCapturePage() {
         ...s,
         status: "pick-collection",
         selectedCollection: null,
+        items: [],
+        currentItemId: null,
+        uploadError: null,
+        stats: { items: 0, images: 0 },
+        existingDrafts: [],
+        existingDraftsLoading: false,
       }));
     }
   };
