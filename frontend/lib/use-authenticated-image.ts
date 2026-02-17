@@ -11,12 +11,17 @@ export function useAuthenticatedImageUrl(url: string | null): string | null {
 
   React.useEffect(() => {
     if (!url) {
-      setBlobUrl(null);
+      setBlobUrl((previous) => {
+        if (previous) {
+          URL.revokeObjectURL(previous);
+        }
+        return null;
+      });
       return;
     }
 
-    let revoked = false;
     let objectUrl: string | null = null;
+    const controller = new AbortController();
 
     const fetchImage = async () => {
       try {
@@ -30,15 +35,29 @@ export function useAuthenticatedImageUrl(url: string | null): string | null {
           headers["Authorization"] = `Bearer ${token}`;
         }
 
-        const response = await fetch(url, { headers });
-        if (!response.ok) return;
+        const response = await fetch(url, {
+          headers,
+          cache: "no-store",
+          signal: controller.signal
+        });
+        if (!response.ok) {
+          setBlobUrl(null);
+          return;
+        }
 
         const blob = await response.blob();
-        if (revoked) return;
-
         objectUrl = URL.createObjectURL(blob);
-        setBlobUrl(objectUrl);
-      } catch {
+        setBlobUrl((previous) => {
+          if (previous) {
+            URL.revokeObjectURL(previous);
+          }
+          return objectUrl;
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        setBlobUrl(null);
         // Silently fail — image just won't show
       }
     };
@@ -46,7 +65,7 @@ export function useAuthenticatedImageUrl(url: string | null): string | null {
     void fetchImage();
 
     return () => {
-      revoked = true;
+      controller.abort();
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }

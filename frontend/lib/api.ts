@@ -934,6 +934,10 @@ export const collectionApi = {
     apiRequest<MessageResponse>(`/collections/${collectionId}/apply-template`, {
       method: "POST",
       body: payload
+    }),
+  delete: (collectionId: number | string) =>
+    apiRequest<MessageResponse>(`/collections/${collectionId}`, {
+      method: "DELETE"
     })
 };
 

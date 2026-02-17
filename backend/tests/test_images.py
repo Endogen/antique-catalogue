@@ -225,6 +225,11 @@ def test_image_serving_public_access(app_with_db, db_session_factory, tmp_path) 
             )
             assert owner_serve.status_code == 200
             assert owner_serve.headers["content-type"] == "image/jpeg"
+            assert owner_serve.headers["cache-control"] == (
+                "no-store, no-cache, must-revalidate, max-age=0"
+            )
+            assert owner_serve.headers["pragma"] == "no-cache"
+            assert owner_serve.headers["expires"] == "0"
 
             invalid_variant = await client.get(
                 f"/images/{image_id}/giant.jpg",
@@ -241,6 +246,9 @@ def test_image_serving_public_access(app_with_db, db_session_factory, tmp_path) 
 
             public_serve = await client.get(f"/images/{image_id}/thumb.jpg")
             assert public_serve.status_code == 200
+            assert public_serve.headers["cache-control"] == (
+                "no-store, no-cache, must-revalidate, max-age=0"
+            )
 
             other_serve = await client.get(
                 f"/images/{image_id}/thumb.jpg",

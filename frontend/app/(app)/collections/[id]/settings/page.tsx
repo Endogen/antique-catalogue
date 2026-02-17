@@ -10,7 +10,9 @@ import {
   Lock,
   RefreshCcw,
   Search,
-  Settings2
+  Settings2,
+  ShieldAlert,
+  Trash2
 } from "lucide-react";
 
 import {
@@ -20,6 +22,7 @@ import {
 import { SchemaBuilder } from "@/components/schema-builder";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import {
   collectionApi,
   fieldApi,
@@ -29,6 +32,13 @@ import {
   type SchemaTemplateSummaryResponse
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+const DELETE_TOKEN = "DELETE";
+
+type DeleteState = {
+  status: "idle" | "working" | "error";
+  message?: string;
+};
 
 const buildPayload = (values: CollectionFormValues) => ({
   name: values.name.trim(),
@@ -44,8 +54,14 @@ type LoadState = {
 
 export default function CollectionSettingsPage() {
   const params = useParams();
+  const router = useRouter();
   const { t, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  const [deletePhrase, setDeletePhrase] = React.useState("");
+  const [deleteState, setDeleteState] = React.useState<DeleteState>({
+    status: "idle"
+  });
+  const confirmDeleteMatches = deletePhrase.trim().toUpperCase() === DELETE_TOKEN;
   const [state, setState] = React.useState<LoadState>({
     status: "loading"
   });
@@ -271,6 +287,25 @@ export default function CollectionSettingsPage() {
       );
     } finally {
       setIsApplyingTemplate(false);
+    }
+  };
+
+  const handleDeleteCollection = async () => {
+    if (!collectionId || deleteState.status === "working") {
+      return;
+    }
+
+    setDeleteState({ status: "working" });
+    try {
+      await collectionApi.delete(collectionId);
+      router.push("/collections");
+    } catch (error) {
+      setDeleteState({
+        status: "error",
+        message: isApiError(error)
+          ? error.detail
+          : "Unable to delete collection."
+      });
     }
   };
 
@@ -589,6 +624,68 @@ export default function CollectionSettingsPage() {
                   "Define the metadata fields for this collection to begin adding items in the next step."
                 )}
               </p>
+            </div>
+
+            <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
+                    {t("Danger zone")}
+                  </p>
+                  <h3 className="font-display mt-3 text-2xl text-stone-900">
+                    {t("Permanently delete this collection.")}
+                  </h3>
+                  <p className="mt-3 text-sm text-rose-700">
+                    {t(
+                      "This removes the collection, all its items, and any attached imagery. Type {token} to confirm.",
+                      { token: DELETE_TOKEN }
+                    )}
+                  </p>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+                  <ShieldAlert className="h-6 w-6" />
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4">
+                <div>
+                  <label
+                    className="text-sm font-medium text-rose-700"
+                    htmlFor="delete-collection-confirm"
+                  >
+                    {t("Confirmation phrase")}
+                  </label>
+                  <input
+                    id="delete-collection-confirm"
+                    type="text"
+                    className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    value={deletePhrase}
+                    onChange={(event) => setDeletePhrase(event.target.value)}
+                    placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-rose-200 text-rose-700 hover:bg-rose-100"
+                  disabled={!confirmDeleteMatches || deleteState.status === "working"}
+                  onClick={handleDeleteCollection}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deleteState.status === "working"
+                    ? t("Deleting...")
+                    : t("Delete collection")}
+                </Button>
+              </div>
+
+              {deleteState.status === "error" && deleteState.message ? (
+                <div
+                  role="alert"
+                  className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
+                >
+                  {t(deleteState.message)}
+                </div>
+              ) : null}
             </div>
           </aside>
         </section>

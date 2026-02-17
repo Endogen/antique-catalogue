@@ -29,6 +29,11 @@ serve_router = APIRouter(prefix="/images", tags=["images"])
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 MULTIPART_AVAILABLE = find_spec("multipart") is not None
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
 
 
 def _get_item_or_404(db: Session, item_id: int, owner_id: int) -> Item:
@@ -319,4 +324,9 @@ def serve_image(
     path = output_dir / filename
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
-    return FileResponse(path, media_type="image/jpeg", filename=filename)
+    return FileResponse(
+        path,
+        media_type="image/jpeg",
+        filename=filename,
+        headers=NO_CACHE_HEADERS,
+    )
