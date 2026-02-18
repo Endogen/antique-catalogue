@@ -509,6 +509,33 @@ export default function PublicCollectionPage() {
               </Link>
             </Button>
             <div className="flex flex-wrap items-center gap-2">
+              {showAuthenticatedCtas ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={
+                    collectionStarred
+                      ? "w-9 px-0 border-amber-300 text-amber-700"
+                      : "w-9 px-0"
+                  }
+                  onClick={handleToggleCollectionStar}
+                  disabled={isUpdatingCollectionStar}
+                  aria-label={collectionStarred ? t("Starred") : t("Star")}
+                  title={collectionStarred ? t("Starred") : t("Star")}
+                >
+                  <Star className={`h-4 w-4 ${collectionStarred ? "fill-current" : ""}`} />
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-9 px-0"
+                onClick={handleRefresh}
+                aria-label={t("Refresh")}
+                title={t("Refresh")}
+              >
+                <RefreshCcw className="h-4 w-4" />
+              </Button>
               <SocialShareActions
                 path={collectionId ? `/explore/${collectionId}` : null}
                 title={
@@ -521,22 +548,9 @@ export default function PublicCollectionPage() {
                     ? collectionState.data.description
                     : undefined
                 }
+                iconOnly
+                copyFirst
               />
-              {showAuthenticatedCtas ? (
-                <Button
-                  variant={collectionStarred ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={handleToggleCollectionStar}
-                  disabled={isUpdatingCollectionStar}
-                >
-                  <Star className={`h-4 w-4 ${collectionStarred ? "fill-current" : ""}`} />
-                  {collectionStarred ? t("Starred") : t("Star")}
-                </Button>
-              ) : null}
-              <Button variant="outline" size="sm" onClick={handleRefresh}>
-                <RefreshCcw className="h-4 w-4" />
-                {t("Refresh")}
-              </Button>
             </div>
           </div>
           {collectionStarError ? (
