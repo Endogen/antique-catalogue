@@ -16,6 +16,7 @@ import {
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
+import { SocialShareActions } from "@/components/social-share-actions";
 import { Button } from "@/components/ui/button";
 import {
   avatarUrl,
@@ -227,6 +228,12 @@ export default function PublicProfilePage() {
                   <p className="mt-1 text-sm text-stone-600">
                     {t("Member since {date}", { date: formatDate(state.data.created_at) })}
                   </p>
+                  <SocialShareActions
+                    className="mt-4"
+                    path={`/profile/${encodeURIComponent(state.data.username)}`}
+                    title={`@${state.data.username}`}
+                    text={`${state.data.public_collection_count} public collections · ${state.data.public_item_count} public items`}
+                  />
                 </div>
               </div>
             </div>

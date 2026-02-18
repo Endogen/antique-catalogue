@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ItemPreviewCard } from "@/components/item-preview-card";
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
+import { SocialShareActions } from "@/components/social-share-actions";
 import {
   isApiError,
   imageApi,
@@ -508,6 +509,19 @@ export default function PublicCollectionPage() {
               </Link>
             </Button>
             <div className="flex flex-wrap items-center gap-2">
+              <SocialShareActions
+                path={collectionId ? `/explore/${collectionId}` : null}
+                title={
+                  collectionState.status === "ready" && collectionState.data
+                    ? collectionState.data.name
+                    : t("Public collection")
+                }
+                text={
+                  collectionState.status === "ready" && collectionState.data
+                    ? collectionState.data.description
+                    : undefined
+                }
+              />
               {showAuthenticatedCtas ? (
                 <Button
                   variant={collectionStarred ? "secondary" : "outline"}

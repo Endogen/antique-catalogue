@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Lightbox } from "@/components/lightbox";
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
+import { SocialShareActions } from "@/components/social-share-actions";
 import {
   imageApi,
   isApiError,
@@ -368,6 +369,23 @@ export default function PublicItemDetailPage() {
                 </Link>
               </Button>
               <div className="flex flex-wrap items-center gap-2">
+                <SocialShareActions
+                  path={
+                    collectionId && itemIdParam
+                      ? `/explore/${collectionId}/items/${itemIdParam}`
+                      : null
+                  }
+                  title={
+                    itemState.status === "ready" && itemState.data
+                      ? itemState.data.name
+                      : t("Item detail")
+                  }
+                  text={
+                    itemState.status === "ready" && itemState.data
+                      ? itemState.data.notes
+                      : undefined
+                  }
+                />
                 {showAuthenticatedCtas ? (
                   <button
                     type="button"
