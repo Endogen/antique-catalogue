@@ -369,6 +369,32 @@ export default function PublicItemDetailPage() {
                 </Link>
               </Button>
               <div className="flex flex-wrap items-center gap-2">
+                {showAuthenticatedCtas ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleItemStar}
+                    disabled={isUpdatingItemStar}
+                  >
+                    <Star className={`h-4 w-4 text-amber-600 ${itemStarred ? "fill-current" : ""}`} />
+                    {itemState.data?.star_count ?? 0}
+                  </Button>
+                ) : (
+                  <span className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium">
+                    <Star className="h-4 w-4 text-amber-600" />
+                    {itemState.data?.star_count ?? 0}
+                  </span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-9 px-0"
+                  onClick={handleRefresh}
+                  aria-label={t("Refresh")}
+                  title={t("Refresh")}
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                </Button>
                 <SocialShareActions
                   path={
                     collectionId && itemIdParam
@@ -385,27 +411,9 @@ export default function PublicItemDetailPage() {
                       ? itemState.data.notes
                       : undefined
                   }
+                  iconOnly
+                  copyFirst
                 />
-                {showAuthenticatedCtas ? (
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-xs font-medium text-stone-700 shadow-sm transition hover:border-amber-300 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={handleToggleItemStar}
-                    disabled={isUpdatingItemStar}
-                  >
-                    <Star className={`h-3.5 w-3.5 text-amber-600 ${itemStarred ? "fill-current" : ""}`} />
-                    {itemState.data?.star_count ?? 0}
-                  </button>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-white/90 px-3 py-2 text-xs font-medium text-stone-700 shadow-sm">
-                    <Star className="h-3.5 w-3.5 text-amber-600" />
-                    {itemState.data?.star_count ?? 0}
-                  </span>
-                )}
-                <Button variant="outline" size="sm" onClick={handleRefresh}>
-                  <RefreshCcw className="h-4 w-4" />
-                  {t("Refresh")}
-                </Button>
               </div>
             </div>
             {itemStarError ? (

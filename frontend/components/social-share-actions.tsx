@@ -13,6 +13,8 @@ type SocialShareActionsProps = {
   title: string;
   text?: string | null;
   className?: string;
+  iconOnly?: boolean;
+  copyFirst?: boolean;
 };
 
 const buildShareText = (title: string, text?: string | null): string => {
@@ -28,7 +30,9 @@ export function SocialShareActions({
   path,
   title,
   text,
-  className
+  className,
+  iconOnly = false,
+  copyFirst = false
 }: SocialShareActionsProps) {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -101,17 +105,43 @@ export function SocialShareActions({
   }, [handleCopyLink, resolveShareUrl, t, text, title, toast]);
 
   const disabled = !path;
+  const iconButtonClassName = iconOnly ? "w-9 px-0" : undefined;
+  const copyButtonVariant = iconOnly ? "outline" : "ghost";
+
+  const shareButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      className={iconButtonClassName}
+      onClick={() => void handleNativeShare()}
+      disabled={disabled}
+      aria-label={t("Share")}
+      title={t("Share")}
+    >
+      <Share2 className="h-4 w-4" />
+      {!iconOnly ? t("Share") : null}
+    </Button>
+  );
+
+  const copyButton = (
+    <Button
+      variant={copyButtonVariant}
+      size="sm"
+      className={iconButtonClassName}
+      onClick={() => void handleCopyLink()}
+      disabled={disabled}
+      aria-label={t("Copy link")}
+      title={t("Copy link")}
+    >
+      <Copy className="h-4 w-4" />
+      {!iconOnly ? t("Copy link") : null}
+    </Button>
+  );
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <Button variant="outline" size="sm" onClick={() => void handleNativeShare()} disabled={disabled}>
-        <Share2 className="h-4 w-4" />
-        {t("Share")}
-      </Button>
-      <Button variant="ghost" size="sm" onClick={() => void handleCopyLink()} disabled={disabled}>
-        <Copy className="h-4 w-4" />
-        {t("Copy link")}
-      </Button>
+      {copyFirst ? copyButton : shareButton}
+      {copyFirst ? shareButton : copyButton}
     </div>
   );
 }
