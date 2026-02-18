@@ -169,7 +169,7 @@ export function HomePageClient({
                 ))}
               </div>
             </div>
-            <div className="flex-1 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+            <div className="flex-1 animate-in slide-in-from-bottom-8 duration-700 delay-150">
               <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-[0_20px_80px_-40px_rgba(15,23,42,0.4)]">
                 <div className="flex items-center justify-between">
                   <p className="text-sm uppercase tracking-[0.3em] text-stone-400">

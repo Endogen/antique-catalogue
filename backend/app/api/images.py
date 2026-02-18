@@ -34,6 +34,9 @@ NO_CACHE_HEADERS = {
     "Pragma": "no-cache",
     "Expires": "0",
 }
+PUBLIC_CACHE_HEADERS = {
+    "Cache-Control": "public, max-age=31536000, immutable",
+}
 
 
 def _get_item_or_404(db: Session, item_id: int, owner_id: int) -> Item:
@@ -324,9 +327,10 @@ def serve_image(
     path = output_dir / filename
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    headers = PUBLIC_CACHE_HEADERS if collection.is_public else NO_CACHE_HEADERS
     return FileResponse(
         path,
         media_type="image/jpeg",
         filename=filename,
-        headers=NO_CACHE_HEADERS,
+        headers=headers,
     )
