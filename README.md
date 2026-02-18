@@ -8,7 +8,7 @@ A responsive web platform for cataloguing antique items with custom metadata sch
 
 ### Core
 - **Custom Metadata Schemas** — Define per-collection fields (text, number, date, select, checkbox, timestamp) with validation, ordering, and privacy controls
-- **Image Management** — Upload, resize (original/medium/thumb), and reorder item photos with drag support
+- **Image Management** — Upload, resize (original/medium/thumb), and drag-to-reorder item photos; full-screen lightbox viewer
 - **Camera Capture** — Take photos directly from your browser on mobile devices
 - **Public Collections** — Share curated collections publicly while keeping others private
 - **User Authentication** — Email verification, password reset, JWT-based sessions with refresh tokens
@@ -16,6 +16,7 @@ A responsive web platform for cataloguing antique items with custom metadata sch
 - **Stars** — Star collections and items; leaderboard ranking by earned stars
 - **Activity Log** — Track item/collection creation, updates, and deletions
 - **Schema Templates** — Create reusable metadata schemas, copy between collections
+- **Dashboard** — Personal overview with collections summary and recent activity feed
 
 ### Speed Capture ⚡
 A mobile-optimized capture-first workflow for fast cataloguing:
@@ -29,13 +30,15 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 ### Profiles & Public Pages
 - **User Profiles** — Custom username, avatar upload (with auto-generated variants)
 - **Public Profile Pages** — `/profile/{username}` showing public collections and star stats
+- **Account Settings** — Language preference, password reset, and account deletion
 - **Featured Collections** — Admin-curated featured collection on the homepage
+- **Spotlight Items** — Mark specific items as spotlights within the featured collection to highlight them on the homepage
 
 ### Admin Panel
-- User management (list, search, activate/deactivate)
-- Collection management (featured collection, public/private toggle)
-- Item management with bulk operations
-- Stats dashboard (total users, collections, featured status)
+- User management (list, search, lock/unlock accounts, delete)
+- Collection management (featured collection selection, delete)
+- Item management (list, search, delete) with spotlight selection for featured items
+- Stats dashboard (total users, collections, items, featured status)
 
 ### Internationalization
 - English and German (auto-detected from browser, switchable in settings)
@@ -47,7 +50,7 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 │                 │     │                 │
 │  Next.js        │---->│  FastAPI        │
 │  Frontend       │     │  Backend        │
-│  (Port 3000)    │     │  (Port 8000)    │
+│  (Port 3010)    │     │  (Port 8000)    │
 │                 │     │                 │
 └─────────────────┘     └────────┬────────┘
                                  │
@@ -113,6 +116,8 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 
 ### Nginx Reverse Proxy
 
+When using Docker Compose, the Next.js frontend already proxies `/api/*` requests to the backend internally — so only the `location /` block is strictly required. The optional `/api/` block below routes API traffic directly to the backend, bypassing Next.js, which can be useful for performance or if you run the backend standalone.
+
 ```nginx
 server {
     listen 80;
@@ -129,6 +134,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Optional: route API calls directly to the backend
     location /api/ {
         proxy_pass http://127.0.0.1:8000/;
         proxy_http_version 1.1;
@@ -250,6 +256,22 @@ npm run dev
 | POST | `/schema-templates` | Create template |
 | POST | `/schema-templates/{id}/copy` | Copy template |
 
+### Admin
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/admin/login` | Admin login |
+| GET | `/admin/stats` | Dashboard statistics |
+| GET | `/admin/users` | List users |
+| PATCH | `/admin/users/{user_id}/lock` | Lock/unlock user |
+| DELETE | `/admin/users/{user_id}` | Delete user |
+| GET | `/admin/collections` | List collections |
+| DELETE | `/admin/collections/{collection_id}` | Delete collection |
+| GET | `/admin/items` | List items |
+| DELETE | `/admin/items/{item_id}` | Delete item |
+| POST | `/admin/featured` | Set featured collection |
+| GET | `/admin/featured/items` | List featured items |
+| POST | `/admin/featured/items` | Set spotlight items |
+
 ### Other
 | Method | Path | Description |
 |--------|------|-------------|
@@ -277,6 +299,8 @@ npm run dev
 | `SMTP_PASSWORD` | — | SMTP password |
 | `SMTP_FROM` | — | From address for emails |
 | `SMTP_USE_TLS` | `true` | Use STARTTLS |
+| `NEXT_PUBLIC_API_URL` | `/api` | Client-side API base URL |
+| `INTERNAL_API_URL` | `http://backend:8000` | Server-side API URL (Docker internal) |
 
 ## Testing
 
@@ -312,7 +336,7 @@ antique-catalogue/
 │   └── pyproject.toml
 ├── frontend/
 │   ├── app/
-│   │   ├── (app)/         # Authenticated pages (dashboard, collections, speed-capture, ...)
+│   │   ├── (app)/         # Authenticated pages (dashboard, collections, speed-capture, search, stars, settings, ...)
 │   │   ├── (auth)/        # Auth pages (login, register, verify, ...)
 │   │   ├── explore/       # Public collection browser
 │   │   └── profile/       # Public profile pages
