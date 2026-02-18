@@ -45,7 +45,7 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 ```
 ┌─────────────────┐     ┌─────────────────┐
 │                 │     │                 │
-│  Next.js        │────▶│  FastAPI        │
+│  Next.js        │───▶│  FastAPI        │
 │  Frontend       │     │  Backend        │
 │  (Port 3000)    │     │  (Port 8000)    │
 │                 │     │                 │
