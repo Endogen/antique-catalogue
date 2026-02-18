@@ -447,7 +447,10 @@ def set_featured_collection(
     featured_items = (
         db.execute(
             select(Item)
-            .where(Item.collection_id == collection.id)
+            .where(
+                Item.collection_id == collection.id,
+                Item.is_draft.is_(False),
+            )
             .order_by(Item.created_at.desc(), Item.id.desc())
             .limit(4)
         )
@@ -475,7 +478,10 @@ def list_featured_items(
     primary_image_id = _primary_image_id_subquery().label("primary_image_id")
     rows = db.execute(
         select(Item, primary_image_id)
-        .where(Item.collection_id == collection_id)
+        .where(
+            Item.collection_id == collection_id,
+            Item.is_draft.is_(False),
+        )
         .order_by(Item.created_at.desc(), Item.id.desc())
     ).all()
     items: list[Item] = []
@@ -506,6 +512,7 @@ def set_featured_items(
             db.execute(
                 select(Item.id).where(
                     Item.collection_id == collection_id,
+                    Item.is_draft.is_(False),
                     Item.id.in_(request.item_ids),
                 )
             )

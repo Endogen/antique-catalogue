@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
+import Link from "next/link";
 import {
   CalendarDays,
   Crown,
@@ -425,9 +427,13 @@ export default function AdminPage() {
       <div className="min-h-screen bg-stone-50 px-6 py-12">
         <div className="mx-auto w-full max-w-md rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-stone-900 text-sm font-semibold text-stone-50">
-              AC
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Antique Catalogue"
+              width={44}
+              height={44}
+              className="rounded-full"
+            />
             <div>
               <p className="font-display text-lg tracking-tight">{t("Admin Console")}</p>
               <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
@@ -489,14 +495,32 @@ export default function AdminPage() {
     <main className="min-h-screen bg-stone-50 px-6 py-10 lg:px-12">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-amber-700">{t("Admin")}</p>
-            <h1 className="font-display mt-3 text-3xl text-stone-900">
-              {t("Catalogue administration")}
-            </h1>
-            <p className="mt-2 text-sm text-stone-600">
-              {t("Monitor platform activity, moderate users, and curate featured content.")}
-            </p>
+          <div className="flex items-start gap-4">
+            <Link href="/" className="flex items-center gap-3">
+              <Image
+                src="/logo.png"
+                alt="Antique Catalogue"
+                width={44}
+                height={44}
+                className="rounded-full"
+              />
+              <div>
+                <p className="font-display text-lg tracking-tight">{t("Antique Catalogue")}</p>
+                <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+                  {t("Studio Archive")}
+                </p>
+              </div>
+            </Link>
+            <div className="hidden h-11 border-l border-stone-200 lg:block" />
+            <div>
+              <p className="text-xs uppercase tracking-[0.4em] text-amber-700">{t("Admin")}</p>
+              <h1 className="font-display mt-3 text-3xl text-stone-900">
+                {t("Catalogue administration")}
+              </h1>
+              <p className="mt-2 text-sm text-stone-600">
+                {t("Monitor platform activity, moderate users, and curate featured content.")}
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="outline" onClick={handleRefreshAll}>

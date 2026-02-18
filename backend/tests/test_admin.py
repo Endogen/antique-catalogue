@@ -87,6 +87,19 @@ def _create_collection_with_items(
         session.close()
 
 
+def _set_item_draft(session_factory, item_id: int, *, is_draft: bool) -> None:
+    session = session_factory()
+    try:
+        item = session.get(Item, item_id)
+        if item is None:
+            raise AssertionError(f"Item {item_id} was not found")
+        item.is_draft = is_draft
+        session.add(item)
+        session.commit()
+    finally:
+        session.close()
+
+
 async def _admin_headers(client: httpx.AsyncClient) -> dict[str, str]:
     login = await client.post(
         "/admin/login",
@@ -258,3 +271,72 @@ def test_admin_can_list_and_delete_items_and_collections(
         assert session.get(Item, second_item_id) is None
     finally:
         session.close()
+
+
+def test_admin_featured_items_exclude_drafts(
+    app_with_db,
+    db_session_factory,
+    monkeypatch,
+) -> None:
+    _configure_admin_credentials(monkeypatch)
+    owner_id = _create_user(
+        db_session_factory,
+        email="featured-owner@example.com",
+        password="strongpass",
+        verified=True,
+        active=True,
+    )
+    collection_id, item_ids = _create_collection_with_items(
+        db_session_factory,
+        owner_id=owner_id,
+        collection_name="Featured Archive",
+        item_names=["Published One", "Draft Candidate", "Published Two"],
+    )
+    published_one_id, draft_item_id, published_two_id = item_ids
+    _set_item_draft(db_session_factory, draft_item_id, is_draft=True)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            headers = await _admin_headers(client)
+
+            set_featured = await client.post(
+                "/admin/featured",
+                headers=headers,
+                json={"collection_id": collection_id},
+            )
+            assert set_featured.status_code == 200
+
+            admin_featured_items = await client.get("/admin/featured/items", headers=headers)
+            assert admin_featured_items.status_code == 200
+            admin_featured_ids = {item["id"] for item in admin_featured_items.json()}
+            assert draft_item_id not in admin_featured_ids
+
+            draft_selection = await client.post(
+                "/admin/featured/items",
+                headers=headers,
+                json={"item_ids": [draft_item_id]},
+            )
+            assert draft_selection.status_code == 404
+            assert (
+                draft_selection.json()["detail"]
+                == "One or more items could not be found in the featured collection"
+            )
+
+            valid_selection = await client.post(
+                "/admin/featured/items",
+                headers=headers,
+                json={"item_ids": [published_one_id, published_two_id]},
+            )
+            assert valid_selection.status_code == 200
+
+            public_featured_collection = await client.get("/public/collections/featured")
+            assert public_featured_collection.status_code == 200
+            assert public_featured_collection.json()["id"] == collection_id
+
+            public_featured_items = await client.get("/public/collections/featured/items")
+            assert public_featured_items.status_code == 200
+            public_featured_ids = {item["id"] for item in public_featured_items.json()}
+            assert public_featured_ids == {published_one_id, published_two_id}
+
+    asyncio.run(_flow())

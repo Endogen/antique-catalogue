@@ -283,7 +283,7 @@ export function HomePageClient({
                       }
                     >
                       {featuredCollection
-                        ? t("View collection")
+                        ? t("View")
                         : t("Browse")}
                     </Link>
                   </Button>

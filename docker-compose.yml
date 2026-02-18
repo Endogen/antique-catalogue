@@ -36,6 +36,9 @@ services:
       # Uses /api by default (relative URL, works on any domain)
       # Set NEXT_PUBLIC_API_URL for local dev: http://localhost:8000
       NEXT_PUBLIC_API_URL: "/api"
+      # Used by Next.js server components (e.g. homepage featured fetches)
+      # so frontend can reach backend directly in Docker.
+      INTERNAL_API_URL: "http://backend:8000"
     depends_on:
       - backend
 
