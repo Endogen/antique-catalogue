@@ -467,16 +467,29 @@ def update_item(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ItemResponse:
-    collection = _get_collection_or_404(db, collection_id, current_user.id)
+    source_collection = _get_collection_or_404(db, collection_id, current_user.id)
     item = _get_item_or_404(db, collection_id, item_id, current_user.id)
     data = request.model_dump(exclude_unset=True)
+    target_collection = source_collection
+    moved_between_collections = False
+
+    destination_collection_id = data.get("collection_id")
+    if (
+        destination_collection_id is not None
+        and destination_collection_id != item.collection_id
+    ):
+        target_collection = _get_collection_or_404(
+            db, destination_collection_id, current_user.id
+        )
+        item.collection_id = target_collection.id
+        moved_between_collections = True
 
     if "name" in data:
         item.name = data["name"]
     if "notes" in data:
         item.notes = data["notes"]
     if "metadata" in data:
-        field_definitions = _get_field_definitions(db, collection_id)
+        field_definitions = _get_field_definitions(db, target_collection.id)
         metadata = _validate_metadata_or_422(field_definitions, data["metadata"])
         item.metadata_ = metadata
     if "is_highlight" in data:
@@ -487,13 +500,20 @@ def update_item(
 
     db.add(item)
     if data:
+        if moved_between_collections:
+            summary = (
+                f'Moved item "{item.name}" from "{source_collection.name}" '
+                f'to "{target_collection.name}".'
+            )
+        else:
+            summary = f'Updated item "{item.name}" in "{target_collection.name}".'
         log_activity(
             db,
             user_id=current_user.id,
             action_type="item.updated",
             resource_type="item",
             resource_id=item.id,
-            summary=f'Updated item "{item.name}" in "{collection.name}".',
+            summary=summary,
         )
     db.commit()
     db.refresh(item)

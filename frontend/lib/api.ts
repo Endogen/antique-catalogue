@@ -195,6 +195,7 @@ export type ItemCreatePayload = {
 };
 
 export type ItemUpdatePayload = {
+  collection_id?: number;
   name?: string;
   metadata?: Record<string, unknown> | null;
   notes?: string | null;

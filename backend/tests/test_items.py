@@ -249,6 +249,127 @@ def test_item_crud_and_queries(app_with_db, db_session_factory) -> None:
     asyncio.run(_flow())
 
 
+def test_item_can_move_to_another_owned_collection(app_with_db, db_session_factory) -> None:
+    email = "item-move@example.com"
+    password = "strongpass"
+    _create_user(db_session_factory, email=email, password=password, verified=True)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            access_token = await _login(client, email=email, password=password)
+            headers = {"Authorization": f"Bearer {access_token}"}
+
+            source_collection_id = await _create_collection(
+                client,
+                headers,
+                name="Source Collection",
+            )
+            destination_collection_id = await _create_collection(
+                client,
+                headers,
+                name="Destination Collection",
+            )
+
+            item = await _create_item(
+                client,
+                headers,
+                source_collection_id,
+                {"name": "Move Candidate"},
+            )
+
+            move_response = await client.patch(
+                f"/collections/{source_collection_id}/items/{item['id']}",
+                headers=headers,
+                json={"collection_id": destination_collection_id},
+            )
+            assert move_response.status_code == 200
+            assert move_response.json()["collection_id"] == destination_collection_id
+
+            source_detail = await client.get(
+                f"/collections/{source_collection_id}/items/{item['id']}",
+                headers=headers,
+            )
+            assert source_detail.status_code == 404
+
+            destination_detail = await client.get(
+                f"/collections/{destination_collection_id}/items/{item['id']}",
+                headers=headers,
+            )
+            assert destination_detail.status_code == 200
+            assert destination_detail.json()["id"] == item["id"]
+
+            source_listing = await client.get(
+                f"/collections/{source_collection_id}/items",
+                headers=headers,
+            )
+            assert source_listing.status_code == 200
+            assert source_listing.json() == []
+
+            destination_listing = await client.get(
+                f"/collections/{destination_collection_id}/items",
+                headers=headers,
+            )
+            assert destination_listing.status_code == 200
+            assert [row["id"] for row in destination_listing.json()] == [item["id"]]
+
+    asyncio.run(_flow())
+
+
+def test_item_move_requires_owned_destination_collection(
+    app_with_db, db_session_factory
+) -> None:
+    owner_email = "item-move-owner@example.com"
+    owner_password = "strongpass"
+    other_email = "item-move-other@example.com"
+    other_password = "strongpass"
+    _create_user(db_session_factory, email=owner_email, password=owner_password, verified=True)
+    _create_user(db_session_factory, email=other_email, password=other_password, verified=True)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            owner_token = await _login(client, email=owner_email, password=owner_password)
+            owner_headers = {"Authorization": f"Bearer {owner_token}"}
+
+            owner_collection_id = await _create_collection(
+                client,
+                owner_headers,
+                name="Owner Source",
+            )
+            item = await _create_item(
+                client,
+                owner_headers,
+                owner_collection_id,
+                {"name": "Protected Move Candidate"},
+            )
+
+            other_token = await _login(client, email=other_email, password=other_password)
+            other_headers = {"Authorization": f"Bearer {other_token}"}
+            other_collection_id = await _create_collection(
+                client,
+                other_headers,
+                name="Other Destination",
+            )
+
+            move_response = await client.patch(
+                f"/collections/{owner_collection_id}/items/{item['id']}",
+                headers=owner_headers,
+                json={"collection_id": other_collection_id},
+            )
+            assert move_response.status_code == 404
+            assert move_response.json()["detail"] == "Collection not found"
+
+            owner_detail = await client.get(
+                f"/collections/{owner_collection_id}/items/{item['id']}",
+                headers=owner_headers,
+            )
+            assert owner_detail.status_code == 200
+            assert owner_detail.json()["collection_id"] == owner_collection_id
+
+    asyncio.run(_flow())
+
+
 def test_items_require_auth(app_with_db) -> None:
     async def _flow() -> None:
         transport = httpx.ASGITransport(app=app_with_db)

@@ -29,6 +29,7 @@ import {
   starsApi,
   type CollectionResponse,
   type FieldDefinitionResponse,
+  type ItemUpdatePayload,
   type ItemResponse
 } from "@/lib/api";
 
@@ -154,6 +155,11 @@ export default function ItemDetailPage() {
   >({
     status: "loading"
   });
+  const [collectionsState, setCollectionsState] = React.useState<
+    LoadState<CollectionResponse[]>
+  >({
+    status: "loading"
+  });
   const [itemState, setItemState] = React.useState<LoadState<ItemResponse>>({
     status: "loading"
   });
@@ -172,6 +178,8 @@ export default function ItemDetailPage() {
   const [itemStarred, setItemStarred] = React.useState(false);
   const [isUpdatingItemStar, setIsUpdatingItemStar] = React.useState(false);
   const [itemStarError, setItemStarError] = React.useState<string | null>(null);
+  const [destinationCollectionId, setDestinationCollectionId] =
+    React.useState<string>("");
 
   const sortedFields = React.useMemo(
     () => sortFields(fieldsState.data),
@@ -199,6 +207,19 @@ export default function ItemDetailPage() {
     () => metadataEntries.filter(([key]) => !fieldNameSet.has(key)),
     [metadataEntries, fieldNameSet]
   );
+
+  const availableCollections =
+    collectionsState.status === "ready" ? collectionsState.data ?? [] : [];
+  const currentCollectionIdNumber = collectionId ? Number(collectionId) : Number.NaN;
+  const destinationCollectionIdNumber = destinationCollectionId
+    ? Number(destinationCollectionId)
+    : Number.NaN;
+  const isDestinationCollectionValid =
+    Number.isInteger(destinationCollectionIdNumber) && destinationCollectionIdNumber > 0;
+  const isMovingToAnotherCollection =
+    Number.isInteger(currentCollectionIdNumber) &&
+    isDestinationCollectionValid &&
+    destinationCollectionIdNumber !== currentCollectionIdNumber;
 
   const canEdit = itemState.status === "ready" && fieldsState.status !== "error";
   const confirmDeleteMatches = deletePhrase.trim().toUpperCase() === DELETE_TOKEN;
@@ -230,6 +251,26 @@ export default function ItemDetailPage() {
       });
     }
   }, [collectionId]);
+
+  const loadCollections = React.useCallback(async () => {
+    setCollectionsState({
+      status: "loading"
+    });
+    try {
+      const data = await collectionApi.list();
+      setCollectionsState({
+        status: "ready",
+        data
+      });
+    } catch (error) {
+      setCollectionsState({
+        status: "error",
+        error: isApiError(error)
+          ? error.detail
+          : "We couldn't load your collections."
+      });
+    }
+  }, []);
 
   const loadItem = React.useCallback(async () => {
     if (!collectionId || !itemId) {
@@ -291,9 +332,10 @@ export default function ItemDetailPage() {
 
   React.useEffect(() => {
     void loadCollection();
+    void loadCollections();
     void loadItem();
     void loadFields();
-  }, [loadCollection, loadFields, loadItem]);
+  }, [loadCollection, loadCollections, loadFields, loadItem]);
 
   const loadItemStarStatus = React.useCallback(async () => {
     if (!collectionId || !itemId) {
@@ -335,8 +377,16 @@ export default function ItemDetailPage() {
     setSaveMessage(null);
   }, [isEditing]);
 
+  React.useEffect(() => {
+    if (itemState.status !== "ready" || !itemState.data) {
+      return;
+    }
+    setDestinationCollectionId(String(itemState.data.collection_id));
+  }, [itemState.data, itemState.status]);
+
   const handleRefresh = () => {
     void loadCollection();
+    void loadCollections();
     void loadItem();
     void loadFields();
     void loadItemStarStatus();
@@ -380,18 +430,35 @@ export default function ItemDetailPage() {
       return;
     }
     setFormError(null);
+    setSaveMessage(null);
+    if (!isDestinationCollectionValid) {
+      setFormError("Choose a destination collection.");
+      return;
+    }
+
+    const payload: ItemUpdatePayload = {
+      name: values.name,
+      notes: values.notes,
+      is_highlight: values.is_highlight
+    };
+    if (!isMovingToAnotherCollection) {
+      payload.metadata = values.metadata;
+    }
+    if (isMovingToAnotherCollection) {
+      payload.collection_id = destinationCollectionIdNumber;
+    }
+
     try {
-      const updated = await itemApi.update(collectionId, itemId, {
-        name: values.name,
-        notes: values.notes,
-        metadata: values.metadata,
-        is_highlight: values.is_highlight
-      });
+      const updated = await itemApi.update(collectionId, itemId, payload);
       setItemState({
         status: "ready",
         data: updated
       });
       setIsEditing(false);
+      if (isMovingToAnotherCollection) {
+        router.push(`/collections/${updated.collection_id}/items/${updated.id}`);
+        return;
+      }
       setSaveMessage("Item updates saved successfully.");
     } catch (error) {
       setFormError(
@@ -571,6 +638,61 @@ export default function ItemDetailPage() {
                           <>
                             {formErrorNode}
                             {baseFields}
+                            <div className="space-y-2">
+                              <label
+                                className="text-sm font-medium text-stone-700"
+                                htmlFor="destination-collection"
+                              >
+                                {t("Collection")}
+                              </label>
+                              <select
+                                id="destination-collection"
+                                className="h-10 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                                value={destinationCollectionId}
+                                onChange={(event) =>
+                                  setDestinationCollectionId(event.target.value)
+                                }
+                                disabled={
+                                  collectionsState.status !== "ready" ||
+                                  availableCollections.length === 0
+                                }
+                              >
+                                {availableCollections.map((collectionOption) => (
+                                  <option
+                                    key={collectionOption.id}
+                                    value={collectionOption.id}
+                                  >
+                                    {collectionOption.name}
+                                  </option>
+                                ))}
+                              </select>
+                              {collectionsState.status === "loading" ? (
+                                <p className="text-xs text-stone-500">
+                                  {t("Loading collections...")}
+                                </p>
+                              ) : null}
+                              {collectionsState.status === "error" ? (
+                                <p className="text-xs text-rose-600">
+                                  {t(
+                                    collectionsState.error ??
+                                      "We couldn't load your collections."
+                                  )}
+                                </p>
+                              ) : null}
+                              {collectionsState.status === "ready" ? (
+                                <p
+                                  className={`text-xs ${
+                                    isMovingToAnotherCollection
+                                      ? "text-amber-700"
+                                      : "text-stone-500"
+                                  }`}
+                                >
+                                  {isMovingToAnotherCollection
+                                    ? t("This item will be moved when you save changes.")
+                                    : t("Choose where this item belongs.")}
+                                </p>
+                              ) : null}
+                            </div>
                             {actions}
                           </>
                         )}
@@ -602,6 +724,12 @@ export default function ItemDetailPage() {
                           {t(
                             fieldsState.error ??
                               "We couldn't load schema fields. Metadata may be incomplete."
+                          )}
+                        </div>
+                      ) : isMovingToAnotherCollection ? (
+                        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-800">
+                          {t(
+                            "Move this item first, then edit metadata using the destination collection schema."
                           )}
                         </div>
                       ) : (

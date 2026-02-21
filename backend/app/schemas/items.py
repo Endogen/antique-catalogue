@@ -40,6 +40,7 @@ class ItemCreateRequest(BaseModel):
 
 
 class ItemUpdateRequest(BaseModel):
+    collection_id: int | None = Field(None, description="Destination collection ID")
     name: str | None = Field(None, examples=["Kodak Brownie Camera"])
     metadata: dict[str, object] | None = Field(
         None,
@@ -59,6 +60,15 @@ class ItemUpdateRequest(BaseModel):
     @classmethod
     def validate_notes(cls, value: str | None) -> str | None:
         return _normalize_notes(value)
+
+    @field_validator("collection_id")
+    @classmethod
+    def validate_collection_id(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        if value <= 0:
+            raise ValueError("Collection ID must be positive")
+        return value
 
 
 class ItemResponse(BaseModel):
