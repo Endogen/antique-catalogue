@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import httpx
+import pytest
 from sqlalchemy import select
 
 from app.core.security import hash_password
@@ -39,6 +40,14 @@ def _get_token(session_factory, *, email: str, token_type: str) -> str:
         return session.execute(query).scalar_one()
     finally:
         session.close()
+
+
+@pytest.fixture(autouse=True)
+def _stub_email_delivery(monkeypatch):
+    from app.api import auth as auth_api
+
+    monkeypatch.setattr(auth_api, "send_verification_email", lambda to_email, token: None)
+    monkeypatch.setattr(auth_api, "send_password_reset_email", lambda to_email, token: None)
 
 
 def test_register_verify_login_and_me(app_with_db, db_session_factory) -> None:
@@ -106,6 +115,104 @@ def test_register_verify_login_and_me(app_with_db, db_session_factory) -> None:
             assert me.json()["username"] == str(user.id)
 
     asyncio.run(_flow())
+
+
+def test_register_rolls_back_when_verification_email_fails(
+    app_with_db, db_session_factory, monkeypatch
+) -> None:
+    from app.api import auth as auth_api
+
+    email = "delivery-fail@example.com"
+    password = "strongpass"
+
+    previous_auto_verify = auth_api.settings.auto_verify_email
+    previous_smtp_host = auth_api.settings.smtp_host
+    previous_smtp_from = auth_api.settings.smtp_from
+    object.__setattr__(auth_api.settings, "auto_verify_email", False)
+    object.__setattr__(auth_api.settings, "smtp_host", "smtp.example.com")
+    object.__setattr__(auth_api.settings, "smtp_from", "noreply@example.com")
+
+    def failing_send_verification_email(to_email: str, token: str) -> None:
+        raise auth_api.EmailDeliveryError("smtp rejected message")
+
+    monkeypatch.setattr(auth_api, "send_verification_email", failing_send_verification_email)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/auth/register",
+                json={"email": email, "password": password},
+            )
+            assert response.status_code == 503
+            assert response.json()["detail"] == (
+                "Verification email could not be sent. Please try again later."
+            )
+
+        session = db_session_factory()
+        try:
+            assert session.execute(select(User).where(User.email == email)).scalar_one_or_none() is None
+            assert (
+                session.execute(
+                    select(EmailToken).join(User).where(User.email == email)
+                ).scalar_one_or_none()
+                is None
+            )
+        finally:
+            session.close()
+
+    try:
+        asyncio.run(_flow())
+    finally:
+        object.__setattr__(auth_api.settings, "auto_verify_email", previous_auto_verify)
+        object.__setattr__(auth_api.settings, "smtp_host", previous_smtp_host)
+        object.__setattr__(auth_api.settings, "smtp_from", previous_smtp_from)
+
+
+def test_forgot_password_rolls_back_reset_token_when_email_fails(
+    app_with_db, db_session_factory, monkeypatch
+) -> None:
+    from app.api import auth as auth_api
+
+    email = "reset-fail@example.com"
+    password = "strongpass"
+    _create_user(db_session_factory, email=email, password=password, verified=True)
+
+    previous_smtp_host = auth_api.settings.smtp_host
+    previous_smtp_from = auth_api.settings.smtp_from
+    object.__setattr__(auth_api.settings, "smtp_host", "smtp.example.com")
+    object.__setattr__(auth_api.settings, "smtp_from", "noreply@example.com")
+
+    def failing_send_reset_email(to_email: str, token: str) -> None:
+        raise auth_api.EmailDeliveryError("smtp rejected message")
+
+    monkeypatch.setattr(auth_api, "send_password_reset_email", failing_send_reset_email)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post("/auth/forgot", json={"email": email})
+            assert response.status_code == 200
+            assert response.json()["message"] == "If the account exists, a reset email has been sent"
+
+        session = db_session_factory()
+        try:
+            assert (
+                session.execute(
+                    select(EmailToken).join(User).where(
+                        User.email == email, EmailToken.token_type == "reset"
+                    )
+                ).scalar_one_or_none()
+                is None
+            )
+        finally:
+            session.close()
+
+    try:
+        asyncio.run(_flow())
+    finally:
+        object.__setattr__(auth_api.settings, "smtp_host", previous_smtp_host)
+        object.__setattr__(auth_api.settings, "smtp_from", previous_smtp_from)
 
 
 def test_refresh_logout_and_reset(app_with_db, db_session_factory) -> None:

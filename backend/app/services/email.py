@@ -10,6 +10,10 @@ from app.core.settings import settings
 logger = logging.getLogger(__name__)
 
 
+class EmailDeliveryError(RuntimeError):
+    """Raised when an email cannot be accepted for delivery."""
+
+
 def _smtp_login(smtp: smtplib.SMTP) -> None:
     if settings.smtp_user and settings.smtp_password:
         smtp.login(settings.smtp_user, settings.smtp_password)
@@ -18,7 +22,7 @@ def _smtp_login(smtp: smtplib.SMTP) -> None:
 def send_email(to_email: str, subject: str, body: str) -> None:
     if not settings.smtp_host or not settings.smtp_from:
         logger.warning("SMTP not configured; skipping email to %s", to_email)
-        return
+        raise EmailDeliveryError("SMTP is not configured")
 
     logger.info("Sending email to %s via %s", to_email, settings.smtp_host)
 
@@ -42,6 +46,7 @@ def send_email(to_email: str, subject: str, body: str) -> None:
         logger.info("Email sent successfully to %s", to_email)
     except Exception as e:
         logger.error("Failed to send email to %s: %s", to_email, str(e))
+        raise EmailDeliveryError("Email delivery failed") from e
 
 
 def send_verification_email(to_email: str, token: str) -> None:
