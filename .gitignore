@@ -25,6 +25,9 @@ local.properties
 # Project
 uploads/
 *.db
+*.db-journal
+*.db-shm
+*.db-wal
 .env
 .ralph/
 .pytest_cache/

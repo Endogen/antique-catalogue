@@ -6,13 +6,17 @@ services:
     ports:
       - "8000:8000"
     environment:
+      APP_ENV: "${APP_ENV:-production}"
       DATABASE_URL: "sqlite:////app/data/antique_catalogue.db"
       UPLOADS_PATH: "/app/uploads"
-      JWT_SECRET: "${JWT_SECRET:-change-me}"
+      # Required: generate one with `openssl rand -hex 32` and put it in .env
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET must be set (e.g. in .env)}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}"
       AUTO_VERIFY_EMAIL: "${AUTO_VERIFY_EMAIL:-false}"
       REFRESH_TOKEN_COOKIE_PATH: "${REFRESH_TOKEN_COOKIE_PATH:-/}"
+      # Set true when the app is served over HTTPS
+      REFRESH_TOKEN_COOKIE_SECURE: "${REFRESH_TOKEN_COOKIE_SECURE:-false}"
       ADMIN_EMAIL: "${ADMIN_EMAIL:-}"
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
       ADMIN_TOKEN_EXPIRE_MINUTES: "${ADMIN_TOKEN_EXPIRE_MINUTES:-60}"

@@ -28,6 +28,7 @@ import {
   type CollectionResponse,
   type ItemResponse
 } from "@/lib/api";
+import { formatMetadataNumber } from "@/lib/format";
 
 type LoadState = {
   status: "loading" | "ready" | "error";
@@ -57,7 +58,7 @@ const highlightCardClass =
 export default function PublicCollectionPage() {
   const { isAuthenticated, logout, status: authStatus } = useAuth();
   const params = useParams();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const sortOptions = React.useMemo(() => buildSortOptions(t), [t]);
@@ -89,7 +90,7 @@ export default function PublicCollectionPage() {
         return value;
       }
       if (typeof value === "number") {
-        return new Intl.NumberFormat(locale).format(value);
+        return formatMetadataNumber(locale, value);
       }
       if (typeof value === "boolean") {
         return value ? t("Yes") : t("No");
@@ -614,13 +615,11 @@ export default function PublicCollectionPage() {
                     {t("Public access")}
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
-                    {t("{count} items loaded", { count: itemCount })}
+                    {tc(itemCount, "{count} item loaded", "{count} items loaded")}
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
                     <Star className="h-3.5 w-3.5 text-amber-600" />
-                    {t("{count} stars", {
-                      count: collectionState.data?.star_count ?? 0
-                    })}
+                    {tc(collectionState.data?.star_count ?? 0, "{count} star", "{count} stars")}
                   </span>
                 </div>
               </div>
@@ -808,9 +807,7 @@ export default function PublicCollectionPage() {
                   const starCount = item.star_count ?? 0;
                   const itemIsStarred = Boolean(itemStarredMap[item.id]);
                   const imageLabel =
-                    imageCount === 1
-                      ? t("{count} image", { count: imageCount })
-                      : t("{count} images", { count: imageCount });
+                    tc(imageCount, "{count} image", "{count} images");
                   const metadata = metadataEntries
                     .slice(0, 4)
                     .map(([key, value]) => ({
@@ -830,9 +827,7 @@ export default function PublicCollectionPage() {
                       descriptionFallback={t("No description provided.")}
                       metadata={metadata}
                       metadataFallback={t("No metadata shared.")}
-                      metadataOverflowLabel={t("+{count} more fields", {
-                        count: Math.max(metadataEntries.length - 2, 0)
-                      })}
+                      metadataOverflowLabel={tc(Math.max(metadataEntries.length - 2, 0), "+{count} more field", "+{count} more fields")}
                       imageSrc={imageId ? imageApi.url(imageId, "medium") : null}
                       imageAlt={item.name}
                       imageFallbackLabel={t("No image")}

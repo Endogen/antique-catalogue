@@ -14,4 +14,5 @@ class ActivityLogResponse(BaseModel):
     resource_id: int | None
     target_path: str | None = None
     summary: str
+    context: dict[str, object] | None = None
     created_at: datetime

@@ -92,10 +92,10 @@ A mobile-optimized capture-first workflow for fast cataloguing:
    cd antique-catalogue
    ```
 
-2. Configure environment (optional):
+2. Configure environment (`JWT_SECRET` is required):
    ```bash
    cat > .env << 'EOF'
-   JWT_SECRET=your-secure-random-secret
+   JWT_SECRET=your-secure-random-secret  # e.g. openssl rand -hex 32
    SMTP_HOST=mail.example.com
    SMTP_PORT=587
    SMTP_USER=noreply@example.com
@@ -283,13 +283,15 @@ npm run dev
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `APP_ENV` | `development` | Set `production` to enforce a strong `JWT_SECRET` (compose default) |
 | `DATABASE_URL` | auto-detected SQLite | Database connection string |
 | `UPLOADS_PATH` | `./uploads` | Path for uploaded images |
-| `JWT_SECRET` | `change-me` | Secret for JWT signing (**change in production**) |
+| `JWT_SECRET` | insecure dev default | Secret for JWT signing; **required** when `APP_ENV=production` |
 | `JWT_ALGORITHM` | `HS256` | JWT algorithm |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token expiry |
 | `AUTO_VERIFY_EMAIL` | `false` | Auto-verify on registration (dev only) |
 | `REFRESH_TOKEN_COOKIE_PATH` | `/` | Refresh token cookie scope |
+| `REFRESH_TOKEN_COOKIE_SECURE` | `false` | Set `true` when serving over HTTPS |
 | `ADMIN_EMAIL` | — | Admin login email |
 | `ADMIN_PASSWORD` | — | Admin login password |
 | `ADMIN_TOKEN_EXPIRE_MINUTES` | `60` | Admin token expiry |

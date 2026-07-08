@@ -247,6 +247,7 @@ def create_schema_template(
         resource_type="schema_template",
         resource_id=template.id,
         summary=f'Created schema template "{template.name}".',
+        context={"template_name": template.name},
     )
 
     try:
@@ -327,6 +328,10 @@ def copy_schema_template(
         resource_type="schema_template",
         resource_id=copied_template.id,
         summary=(f'Copied schema template "{source_template.name}" to "{copied_template.name}".'),
+        context={
+            "source_template_name": source_template.name,
+            "template_name": copied_template.name,
+        },
     )
 
     try:
@@ -393,6 +398,7 @@ def update_schema_template(
             resource_type="schema_template",
             resource_id=template.id,
             summary=f'Updated schema template "{template.name}".',
+            context={"template_name": template.name},
         )
 
     db.add(template)
@@ -424,6 +430,7 @@ def delete_schema_template(
         resource_type="schema_template",
         resource_id=template.id,
         summary=f'Deleted schema template "{template.name}".',
+        context={"template_name": template.name},
     )
     db.delete(template)
     db.commit()

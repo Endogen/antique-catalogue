@@ -3,10 +3,11 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
-import json
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
+
+import jwt
 
 from app.core.settings import settings
 
@@ -16,8 +17,12 @@ class TokenError(ValueError):
 
 
 _PWD_ALGORITHM = "pbkdf2_sha256"
-_PWD_ITERATIONS = 100_000
+# OWASP recommendation for PBKDF2-HMAC-SHA256 (2023+). The iteration count is
+# stored in each hash, so older hashes keep verifying after this changes.
+_PWD_ITERATIONS = 600_000
 _PWD_SALT_BYTES = 16
+
+_JWT_ALGORITHMS = {"HS256"}
 
 
 def _b64url_encode(data: bytes) -> str:
@@ -75,16 +80,15 @@ def _build_token_payload(
     return payload
 
 
-def _jwt_encode(payload: dict[str, Any]) -> str:
-    header = {"alg": settings.jwt_algorithm, "typ": "JWT"}
-    if settings.jwt_algorithm != "HS256":
+def _require_supported_algorithm() -> str:
+    if settings.jwt_algorithm not in _JWT_ALGORITHMS:
         raise TokenError("Unsupported JWT algorithm")
-    header_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
-    payload_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
-    signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
-    signature = hmac.new(settings.jwt_secret.encode("utf-8"), signing_input, hashlib.sha256)
-    signature_b64 = _b64url_encode(signature.digest())
-    return f"{header_b64}.{payload_b64}.{signature_b64}"
+    return settings.jwt_algorithm
+
+
+def _jwt_encode(payload: dict[str, Any]) -> str:
+    algorithm = _require_supported_algorithm()
+    return jwt.encode(payload, settings.jwt_secret, algorithm=algorithm)
 
 
 def create_access_token(
@@ -115,32 +119,10 @@ def create_admin_token(
 
 
 def decode_token(token: str) -> dict[str, Any]:
+    algorithm = _require_supported_algorithm()
     try:
-        header_b64, payload_b64, signature_b64 = token.split(".")
-    except ValueError as exc:
+        return jwt.decode(token, settings.jwt_secret, algorithms=[algorithm])
+    except jwt.ExpiredSignatureError as exc:
+        raise TokenError("Token expired") from exc
+    except jwt.InvalidTokenError as exc:
         raise TokenError("Invalid token") from exc
-
-    signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
-    expected_signature = hmac.new(
-        settings.jwt_secret.encode("utf-8"), signing_input, hashlib.sha256
-    ).digest()
-    signature = _b64url_decode(signature_b64)
-    if not hmac.compare_digest(signature, expected_signature):
-        raise TokenError("Invalid token")
-
-    try:
-        header = json.loads(_b64url_decode(header_b64))
-        payload = json.loads(_b64url_decode(payload_b64))
-    except (json.JSONDecodeError, ValueError) as exc:
-        raise TokenError("Invalid token") from exc
-
-    if header.get("alg") != settings.jwt_algorithm:
-        raise TokenError("Invalid token")
-
-    exp = payload.get("exp")
-    if exp is not None:
-        now = int(datetime.now(timezone.utc).timestamp())
-        if now >= int(exp):
-            raise TokenError("Token expired")
-
-    return payload

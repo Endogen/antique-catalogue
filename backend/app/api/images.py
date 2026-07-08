@@ -9,7 +9,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_optional_user
-from app.core.settings import settings
 from app.db.session import get_db
 from app.models.collection import Collection
 from app.models.item import Item
@@ -23,6 +22,7 @@ from app.services.image_processing import (
     generate_image_variants,
     save_image_variants,
 )
+from app.services.uploads import item_upload_dir
 
 router = APIRouter(prefix="/items/{item_id}/images", tags=["images"])
 serve_router = APIRouter(prefix="/images", tags=["images"])
@@ -115,10 +115,6 @@ def _get_next_position(db: Session, item_id: int) -> int:
     return int(current) + 1
 
 
-def _build_upload_dir(user_id: int, collection_id: int, item_id: int) -> Path:
-    return settings.uploads_dir / str(user_id) / str(collection_id) / str(item_id)
-
-
 def _cleanup_variants(output_dir: Path, image_id: int) -> None:
     if not output_dir.exists():
         return
@@ -179,7 +175,7 @@ if MULTIPART_AVAILABLE:
             db.add(image)
             db.flush()
 
-            output_dir = _build_upload_dir(current_user.id, item.collection_id, item.id)
+            output_dir = item_upload_dir(current_user.id, item.collection_id, item.id)
             try:
                 variants = generate_image_variants(payload)
             except ImageProcessingError as exc:
@@ -297,7 +293,7 @@ def delete_image(
     item = _get_item_or_404(db, item_id, current_user.id)
     image = _get_image_or_404(db, item_id, image_id, current_user.id)
 
-    output_dir = _build_upload_dir(current_user.id, item.collection_id, item.id)
+    output_dir = item_upload_dir(current_user.id, item.collection_id, item.id)
     _cleanup_variants(output_dir, image.id)
 
     db.delete(image)
@@ -323,7 +319,7 @@ def serve_image(
             detail=str(exc),
         ) from exc
 
-    output_dir = _build_upload_dir(collection.owner_id, collection.id, item.id)
+    output_dir = item_upload_dir(collection.owner_id, collection.id, item.id)
     path = output_dir / filename
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")

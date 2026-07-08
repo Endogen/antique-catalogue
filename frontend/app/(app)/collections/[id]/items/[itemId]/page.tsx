@@ -32,6 +32,7 @@ import {
   type ItemUpdatePayload,
   type ItemResponse
 } from "@/lib/api";
+import { formatMetadataNumber } from "@/lib/format";
 
 type LoadState<T> = {
   status: "loading" | "ready" | "error";
@@ -67,7 +68,7 @@ const sortFields = (items: FieldDefinitionResponse[]) =>
 export default function ItemDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const itemId = Array.isArray(params?.itemId)
     ? params.itemId[0]
@@ -125,7 +126,7 @@ export default function ItemDetailPage() {
 
       if (fieldType === "number") {
         return typeof value === "number"
-          ? new Intl.NumberFormat(locale).format(value)
+          ? formatMetadataNumber(locale, value)
           : String(value);
       }
 
@@ -910,7 +911,7 @@ export default function ItemDetailPage() {
                       </div>
                       <div>
                         <p className="font-medium text-stone-900">{t("Stars")}</p>
-                        <p>{t("{count} stars", { count: itemState.data?.star_count ?? 0 })}</p>
+                        <p>{tc(itemState.data?.star_count ?? 0, "{count} star", "{count} stars")}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -921,7 +922,7 @@ export default function ItemDetailPage() {
                         <p className="font-medium text-stone-900">
                           {t("Metadata fields")}
                         </p>
-                        <p>{t("{count} schema fields", { count: sortedFields.length })}</p>
+                        <p>{tc(sortedFields.length, "{count} schema field", "{count} schema fields")}</p>
                       </div>
                     </div>
                   </div>

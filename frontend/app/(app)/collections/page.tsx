@@ -43,7 +43,7 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 };
 
 export default function CollectionsPage() {
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const [state, setState] = React.useState<LoadState>({
     status: "loading",
     data: []
@@ -297,9 +297,7 @@ export default function CollectionsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Star className="h-4 w-4 text-amber-600" />
-                        {t("{count} stars", {
-                          count: collection.star_count ?? 0
-                        })}
+                        {tc(collection.star_count ?? 0, "{count} star", "{count} stars")}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">

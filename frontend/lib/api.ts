@@ -235,6 +235,7 @@ export type ActivityLogResponse = {
   resource_id: number | null;
   target_path?: string | null;
   summary: string;
+  context?: Record<string, unknown> | null;
   created_at: string;
 };
 

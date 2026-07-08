@@ -7,7 +7,8 @@ import {
   DEFAULT_LOCALE,
   type Locale,
   resolveLocale,
-  translate
+  translate,
+  translateCount
 } from "@/lib/i18n";
 
 type I18nContextValue = {
@@ -15,6 +16,12 @@ type I18nContextValue = {
   availableLocales: Locale[];
   setLocale: (next: Locale) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
+  tc: (
+    count: number,
+    singularKey: string,
+    pluralKey: string,
+    params?: Record<string, string | number>
+  ) => string;
 };
 
 const I18nContext = React.createContext<I18nContextValue | undefined>(undefined);
@@ -53,14 +60,25 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [locale]
   );
 
+  const tc = React.useCallback(
+    (
+      count: number,
+      singularKey: string,
+      pluralKey: string,
+      params?: Record<string, string | number>
+    ) => translateCount(locale, count, singularKey, pluralKey, params),
+    [locale]
+  );
+
   const value = React.useMemo<I18nContextValue>(
     () => ({
       locale,
       availableLocales: AVAILABLE_LOCALES,
       setLocale,
-      t
+      t,
+      tc
     }),
-    [locale, setLocale, t]
+    [locale, setLocale, t, tc]
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

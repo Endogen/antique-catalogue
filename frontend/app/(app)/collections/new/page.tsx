@@ -31,7 +31,7 @@ const buildPayload = (
 
 export default function NewCollectionPage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, tc } = useI18n();
   const [formError, setFormError] = React.useState<string | null>(null);
   const [schemaMode, setSchemaMode] = React.useState<"scratch" | "template">(
     "scratch"
@@ -247,7 +247,7 @@ export default function NewCollectionPage() {
                             {template.name}
                           </p>
                           <span className="text-xs text-stone-500">
-                            {t("{count} fields", { count: template.field_count })}
+                            {tc(template.field_count, "{count} field", "{count} fields")}
                           </span>
                         </div>
                       </button>

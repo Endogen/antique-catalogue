@@ -22,15 +22,34 @@ from app.api.images import router as images_router
 from app.api.images import serve_router as images_serve_router
 from app.api.items import public_router as public_items_router
 from app.api.items import router as items_router
+from app.api.profiles import avatar_router as avatar_serve_router
 from app.api.profiles import router as profiles_router
 from app.api.schema_templates import router as schema_templates_router
 from app.api.search import router as search_router
+from app.api.speed_capture import router as speed_capture_router
 from app.api.stars import router as stars_router
 from app.core.exceptions import register_exception_handlers
+from app.core.rate_limit import reset_rate_limiters
 from app.core.settings import settings
 from app.db.base import Base
-from app.db.session import get_db
+from app.db.session import enable_sqlite_pragmas, get_db
 from app.schemas.responses import DEFAULT_ERROR_RESPONSES
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    reset_rate_limiters()
+    yield
+    reset_rate_limiters()
+
+
+@pytest.fixture(autouse=True)
+def _isolated_uploads_dir(tmp_path):
+    """Point uploads at a per-test directory so tests never touch real files."""
+    previous = settings.uploads_path
+    object.__setattr__(settings, "uploads_path", str(tmp_path / "uploads"))
+    yield
+    object.__setattr__(settings, "uploads_path", previous)
 
 
 @pytest.fixture()
@@ -40,6 +59,7 @@ def db_session_factory():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+    enable_sqlite_pragmas(engine)
     TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     Base.metadata.create_all(bind=engine)
     try:
@@ -89,7 +109,9 @@ def app_with_db(db_session_factory, monkeypatch):
     app.include_router(public_collections_router)
     app.include_router(public_items_router)
     app.include_router(profiles_router)
+    app.include_router(avatar_serve_router)
     app.include_router(search_router)
+    app.include_router(speed_capture_router)
     app.include_router(stars_router)
     app.include_router(schema_templates_router)
 

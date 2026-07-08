@@ -10,7 +10,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.settings import settings
 from app.db.session import get_db
 from app.models.collection import Collection
 from app.models.collection_star import CollectionStar
@@ -27,6 +26,7 @@ from app.services.image_processing import (
     generate_image_variants,
     save_image_variants,
 )
+from app.services.uploads import avatar_upload_dir
 from app.services.usernames import normalize_username_lookup, validate_username_for_user
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -197,6 +197,7 @@ def update_my_profile(
                 resource_type="user",
                 resource_id=current_user.id,
                 summary=f'Updated username to "{current_user.username}".',
+                context={"username": current_user.username},
             )
             db.commit()
         except IntegrityError:
@@ -251,12 +252,8 @@ def read_public_profile(username: str, db: Session = Depends(get_db)) -> PublicP
 # ---------------------------------------------------------------------------
 
 
-def _avatar_dir(user_id: int) -> Path:
-    return settings.uploads_dir / "avatars" / str(user_id)
-
-
 def _cleanup_avatar_files(user_id: int) -> None:
-    directory = _avatar_dir(user_id)
+    directory = avatar_upload_dir(user_id)
     if not directory.exists():
         return
     for path in directory.glob("avatar_*.jpg"):
@@ -300,7 +297,7 @@ if MULTIPART_AVAILABLE:
             # Clean up any previous avatar files
             _cleanup_avatar_files(current_user.id)
 
-            output_dir = _avatar_dir(current_user.id)
+            output_dir = avatar_upload_dir(current_user.id)
             try:
                 save_image_variants(variants.as_dict(), output_dir, "avatar")
             except Exception as exc:
@@ -365,7 +362,7 @@ def serve_avatar(user_id: int, variant: str) -> FileResponse:
             detail=str(exc),
         ) from exc
 
-    path = _avatar_dir(user_id) / filename
+    path = avatar_upload_dir(user_id) / filename
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avatar not found")
     return FileResponse(path, media_type="image/jpeg", filename=filename)

@@ -287,6 +287,7 @@ def star_collection(
         resource_type="collection",
         resource_id=collection.id,
         summary=f'Starred collection "{collection.name}".',
+        context={"collection_name": collection.name},
     )
     if collection.owner_id != current_user.id:
         log_activity(
@@ -295,7 +296,11 @@ def star_collection(
             action_type="collection.starred",
             resource_type="collection",
             resource_id=collection.id,
-            summary=(f'{current_user.email} starred your collection "{collection.name}".'),
+            summary=(f'@{current_user.username} starred your collection "{collection.name}".'),
+            context={
+                "collection_name": collection.name,
+                "actor_username": current_user.username,
+            },
         )
 
     db.commit()
@@ -389,6 +394,7 @@ def star_item(
         resource_type="item",
         resource_id=item.id,
         summary=f'Starred item "{item.name}" in "{collection_name}".',
+        context={"item_name": item.name, "collection_name": collection_name},
     )
     if owner_id != current_user.id:
         log_activity(
@@ -397,7 +403,11 @@ def star_item(
             action_type="item.starred",
             resource_type="item",
             resource_id=item.id,
-            summary=f'{current_user.email} starred your item "{item.name}".',
+            summary=f'@{current_user.username} starred your item "{item.name}".',
+            context={
+                "item_name": item.name,
+                "actor_username": current_user.username,
+            },
         )
 
     db.commit()

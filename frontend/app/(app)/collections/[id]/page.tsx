@@ -31,6 +31,7 @@ import {
   type FieldDefinitionResponse,
   type ItemResponse
 } from "@/lib/api";
+import { formatMetadataNumber } from "@/lib/format";
 
 type LoadState = {
   status: "loading" | "ready" | "error";
@@ -109,7 +110,7 @@ const extractOptions = (options?: { options?: unknown } | null) => {
 export default function CollectionDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const baseSortOptions = React.useMemo(() => buildBaseSortOptions(t), [t]);
@@ -172,7 +173,7 @@ export default function CollectionDetailPage() {
         return value;
       }
       if (typeof value === "number") {
-        return new Intl.NumberFormat(locale).format(value);
+        return formatMetadataNumber(locale, value);
       }
       if (typeof value === "boolean") {
         return value ? t("Yes") : t("No");
@@ -574,7 +575,7 @@ export default function CollectionDetailPage() {
               <FileEdit className="h-4 w-4" />
               {showDrafts
                 ? t("Hide drafts")
-                : t("{count} drafts", { count: draftCount ?? 0 })}
+                : tc(draftCount ?? 0, "{count} draft", "{count} drafts")}
             </Button>
           ) : null}
           <Button variant="outline" onClick={handleRefresh}>
@@ -634,13 +635,11 @@ export default function CollectionDetailPage() {
                 {collectionState.data?.is_public ? t("Public") : t("Private")}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-stone-600">
-                {t("{count} items loaded", { count: itemCount })}
+                {tc(itemCount, "{count} item loaded", "{count} items loaded")}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-stone-600">
                 <Star className="h-3.5 w-3.5 text-amber-600" />
-                {t("{count} stars", {
-                  count: collectionState.data?.star_count ?? 0
-                })}
+                {tc(collectionState.data?.star_count ?? 0, "{count} star", "{count} stars")}
               </span>
             </div>
             {collectionStarError ? (
@@ -685,7 +684,7 @@ export default function CollectionDetailPage() {
               </div>
             ) : (
               <div className="mt-4 space-y-3 text-sm text-stone-600">
-                <p>{t("{count} fields defined.", { count: fieldsState.data.length })}</p>
+                <p>{tc(fieldsState.data.length, "{count} field defined.", "{count} fields defined.")}</p>
                 <div className="space-y-2">
                   {sortedFields.slice(0, 4).map((field) => (
                     <div
@@ -702,9 +701,7 @@ export default function CollectionDetailPage() {
                   ))}
                   {sortedFields.length > 4 ? (
                     <p className="text-xs text-stone-400">
-                      {t("+{count} more fields", {
-                        count: sortedFields.length - 4
-                      })}
+                      {tc(sortedFields.length - 4, "+{count} more field", "+{count} more fields")}
                     </p>
                   ) : null}
                 </div>
@@ -973,9 +970,7 @@ export default function CollectionDetailPage() {
                 const metadataEntries = Object.entries(item.metadata ?? {});
                 const imageCount = item.image_count ?? 0;
                 const imageLabel =
-                  imageCount === 1
-                    ? t("{count} image", { count: imageCount })
-                    : t("{count} images", { count: imageCount });
+                  tc(imageCount, "{count} image", "{count} images");
                 const starCount = item.star_count ?? 0;
                 const imageId = item.primary_image_id ?? null;
                 const metadata = metadataEntries.slice(0, 4).map(([key, value]) => ({
@@ -995,9 +990,7 @@ export default function CollectionDetailPage() {
                     descriptionFallback={t("No description provided.")}
                     metadata={metadata}
                     metadataFallback={t("No metadata captured yet.")}
-                    metadataOverflowLabel={t("+{count} more fields", {
-                      count: Math.max(metadataEntries.length - 2, 0)
-                    })}
+                    metadataOverflowLabel={tc(Math.max(metadataEntries.length - 2, 0), "+{count} more field", "+{count} more fields")}
                     imageSrc={imageId ? imageApi.url(imageId, "medium") : null}
                     imageAlt={item.name}
                     imageFallbackLabel={t("No image")}

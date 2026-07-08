@@ -24,6 +24,7 @@ from app.schemas.collections import (
 from app.schemas.featured import FeaturedItemResponse
 from app.schemas.responses import MessageResponse
 from app.services.activity import log_activity
+from app.services.uploads import delete_collection_uploads
 
 router = APIRouter(prefix="/collections", tags=["collections"])
 public_router = APIRouter(prefix="/public/collections", tags=["public collections"])
@@ -195,8 +196,10 @@ def create_collection(
         db.add_all(copied_fields)
 
     summary = f'Created collection "{collection.name}".'
+    context: dict[str, object] = {"collection_name": collection.name}
     if template is not None:
         summary = f'Created collection "{collection.name}" from template "{template.name}".'
+        context["template_name"] = template.name
     log_activity(
         db,
         user_id=current_user.id,
@@ -204,6 +207,7 @@ def create_collection(
         resource_type="collection",
         resource_id=collection.id,
         summary=summary,
+        context=context,
     )
     db.commit()
     db.refresh(collection)
@@ -254,6 +258,7 @@ def update_collection(
             resource_type="collection",
             resource_id=collection.id,
             summary=f'Updated collection "{collection.name}".',
+            context={"collection_name": collection.name},
         )
     db.commit()
     db.refresh(collection)
@@ -341,6 +346,7 @@ def apply_schema_template(
         resource_type="collection",
         resource_id=collection.id,
         summary=(f'Applied schema template "{template.name}" to collection "{collection.name}".'),
+        context={"collection_name": collection.name, "template_name": template.name},
     )
     try:
         db.commit()
@@ -367,9 +373,11 @@ def delete_collection(
         resource_type="collection",
         resource_id=collection.id,
         summary=f'Deleted collection "{collection.name}".',
+        context={"collection_name": collection.name},
     )
     db.delete(collection)
     db.commit()
+    delete_collection_uploads(current_user.id, collection_id)
     return MessageResponse(message="Collection deleted")
 
 

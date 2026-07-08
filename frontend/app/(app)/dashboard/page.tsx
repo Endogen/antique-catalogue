@@ -6,6 +6,7 @@ import { CalendarDays, Folder, Star } from "lucide-react";
 
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { activityActionLabel, describeActivity } from "@/lib/activity";
 import {
   activityApi,
   collectionApi,
@@ -58,10 +59,8 @@ const formatDateTime = (value: string | null | undefined, locale: string) => {
   }).format(parsed);
 };
 
-const formatActionType = (value: string) => value.replace(/[._-]+/g, " ");
-
 export default function DashboardPage() {
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const [collectionsState, setCollectionsState] = React.useState<CollectionsState>({
     status: "loading",
     data: []
@@ -203,9 +202,7 @@ export default function DashboardPage() {
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <Star className="h-3.5 w-3.5 text-amber-600" />
-                        {t("{count} stars", {
-                          count: collection.star_count ?? 0
-                        })}
+                        {tc(collection.star_count ?? 0, "{count} star", "{count} stars")}
                       </span>
                     </div>
                     <Button size="sm" variant="secondary" asChild>
@@ -265,7 +262,7 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-xs uppercase tracking-[0.2em] text-amber-700">
-                          {formatActionType(entry.action_type)}
+                          {activityActionLabel(entry, t)}
                         </p>
                         <span className="text-xs text-stone-500">
                           {formatDateTime(entry.created_at, locale)}
@@ -273,7 +270,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-3">
                         <p className="text-sm font-medium text-stone-900">
-                          {entry.summary}
+                          {describeActivity(entry, t)}
                         </p>
                         {targetHref ? (
                           <Button size="sm" variant="ghost" asChild>

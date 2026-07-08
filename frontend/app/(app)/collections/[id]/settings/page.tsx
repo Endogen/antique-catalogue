@@ -55,7 +55,7 @@ type LoadState = {
 export default function CollectionSettingsPage() {
   const params = useParams();
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [deletePhrase, setDeletePhrase] = React.useState("");
   const [deleteState, setDeleteState] = React.useState<DeleteState>({
@@ -532,7 +532,7 @@ export default function CollectionSettingsPage() {
                             {template.name}
                           </p>
                           <span className="text-xs text-stone-500">
-                            {t("{count} fields", { count: template.field_count })}
+                            {tc(template.field_count, "{count} field", "{count} fields")}
                           </span>
                         </div>
                       </button>

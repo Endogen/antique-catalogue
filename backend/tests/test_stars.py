@@ -199,6 +199,10 @@ def test_starring_public_content_logs_activity_for_actor_and_owner(
             viewer_token = await _login(client, email=viewer_email, password=viewer_password)
             viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
 
+            viewer_me = await client.get("/auth/me", headers=viewer_headers)
+            assert viewer_me.status_code == 200
+            viewer_username = viewer_me.json()["username"]
+
             star_collection = await client.post(
                 f"/stars/collections/{collection_id}", headers=viewer_headers
             )
@@ -231,8 +235,10 @@ def test_starring_public_content_logs_activity_for_actor_and_owner(
                 f"/collections/{collection_id}/items/{item_id}"
             )
             assert owner_payload[1]["target_path"] == f"/collections/{collection_id}"
-            assert viewer_email in owner_payload[0]["summary"]
-            assert viewer_email in owner_payload[1]["summary"]
+            assert viewer_email not in owner_payload[0]["summary"]
+            assert viewer_email not in owner_payload[1]["summary"]
+            assert f"@{viewer_username}" in owner_payload[0]["summary"]
+            assert f"@{viewer_username}" in owner_payload[1]["summary"]
 
     asyncio.run(_flow())
 
@@ -355,5 +361,65 @@ def test_starred_lists_are_searchable_and_skip_now_private_content(
             now_hidden_items = await client.get("/stars/items", headers=viewer_headers)
             assert now_hidden_items.status_code == 200
             assert now_hidden_items.json() == []
+
+    asyncio.run(_flow())
+
+
+def test_star_notification_uses_username_not_email(app_with_db, db_session_factory) -> None:
+    owner_email = "star-owner@example.com"
+    starrer_email = "star-fan@example.com"
+    password = "strongpass"
+    _create_user(db_session_factory, email=owner_email, password=password, verified=True)
+    _create_user(db_session_factory, email=starrer_email, password=password, verified=True)
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            owner_token = await _login(client, email=owner_email, password=password)
+            owner_headers = {"Authorization": f"Bearer {owner_token}"}
+            starrer_token = await _login(client, email=starrer_email, password=password)
+            starrer_headers = {"Authorization": f"Bearer {starrer_token}"}
+
+            starrer_me = await client.get("/auth/me", headers=starrer_headers)
+            assert starrer_me.status_code == 200
+            starrer_username = starrer_me.json()["username"]
+
+            create = await client.post(
+                "/collections",
+                json={"name": "Public Shelf", "is_public": True},
+                headers=owner_headers,
+            )
+            assert create.status_code == 201
+            collection_id = create.json()["id"]
+
+            create_item = await client.post(
+                f"/collections/{collection_id}/items",
+                json={"name": "Shiny Object"},
+                headers=owner_headers,
+            )
+            assert create_item.status_code == 201
+            item_id = create_item.json()["id"]
+
+            star_collection = await client.post(
+                f"/stars/collections/{collection_id}", headers=starrer_headers
+            )
+            assert star_collection.status_code == 200
+            star_item = await client.post(
+                f"/stars/collections/{collection_id}/items/{item_id}",
+                headers=starrer_headers,
+            )
+            assert star_item.status_code == 200
+
+            activity = await client.get("/activity", headers=owner_headers)
+            assert activity.status_code == 200
+            entries = [
+                entry for entry in activity.json() if "starred your" in entry["summary"]
+            ]
+            assert len(entries) == 2
+            for entry in entries:
+                assert starrer_email not in entry["summary"]
+                assert f"@{starrer_username}" in entry["summary"]
+                assert entry["context"]["actor_username"] == starrer_username
+                assert starrer_email not in str(entry["context"])
 
     asyncio.run(_flow())

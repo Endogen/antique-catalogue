@@ -4,9 +4,10 @@ import hmac
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
+from app.core.rate_limit import rate_limit
 from app.core.security import TokenError, create_admin_token, decode_token
 from app.core.settings import settings
 from app.db.session import get_db
@@ -30,8 +31,15 @@ from app.schemas.admin import (
     AdminUserResponse,
 )
 from app.schemas.responses import MessageResponse
+from app.services.uploads import (
+    delete_collection_uploads,
+    delete_item_uploads,
+    delete_user_uploads,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+admin_login_rate_limit = rate_limit("admin:login", limit=5, window_seconds=60)
 
 
 def _primary_image_id_subquery():
@@ -163,7 +171,11 @@ def get_admin_subject(
     return subject
 
 
-@router.post("/login", response_model=AdminTokenResponse)
+@router.post(
+    "/login",
+    response_model=AdminTokenResponse,
+    dependencies=[Depends(admin_login_rate_limit)],
+)
 def admin_login(request: AdminLoginRequest) -> AdminTokenResponse:
     _require_admin_config()
     if not _verify_admin_credentials(request.email, request.password):
@@ -245,9 +257,10 @@ def delete_admin_collection(
     collection = db.get(Collection, collection_id)
     if not collection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
-    db.execute(delete(Item).where(Item.collection_id == collection.id))
+    owner_id = collection.owner_id
     db.delete(collection)
     db.commit()
+    delete_collection_uploads(owner_id, collection_id)
     return MessageResponse(message="Collection deleted")
 
 
@@ -328,11 +341,9 @@ def delete_admin_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    owned_collection_ids = select(Collection.id).where(Collection.owner_id == user.id)
-    db.execute(delete(Item).where(Item.collection_id.in_(owned_collection_ids)))
-    db.execute(delete(Collection).where(Collection.owner_id == user.id))
     db.delete(user)
     db.commit()
+    delete_user_uploads(user_id)
     return MessageResponse(message="User deleted")
 
 
@@ -412,8 +423,13 @@ def delete_admin_item(
     item = db.get(Item, item_id)
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+    owner_id = db.execute(
+        select(Collection.owner_id).where(Collection.id == item.collection_id)
+    ).scalar_one()
+    collection_id = item.collection_id
     db.delete(item)
     db.commit()
+    delete_item_uploads(owner_id, collection_id, item_id)
     return MessageResponse(message="Item deleted")
 
 

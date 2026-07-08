@@ -44,3 +44,15 @@ export const translate = (
 
   return value;
 };
+
+export const translateCount = (
+  locale: Locale,
+  count: number,
+  singularKey: string,
+  pluralKey: string,
+  params?: Record<string, string | number>
+): string =>
+  translate(locale, count === 1 ? singularKey : pluralKey, {
+    count,
+    ...params
+  });

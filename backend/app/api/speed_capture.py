@@ -10,7 +10,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.settings import settings
 from app.db.session import get_db
 from app.models.collection import Collection
 from app.models.item import Item
@@ -27,6 +26,7 @@ from app.services.image_processing import (
     generate_image_variants,
     save_image_variants,
 )
+from app.services.uploads import item_upload_dir
 
 router = APIRouter(prefix="/speed-capture", tags=["speed-capture"])
 
@@ -69,14 +69,32 @@ def _get_own_draft_or_404(db: Session, item_id: int, owner_id: int) -> Item:
     return item
 
 
+DRAFT_NAME_PREFIX = "Draft "
+
+
 def _next_draft_number(db: Session, collection_id: int) -> int:
-    count = db.execute(
-        select(func.count(Item.id)).where(
-            Item.collection_id == collection_id,
-            Item.is_draft.is_(True),
+    """Return one past the highest existing draft number.
+
+    Counting drafts would reuse numbers after deletions and produce duplicate
+    names, so derive the next number from the names that still exist.
+    """
+    names = (
+        db.execute(
+            select(Item.name).where(
+                Item.collection_id == collection_id,
+                Item.is_draft.is_(True),
+                Item.name.like(f"{DRAFT_NAME_PREFIX}%"),
+            )
         )
-    ).scalar_one()
-    return count + 1
+        .scalars()
+        .all()
+    )
+    highest = 0
+    for name in names:
+        suffix = name[len(DRAFT_NAME_PREFIX):]
+        if suffix.isdigit():
+            highest = max(highest, int(suffix))
+    return highest + 1
 
 
 def _next_image_position(db: Session, item_id: int) -> int:
@@ -86,10 +104,6 @@ def _next_image_position(db: Session, item_id: int) -> int:
     if current is None:
         return 0
     return int(current) + 1
-
-
-def _build_upload_dir(user_id: int, collection_id: int, item_id: int) -> Path:
-    return settings.uploads_dir / str(user_id) / str(collection_id) / str(item_id)
 
 
 def _read_upload(file: UploadFile) -> bytes:
@@ -169,7 +183,7 @@ if MULTIPART_AVAILABLE:
 
             item = Item(
                 collection_id=collection_id,
-                name=f"Draft {draft_number}",
+                name=f"{DRAFT_NAME_PREFIX}{draft_number}",
                 is_draft=True,
             )
             db.add(item)
@@ -179,7 +193,7 @@ if MULTIPART_AVAILABLE:
             db.add(image)
             db.flush()
 
-            output_dir = _build_upload_dir(current_user.id, collection_id, item.id)
+            output_dir = item_upload_dir(current_user.id, collection_id, item.id)
             _process_and_save_image(payload, output_dir, image.id, db)
 
             log_activity(
@@ -189,6 +203,11 @@ if MULTIPART_AVAILABLE:
                 resource_type="item",
                 resource_id=item.id,
                 summary=f'Speed capture: created draft in "{collection.name}".',
+                context={
+                    "item_name": item.name,
+                    "collection_name": collection.name,
+                    "via": "speed_capture",
+                },
             )
             db.commit()
             db.refresh(item)
@@ -241,7 +260,7 @@ if MULTIPART_AVAILABLE:
             db.add(image)
             db.flush()
 
-            output_dir = _build_upload_dir(current_user.id, collection_id, item.id)
+            output_dir = item_upload_dir(current_user.id, collection_id, item.id)
             _process_and_save_image(payload, output_dir, image.id, db)
 
             total_images = db.execute(

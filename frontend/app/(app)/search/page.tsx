@@ -41,7 +41,7 @@ const highlightCardClass =
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const queryParam = searchParams.get("query") ?? "";
   const [searchValue, setSearchValue] = React.useState(queryParam);
   const [state, setState] = React.useState<LoadState>({
@@ -52,7 +52,7 @@ function SearchContent() {
   const runSearch = React.useCallback(async (term: string) => {
     setState({ status: "loading", data: [] });
     try {
-      const data = await searchApi.items(term);
+      const data = await searchApi.items(term, { limit: 100 });
       setState({ status: "ready", data });
     } catch (error) {
       setState({
@@ -164,7 +164,7 @@ function SearchContent() {
               {t("Results")}
             </p>
             <span className="text-xs text-stone-400">
-              {t("{count} items found", { count: state.data.length })}
+              {tc(state.data.length, "{count} item found", "{count} items found")}
             </span>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -172,9 +172,7 @@ function SearchContent() {
               const imageId = item.primary_image_id ?? null;
               const imageCount = item.image_count ?? 0;
               const imageLabel =
-                imageCount === 1
-                  ? t("{count} image", { count: imageCount })
-                  : t("{count} images", { count: imageCount });
+                tc(imageCount, "{count} image", "{count} images");
               return (
                 <ItemPreviewCard
                   key={`${item.collection_id}-${item.id}`}

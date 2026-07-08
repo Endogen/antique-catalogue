@@ -33,7 +33,7 @@ def _image_count_subquery():
 def search_items(
     q: str = Query(..., min_length=1, description="Search term for item name or notes"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    limit: int | None = Query(None, ge=1, le=1000, description="Optional pagination limit"),
+    limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[ItemSearchResponse]:
@@ -56,9 +56,8 @@ def search_items(
         )
         .order_by(Item.created_at.desc(), Item.id.desc())
         .offset(offset)
+        .limit(limit)
     )
-    if limit is not None:
-        query = query.limit(limit)
     rows = db.execute(query).all()
 
     results: list[ItemSearchResponse] = []

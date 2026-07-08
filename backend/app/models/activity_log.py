@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -19,6 +19,9 @@ class ActivityLog(Base):
     resource_type: Mapped[str] = mapped_column(String(80), nullable=False)
     resource_id: Mapped[int | None] = mapped_column(Integer)
     summary: Mapped[str] = mapped_column(String(400), nullable=False)
+    # Structured parameters (names, actors) so clients can localize the
+    # summary; the English `summary` stays as a fallback.
+    context: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

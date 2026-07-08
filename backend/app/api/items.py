@@ -18,6 +18,7 @@ from app.schemas.items import ItemCreateRequest, ItemResponse, ItemUpdateRequest
 from app.schemas.responses import MessageResponse
 from app.services.activity import log_activity
 from app.services.metadata import MetadataValidationError, validate_metadata
+from app.services.uploads import delete_item_uploads, move_item_uploads
 
 router = APIRouter(prefix="/collections/{collection_id}/items", tags=["items"])
 public_router = APIRouter(
@@ -424,6 +425,7 @@ def create_item(
         resource_type="item",
         resource_id=item.id,
         summary=f'Created item "{item.name}" in "{collection.name}".',
+        context={"item_name": item.name, "collection_name": collection.name},
     )
     db.commit()
     db.refresh(item)
@@ -505,8 +507,17 @@ def update_item(
                 f'Moved item "{item.name}" from "{source_collection.name}" '
                 f'to "{target_collection.name}".'
             )
+            context: dict[str, object] = {
+                "item_name": item.name,
+                "from_collection_name": source_collection.name,
+                "to_collection_name": target_collection.name,
+            }
         else:
             summary = f'Updated item "{item.name}" in "{target_collection.name}".'
+            context = {
+                "item_name": item.name,
+                "collection_name": target_collection.name,
+            }
         log_activity(
             db,
             user_id=current_user.id,
@@ -514,8 +525,16 @@ def update_item(
             resource_type="item",
             resource_id=item.id,
             summary=summary,
+            context=context,
         )
     db.commit()
+    if moved_between_collections:
+        move_item_uploads(
+            current_user.id,
+            source_collection.id,
+            target_collection.id,
+            item_id,
+        )
     db.refresh(item)
     image_id = db.execute(
         select(ItemImage.id)
@@ -550,9 +569,11 @@ def delete_item(
         resource_type="item",
         resource_id=item.id,
         summary=f'Deleted item "{item.name}" from "{collection.name}".',
+        context={"item_name": item.name, "collection_name": collection.name},
     )
     db.delete(item)
     db.commit()
+    delete_item_uploads(current_user.id, collection.id, item_id)
     return MessageResponse(message="Item deleted")
 
 

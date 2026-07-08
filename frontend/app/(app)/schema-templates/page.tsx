@@ -36,7 +36,7 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 
 export default function SchemaTemplatesPage() {
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const [query, setQuery] = React.useState("");
   const [refreshToken, setRefreshToken] = React.useState(0);
   const [state, setState] = React.useState<TemplatesState>({
@@ -272,7 +272,7 @@ export default function SchemaTemplatesPage() {
                   </h2>
                 </div>
                 <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600">
-                  {t("{count} fields", { count: template.field_count })}
+                  {tc(template.field_count, "{count} field", "{count} fields")}
                 </span>
               </div>
 

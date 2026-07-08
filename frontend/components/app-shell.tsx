@@ -41,6 +41,7 @@ type SidebarContentProps = {
 const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
   const pathname = usePathname();
   const { t } = useI18n();
+  const { user } = useAuth();
 
   const primaryNav: NavItem[] = [
     {
@@ -235,6 +236,27 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
         })}
       </nav>
 
+      {user ? (
+        <div className="mt-auto border-t border-stone-800/70 pt-4">
+          <Link
+            href="/profile"
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-2xl px-3 py-3 transition hover:bg-stone-900/60"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200/15 font-display text-lg text-amber-200 ring-1 ring-amber-200/30">
+              {user.username.charAt(0).toUpperCase()}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium text-stone-100">
+                @{user.username}
+              </span>
+              <span className="block truncate text-xs text-stone-400">
+                {user.email}
+              </span>
+            </span>
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 };

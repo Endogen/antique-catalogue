@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.rate_limit import rate_limit
 from app.core.security import (
     TokenError,
     create_access_token,
@@ -32,6 +33,7 @@ from app.schemas.auth import (
 )
 from app.schemas.responses import MessageResponse
 from app.services.email import send_password_reset_email, send_verification_email
+from app.services.uploads import delete_user_uploads
 
 VERIFY_TOKEN_EXPIRE_HOURS = 24
 RESET_TOKEN_EXPIRE_HOURS = 2
@@ -42,6 +44,14 @@ REFRESH_TOKEN_COOKIE = "refresh_token"
 REFRESH_TOKEN_MAX_AGE = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Per-IP limits on credential and token endpoints to slow down brute force
+# and account enumeration. Counters are per process; see app.core.rate_limit.
+login_rate_limit = rate_limit("auth:login", limit=10, window_seconds=60)
+register_rate_limit = rate_limit("auth:register", limit=10, window_seconds=600)
+verify_rate_limit = rate_limit("auth:verify", limit=10, window_seconds=60)
+forgot_rate_limit = rate_limit("auth:forgot", limit=5, window_seconds=900)
+reset_rate_limit = rate_limit("auth:reset", limit=10, window_seconds=60)
 
 
 def _generate_unique_token(db: Session, label: str) -> str:
@@ -60,6 +70,7 @@ def _generate_unique_token(db: Session, label: str) -> str:
     "/register",
     response_model=MessageResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(register_rate_limit)],
 )
 def register(request: RegisterRequest, db: Session = Depends(get_db)) -> MessageResponse:
     existing = db.execute(select(User).where(User.email == request.email)).scalar_one_or_none()
@@ -111,7 +122,7 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         httponly=True,
         max_age=REFRESH_TOKEN_MAX_AGE,
         samesite="lax",
-        secure=False,
+        secure=settings.refresh_token_cookie_secure,
         path=settings.refresh_token_cookie_path,
     )
 
@@ -120,7 +131,7 @@ def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(REFRESH_TOKEN_COOKIE, path=settings.refresh_token_cookie_path)
 
 
-@router.post("/verify", response_model=MessageResponse)
+@router.post("/verify", response_model=MessageResponse, dependencies=[Depends(verify_rate_limit)])
 def verify_email(request: VerifyRequest, db: Session = Depends(get_db)) -> MessageResponse:
     email_token = (
         db.execute(
@@ -161,7 +172,7 @@ def verify_email(request: VerifyRequest, db: Session = Depends(get_db)) -> Messa
     return MessageResponse(message="Email verified")
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, dependencies=[Depends(login_rate_limit)])
 def login(
     request: LoginRequest,
     response: Response,
@@ -259,7 +270,7 @@ def logout(response: Response) -> MessageResponse:
     return MessageResponse(message="Logged out")
 
 
-@router.post("/forgot", response_model=MessageResponse)
+@router.post("/forgot", response_model=MessageResponse, dependencies=[Depends(forgot_rate_limit)])
 def forgot_password(
     request: ForgotPasswordRequest, db: Session = Depends(get_db)
 ) -> MessageResponse:
@@ -282,7 +293,7 @@ def forgot_password(
     return MessageResponse(message="If the account exists, a reset email has been sent")
 
 
-@router.post("/reset", response_model=MessageResponse)
+@router.post("/reset", response_model=MessageResponse, dependencies=[Depends(reset_rate_limit)])
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)) -> MessageResponse:
     email_token = (
         db.execute(
@@ -330,7 +341,9 @@ def delete_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MessageResponse:
+    user_id = current_user.id
     db.delete(current_user)
     db.commit()
+    delete_user_uploads(user_id)
     _clear_refresh_cookie(response)
     return MessageResponse(message="Account deleted")

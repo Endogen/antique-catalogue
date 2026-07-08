@@ -76,13 +76,22 @@ def _get_bool_env(name: str, default: bool) -> bool:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+# Recognizable dev-only default; long enough to satisfy the 32-byte minimum
+# HMAC key length for HS256 (RFC 7518) so local runs stay warning-free.
+DEV_JWT_SECRET = "insecure-development-secret-change-me"
+INSECURE_JWT_SECRETS = {"", "change-me", DEV_JWT_SECRET}
+MIN_JWT_SECRET_LENGTH = 32
+
+
 @dataclass(frozen=True)
 class Settings:
+    app_env: str
     database_url: str
     jwt_secret: str
     jwt_algorithm: str
     jwt_access_token_expire_minutes: int
     refresh_token_cookie_path: str
+    refresh_token_cookie_secure: bool
     auto_verify_email: bool
     admin_email: str | None
     admin_password: str | None
@@ -107,9 +116,21 @@ def get_settings() -> Settings:
         database_url = _normalize_sqlite_url(raw_database_url)
     else:
         database_url = _default_database_url()
+
+    app_env = os.environ.get("APP_ENV", "development").strip().lower() or "development"
+    jwt_secret = os.environ.get("JWT_SECRET", DEV_JWT_SECRET)
+    if app_env == "production" and (
+        jwt_secret in INSECURE_JWT_SECRETS or len(jwt_secret) < MIN_JWT_SECRET_LENGTH
+    ):
+        raise RuntimeError(
+            "JWT_SECRET must be set to a strong secret of at least "
+            f"{MIN_JWT_SECRET_LENGTH} characters when APP_ENV=production"
+        )
+
     return Settings(
+        app_env=app_env,
         database_url=database_url,
-        jwt_secret=os.environ.get("JWT_SECRET", "change-me"),
+        jwt_secret=jwt_secret,
         jwt_algorithm=os.environ.get("JWT_ALGORITHM", "HS256"),
         jwt_access_token_expire_minutes=_get_int_env(
             "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
@@ -120,6 +141,7 @@ def get_settings() -> Settings:
             default="/",
         )
         or "/",
+        refresh_token_cookie_secure=_get_bool_env("REFRESH_TOKEN_COOKIE_SECURE", False),
         auto_verify_email=_get_bool_env("AUTO_VERIFY_EMAIL", False),
         admin_email=os.environ.get("ADMIN_EMAIL"),
         admin_password=os.environ.get("ADMIN_PASSWORD"),

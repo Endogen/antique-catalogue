@@ -40,7 +40,7 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 export default function SchemaTemplateDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const templateId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [state, setState] = React.useState<LoadState>({ status: "loading" });
   const [nameInput, setNameInput] = React.useState("");
@@ -314,9 +314,7 @@ export default function SchemaTemplateDetailPage() {
               </h3>
               <div className="mt-6 space-y-2 text-sm text-stone-600">
                 <p>
-                  {t("{count} fields", {
-                    count: state.data?.field_count ?? 0
-                  })}
+                  {tc(state.data?.field_count ?? 0, "{count} field", "{count} fields")}
                 </p>
                 <p>
                   {t("Created {date}", {

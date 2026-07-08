@@ -32,7 +32,7 @@ type FieldsState = {
 export default function NewItemPage() {
   const params = useParams();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, tc } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const [collectionState, setCollectionState] = React.useState<LoadState>({
@@ -254,9 +254,7 @@ export default function NewItemPage() {
               ) : (
                 <div className="mt-4 space-y-3 text-sm text-stone-600">
                   <p>
-                    {t("{count} fields available.", {
-                      count: fieldsState.data.length
-                    })}
+                    {tc(fieldsState.data.length, "{count} field available.", "{count} fields available.")}
                   </p>
                   <div className="space-y-2">
                     {fieldsState.data.slice(0, 5).map((field) => (
@@ -274,9 +272,7 @@ export default function NewItemPage() {
                     ))}
                     {fieldsState.data.length > 5 ? (
                       <p className="text-xs text-stone-400">
-                        {t("+{count} more fields", {
-                          count: fieldsState.data.length - 5
-                        })}
+                        {tc(fieldsState.data.length - 5, "+{count} more field", "+{count} more fields")}
                       </p>
                     ) : null}
                   </div>

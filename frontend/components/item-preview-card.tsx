@@ -75,12 +75,12 @@ export function ItemPreviewCard({
   return (
     <article
       className={cn(
-        "flex h-full min-h-[31rem] flex-col rounded-3xl border border-stone-200 bg-white/90 p-5 shadow-sm",
+        "flex h-full min-h-[31rem] flex-col rounded-3xl border border-stone-200 bg-white/90 p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-md",
         isHighlighted ? highlightClassName : null,
         className
       )}
     >
-      <Link href={href} className="flex flex-1 flex-col">
+      <Link href={href} className="group flex flex-1 flex-col">
         <div className="h-44 overflow-hidden rounded-2xl border border-stone-100 bg-stone-50">
           {resolvedImageSrc ? (
             <Image
@@ -88,7 +88,7 @@ export function ItemPreviewCard({
               alt={imageAlt ?? title}
               width={640}
               height={352}
-              className="block h-full w-full object-cover"
+              className="block h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               unoptimized
             />
           ) : (

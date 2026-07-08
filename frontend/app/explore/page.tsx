@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
+  Boxes,
   CalendarDays,
   Globe2,
   LogOut,
@@ -64,7 +65,7 @@ const filterCollections = (
 
 export default function ExplorePage() {
   const { isAuthenticated, logout, status: authStatus } = useAuth();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const [state, setState] = React.useState<LoadState>({
     status: "loading",
     data: []
@@ -399,10 +400,12 @@ export default function ExplorePage() {
                         })}
                       </span>
                       <span className="inline-flex items-center gap-1">
+                        <Boxes className="h-4 w-4 text-amber-600" />
+                        {tc(collection.item_count ?? 0, "{count} item", "{count} items")}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
                         <Star className="h-4 w-4 text-amber-600" />
-                        {t("{count} stars", {
-                          count: collection.star_count ?? 0
-                        })}
+                        {tc(collection.star_count ?? 0, "{count} star", "{count} stars")}
                       </span>
                     </div>
                     <Button size="sm" variant="secondary" asChild>

@@ -29,6 +29,7 @@ import {
   type ItemImageResponse,
   type ItemResponse
 } from "@/lib/api";
+import { formatMetadataNumber } from "@/lib/format";
 
 type LoadState<T> = {
   status: "loading" | "ready" | "error";
@@ -39,7 +40,7 @@ type LoadState<T> = {
 export default function PublicItemDetailPage() {
   const params = useParams();
   const { isAuthenticated, logout, status: authStatus } = useAuth();
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const itemIdParam = Array.isArray(params?.itemId) ? params.itemId[0] : params?.itemId;
   const itemId = itemIdParam ? Number(itemIdParam) : NaN;
@@ -91,7 +92,7 @@ export default function PublicItemDetailPage() {
         return value;
       }
       if (typeof value === "number") {
-        return new Intl.NumberFormat(locale).format(value);
+        return formatMetadataNumber(locale, value);
       }
       if (typeof value === "boolean") {
         return value ? t("Yes") : t("No");
@@ -462,11 +463,11 @@ export default function PublicItemDetailPage() {
                     </span>
                     <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 font-medium text-stone-600">
                       <ImageIcon className="h-3.5 w-3.5 text-amber-600" />
-                      {t("{count} images", { count: imagesState.data?.length ?? 0 })}
+                      {tc(imagesState.data?.length ?? 0, "{count} image", "{count} images")}
                     </span>
                     <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-100 px-3 py-1 font-medium text-stone-600">
                       <Star className="h-3.5 w-3.5 text-amber-600" />
-                      {t("{count} stars", { count: itemState.data?.star_count ?? 0 })}
+                      {tc(itemState.data?.star_count ?? 0, "{count} star", "{count} stars")}
                     </span>
                   </div>
                 </div>

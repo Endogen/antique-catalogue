@@ -49,7 +49,7 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 };
 
 export default function StarsPage() {
-  const { t, locale } = useI18n();
+  const { t, tc, locale } = useI18n();
   const [query, setQuery] = React.useState("");
   const [refreshToken, setRefreshToken] = React.useState(0);
   const [activeTab, setActiveTab] = React.useState<StarsTab>("collections");
@@ -149,7 +149,7 @@ export default function StarsPage() {
             />
           </div>
           <span className="text-xs text-stone-500">
-            {t("{count} stars", { count: totalStarredEntries })}
+            {tc(totalStarredEntries, "{count} star", "{count} stars")}
           </span>
         </div>
       </header>
@@ -280,9 +280,7 @@ export default function StarsPage() {
               {state.items.map((item) => {
                 const imageCount = item.image_count ?? 0;
                 const imageLabel =
-                  imageCount === 1
-                    ? t("{count} image", { count: imageCount })
-                    : t("{count} images", { count: imageCount });
+                  tc(imageCount, "{count} image", "{count} images");
                 return (
                   <ItemPreviewCard
                     key={`${item.collection_id}-${item.id}`}

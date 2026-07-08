@@ -16,6 +16,7 @@ def log_activity(
     resource_type: str,
     summary: str,
     resource_id: int | None = None,
+    context: dict[str, object] | None = None,
 ) -> None:
     entry = ActivityLog(
         user_id=user_id,
@@ -23,6 +24,7 @@ def log_activity(
         resource_type=resource_type,
         resource_id=resource_id,
         summary=summary,
+        context=context,
     )
     db.add(entry)
     db.flush()
