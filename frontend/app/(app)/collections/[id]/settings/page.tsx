@@ -20,6 +20,8 @@ import {
   type CollectionFormValues
 } from "@/components/collection-form";
 import { SchemaBuilder } from "@/components/schema-builder";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -31,7 +33,14 @@ import {
   type CollectionResponse,
   type SchemaTemplateSummaryResponse
 } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { cn } from "@/lib/utils";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 
 const DELETE_TOKEN = "DELETE";
 
@@ -46,12 +55,6 @@ const buildPayload = (values: CollectionFormValues) => ({
   is_public: values.is_public
 });
 
-type LoadState = {
-  status: "loading" | "ready" | "error";
-  data?: CollectionResponse;
-  error?: string;
-};
-
 export default function CollectionSettingsPage() {
   const params = useParams();
   const router = useRouter();
@@ -62,9 +65,18 @@ export default function CollectionSettingsPage() {
     status: "idle"
   });
   const confirmDeleteMatches = deletePhrase.trim().toUpperCase() === DELETE_TOKEN;
-  const [state, setState] = React.useState<LoadState>({
-    status: "loading"
+  const queryClient = useQueryClient();
+  const collectionKey = queryKeys.collections.detail(Number(collectionId));
+  const collectionQuery = useQuery({
+    queryKey: collectionKey,
+    queryFn: ({ signal }) => collectionApi.get(collectionId!, { signal }),
+    enabled: Boolean(collectionId)
   });
+  const state = toLoadState<CollectionResponse | undefined>(
+    collectionQuery,
+    "We couldn't load this collection.",
+    undefined
+  );
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
   const [templateName, setTemplateName] = React.useState("");
@@ -77,14 +89,6 @@ export default function CollectionSettingsPage() {
   const [selectedApplyTemplateId, setSelectedApplyTemplateId] = React.useState<
     number | null
   >(null);
-  const [applyTemplatesState, setApplyTemplatesState] = React.useState<{
-    status: "idle" | "loading" | "ready" | "error";
-    data: SchemaTemplateSummaryResponse[];
-    error?: string;
-  }>({
-    status: "idle",
-    data: []
-  });
   const [applyTemplateError, setApplyTemplateError] = React.useState<string | null>(
     null
   );
@@ -111,90 +115,46 @@ export default function CollectionSettingsPage() {
     [locale]
   );
 
-  const loadCollection = React.useCallback(async () => {
-    if (!collectionId) {
-      setState({
-        status: "error",
-        error: "Collection ID was not provided."
-      });
+  const { refetch: refetchCollection } = collectionQuery;
+  const loadCollection = React.useCallback(() => {
+    void refetchCollection();
+  }, [refetchCollection]);
+
+
+  const debouncedTemplateQuery = useDebouncedValue(applyTemplateQuery).trim();
+  const applyTemplatesQuery = useQuery({
+    queryKey: [
+      ...queryKeys.schemaTemplates.list(),
+      "apply",
+      debouncedTemplateQuery
+    ],
+    queryFn: ({ signal }) =>
+      schemaTemplateApi.list({
+        q: debouncedTemplateQuery || undefined,
+        limit: 50,
+        signal
+      }),
+    enabled: Boolean(collectionId)
+  });
+  const applyTemplatesState = toLoadState<SchemaTemplateSummaryResponse[]>(
+    applyTemplatesQuery,
+    "We couldn't load schema templates.",
+    []
+  );
+
+  // Clear a selection that the latest search no longer contains.
+  const availableTemplates = applyTemplatesQuery.data;
+  React.useEffect(() => {
+    if (!availableTemplates) {
       return;
     }
+    setSelectedApplyTemplateId((prev) =>
+      prev !== null && availableTemplates.some((template) => template.id === prev)
+        ? prev
+        : null
+    );
+  }, [availableTemplates]);
 
-    setState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-
-    try {
-      const data = await collectionApi.get(collectionId);
-      setState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setState({
-        status: "error",
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load this collection."
-      });
-    }
-  }, [collectionId]);
-
-  React.useEffect(() => {
-    void loadCollection();
-  }, [loadCollection]);
-
-  React.useEffect(() => {
-    if (!collectionId) {
-      return;
-    }
-    let isActive = true;
-    const handle = setTimeout(() => {
-      void (async () => {
-        setApplyTemplatesState((prev) => ({
-          ...prev,
-          status: "loading",
-          error: undefined
-        }));
-        try {
-          const data = await schemaTemplateApi.list({
-            q: applyTemplateQuery.trim() || undefined,
-            limit: 50
-          });
-          if (!isActive) {
-            return;
-          }
-          setApplyTemplatesState({
-            status: "ready",
-            data
-          });
-          setSelectedApplyTemplateId((prev) =>
-            prev !== null && data.some((template) => template.id === prev)
-              ? prev
-              : null
-          );
-        } catch (error) {
-          if (!isActive) {
-            return;
-          }
-          setApplyTemplatesState((prev) => ({
-            ...prev,
-            status: "error",
-            error: isApiError(error)
-              ? error.detail
-              : "We couldn't load schema templates."
-          }));
-        }
-      })();
-    }, 250);
-
-    return () => {
-      isActive = false;
-      clearTimeout(handle);
-    };
-  }, [applyTemplateQuery, collectionId]);
 
   const handleSubmit = async (values: CollectionFormValues) => {
     if (!collectionId) {
@@ -207,10 +167,7 @@ export default function CollectionSettingsPage() {
         collectionId,
         buildPayload(values)
       );
-      setState({
-        status: "ready",
-        data: updated
-      });
+      queryClient.setQueryData(collectionKey, updated);
       setSaveMessage("Changes saved successfully.");
     } catch (error) {
       setFormError(
@@ -320,15 +277,15 @@ export default function CollectionSettingsPage() {
             </Link>
           </Button>
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+            <Eyebrow tone="brand" spacing="wide">
               {t("Collection settings")}
-            </p>
-            <h1 className="font-display mt-4 text-3xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading as="h1" size="xl" className="mt-4">
               {state.status === "ready" && state.data
                 ? state.data.name
                 : t("Review collection details")}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-3 max-w-2xl text-sm text-muted-strong">
               {t(
                 "Update the collection name, description, and public visibility."
               )}
@@ -344,18 +301,16 @@ export default function CollectionSettingsPage() {
       </header>
 
       {state.status === "loading" ? (
-        <div
-          className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
-          aria-busy="true"
-        >
+        <EmptyState
+          aria-busy="true">
           {t("Loading collection settings...")}
-        </div>
+        </EmptyState>
       ) : state.status === "error" ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
-          <p className="text-sm font-medium text-rose-700">
+        <Alert className="rounded-3xl p-6">
+          <p className="text-sm font-medium text-destructive">
             {t("We hit a snag loading this collection.")}
           </p>
-          <p className="mt-2 text-sm text-rose-600">
+          <p className="mt-2 text-sm text-destructive">
             {t(state.error ?? "Please try again.")}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -366,30 +321,29 @@ export default function CollectionSettingsPage() {
               <Link href="/collections">{t("Back to collections")}</Link>
             </Button>
           </div>
-        </div>
+        </Alert>
       ) : (
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <div className="space-y-6">
-            <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            <Card>
+              <Eyebrow>
                 {t("Collection details")}
-              </p>
-              <h2 className="font-display mt-3 text-2xl text-stone-900">
+              </Eyebrow>
+              <SectionHeading className="mt-3">
                 {t("Keep your catalogue organized.")}
-              </h2>
-              <p className="mt-3 text-sm text-stone-600">
+              </SectionHeading>
+              <p className="mt-3 text-sm text-muted-strong">
                 {t(
                   "These details appear throughout your workspace and in the public directory if enabled."
                 )}
               </p>
 
               {saveMessage ? (
-                <div
+                <Alert tone="success"
                   role="status"
-                  className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-                >
+                  className="mt-6">
                   {t(saveMessage)}
-                </div>
+                </Alert>
               ) : null}
 
               <div className="mt-6">
@@ -410,46 +364,46 @@ export default function CollectionSettingsPage() {
                   formError={formError}
                 />
               </div>
-            </div>
+            </Card>
 
-            <SchemaBuilder key={schemaBuilderKey} collectionId={collectionId ?? ""} />
+            <SchemaBuilder key={`${collectionId}:${schemaBuilderKey}`} collectionId={collectionId ?? ""} />
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            <Card tone="subtle">
+              <Eyebrow>
                 {t("Collection snapshot")}
-              </p>
-              <h3 className="font-display mt-3 text-2xl text-stone-900">
+              </Eyebrow>
+              <SectionHeading as="h3" className="mt-3">
                 {t("Quick details")}
-              </h3>
-              <div className="mt-6 space-y-4 text-sm text-stone-600">
+              </SectionHeading>
+              <div className="mt-6 space-y-4 text-sm text-muted-strong">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-muted text-muted-strong">
                     <CalendarDays className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-stone-900">{t("Created")}</p>
-                    <p className="mt-1 text-xs text-stone-500">
+                    <p className="font-medium text-foreground">{t("Created")}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {formatDate(state.data?.created_at)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-muted text-muted-strong">
                     <Settings2 className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-stone-900">
+                    <p className="font-medium text-foreground">
                       {t("Last updated")}
                     </p>
-                    <p className="mt-1 text-xs text-stone-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {formatDate(state.data?.updated_at)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-muted text-brand">
                     {state.data?.is_public ? (
                       <Globe2 className="h-4 w-4" />
                     ) : (
@@ -457,8 +411,8 @@ export default function CollectionSettingsPage() {
                     )}
                   </div>
                   <div>
-                    <p className="font-medium text-stone-900">{t("Visibility")}</p>
-                    <p className="mt-1 text-xs text-stone-500">
+                    <p className="font-medium text-foreground">{t("Visibility")}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {state.data?.is_public
                         ? t("Public directory")
                         : t("Private workspace")}
@@ -466,16 +420,16 @@ export default function CollectionSettingsPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
-            <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            <Card tone="subtle">
+              <Eyebrow>
                 {t("Apply schema template")}
-              </p>
-              <h3 className="font-display mt-3 text-2xl text-stone-900">
+              </Eyebrow>
+              <SectionHeading as="h3" className="mt-3">
                 {t("Copy fields from a saved schema template.")}
-              </h3>
-              <p className="mt-3 text-sm text-stone-600">
+              </SectionHeading>
+              <p className="mt-3 text-sm text-muted-strong">
                 {t(
                   "Append fields from one of your saved templates to this collection schema."
                 )}
@@ -483,30 +437,30 @@ export default function CollectionSettingsPage() {
 
               <div className="mt-4 space-y-3">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
                   <input
                     type="search"
                     value={applyTemplateQuery}
                     onChange={(event) => setApplyTemplateQuery(event.target.value)}
                     placeholder={t("Search schema templates")}
-                    className="h-10 w-full rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
 
                 {applyTemplatesState.status === "loading" &&
                 applyTemplatesState.data.length === 0 ? (
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-muted-foreground">
                     {t("Loading schema templates...")}
                   </p>
                 ) : applyTemplatesState.status === "error" ? (
-                  <p className="text-xs text-rose-600">
+                  <p className="text-xs text-destructive">
                     {t(
                       applyTemplatesState.error ??
                         "We couldn't load schema templates."
                     )}
                   </p>
                 ) : applyTemplatesState.data.length === 0 ? (
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-muted-foreground">
                     {t("No schema templates found.")}
                   </p>
                 ) : (
@@ -523,15 +477,15 @@ export default function CollectionSettingsPage() {
                         className={cn(
                           "w-full rounded-xl border p-3 text-left transition",
                           selectedApplyTemplateId === template.id
-                            ? "border-amber-300 bg-amber-50/80"
-                            : "border-stone-200 bg-white hover:border-stone-300"
+                            ? "border-brand-border bg-brand-muted/80"
+                            : "border-border bg-card hover:border-muted-subtle"
                         )}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium text-stone-900">
+                          <p className="text-sm font-medium text-foreground">
                             {template.name}
                           </p>
-                          <span className="text-xs text-stone-500">
+                          <span className="text-xs text-muted-foreground">
                             {tc(template.field_count, "{count} field", "{count} fields")}
                           </span>
                         </div>
@@ -549,45 +503,45 @@ export default function CollectionSettingsPage() {
                 </Button>
 
                 {applyTemplateError ? (
-                  <p className="text-xs text-rose-600">{t(applyTemplateError)}</p>
+                  <p className="text-xs text-destructive">{t(applyTemplateError)}</p>
                 ) : null}
                 {applyTemplateMessage ? (
-                  <p className="text-xs text-emerald-700">
+                  <p className="text-xs text-success">
                     {t(applyTemplateMessage)}
                   </p>
                 ) : null}
 
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-muted-foreground">
                   {t("Need a new template?")}{" "}
                   <Link
                     href="/schema-templates"
-                    className="font-medium text-amber-700"
+                    className="font-medium text-brand"
                   >
                     {t("Manage schema templates")}
                   </Link>
                 </p>
               </div>
-            </div>
+            </Card>
 
-            <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            <Card tone="subtle">
+              <Eyebrow>
                 {t("Save schema template")}
-              </p>
-              <h3 className="font-display mt-3 text-2xl text-stone-900">
+              </Eyebrow>
+              <SectionHeading as="h3" className="mt-3">
                 {t("Reuse this schema later.")}
-              </h3>
-              <p className="mt-3 text-sm text-stone-600">
+              </SectionHeading>
+              <p className="mt-3 text-sm text-muted-strong">
                 {t(
                   "Save the current field setup as a template for future collections."
                 )}
               </p>
               <div className="mt-4 space-y-3">
-                <input
+                <Input
                   type="text"
                   value={templateName}
                   onChange={(event) => setTemplateName(event.target.value)}
                   placeholder={t("Template name")}
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+
                 />
                 <Button
                   type="button"
@@ -597,15 +551,15 @@ export default function CollectionSettingsPage() {
                   {isSavingTemplate ? t("Saving...") : t("Save template")}
                 </Button>
                 {templateError ? (
-                  <p className="text-xs text-rose-600">{t(templateError)}</p>
+                  <p className="text-xs text-destructive">{t(templateError)}</p>
                 ) : null}
                 {templateMessage ? (
-                  <p className="text-xs text-emerald-700">
+                  <p className="text-xs text-success">
                     {t(templateMessage)}{" "}
                     {savedTemplateId ? (
                       <Link
                         href={`/schema-templates/${savedTemplateId}`}
-                        className="font-medium text-emerald-700 underline"
+                        className="font-medium text-success underline"
                       >
                         {t("Open")}
                       </Link>
@@ -613,36 +567,36 @@ export default function CollectionSettingsPage() {
                   </p>
                 ) : null}
               </div>
-            </div>
+            </Card>
 
-            <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+              <Eyebrow tone="subtle">
                 {t("Next step")}
-              </p>
-              <p className="mt-3 text-sm text-stone-300">
+              </Eyebrow>
+              <p className="mt-3 text-sm text-panel-muted-foreground">
                 {t(
                   "Define the metadata fields for this collection to begin adding items in the next step."
                 )}
               </p>
             </div>
 
-            <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
+            <Alert className="rounded-3xl p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
+                  <Eyebrow className="text-destructive">
                     {t("Danger zone")}
-                  </p>
-                  <h3 className="font-display mt-3 text-2xl text-stone-900">
+                  </Eyebrow>
+                  <SectionHeading as="h3" className="mt-3">
                     {t("Permanently delete this collection.")}
-                  </h3>
-                  <p className="mt-3 text-sm text-rose-700">
+                  </SectionHeading>
+                  <p className="mt-3 text-sm text-destructive">
                     {t(
                       "This removes the collection, all its items, and any attached imagery. Type {token} to confirm.",
                       { token: DELETE_TOKEN }
                     )}
                   </p>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive-muted text-destructive">
                   <ShieldAlert className="h-6 w-6" />
                 </div>
               </div>
@@ -650,7 +604,7 @@ export default function CollectionSettingsPage() {
               <div className="mt-6 grid gap-4">
                 <div>
                   <label
-                    className="text-sm font-medium text-rose-700"
+                    className="text-sm font-medium text-destructive"
                     htmlFor="delete-collection-confirm"
                   >
                     {t("Confirmation phrase")}
@@ -658,7 +612,7 @@ export default function CollectionSettingsPage() {
                   <input
                     id="delete-collection-confirm"
                     type="text"
-                    className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-sm transition focus:border-destructive-border focus:outline-none focus:ring-2 focus:ring-destructive-border"
                     value={deletePhrase}
                     onChange={(event) => setDeletePhrase(event.target.value)}
                     placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}
@@ -667,7 +621,7 @@ export default function CollectionSettingsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-rose-200 text-rose-700 hover:bg-rose-100"
+                  className="border-destructive-border text-destructive hover:bg-destructive-muted"
                   disabled={!confirmDeleteMatches || deleteState.status === "working"}
                   onClick={handleDeleteCollection}
                 >
@@ -679,14 +633,13 @@ export default function CollectionSettingsPage() {
               </div>
 
               {deleteState.status === "error" && deleteState.message ? (
-                <div
+                <Alert
                   role="alert"
-                  className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
-                >
+                  className="mt-4 bg-card/80">
                   {t(deleteState.message)}
-                </div>
+                </Alert>
               ) : null}
-            </div>
+            </Alert>
           </aside>
         </section>
       )}

@@ -16,9 +16,16 @@ import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
+
 import { useI18n } from "@/components/i18n-provider";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { setRoundedDragPreview } from "@/lib/drag-preview";
 import { cn } from "@/lib/utils";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 import {
   fieldApi,
   isApiError,
@@ -125,15 +132,21 @@ const arrayMove = <T,>(items: T[], fromIndex: number, toIndex: number) => {
 type SchemaBuilderProps = {
   collectionId?: number | string;
   api?: SchemaBuilderApi;
+  /**
+   * Identifies the schema source for caching when a custom `api` is supplied
+   * (a schema template, for example) rather than a collection id.
+   */
+  sourceKey?: string;
 };
 
-export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
+export function SchemaBuilder({
+  collectionId,
+  api,
+  sourceKey
+}: SchemaBuilderProps) {
   const { t } = useI18n();
-  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
-    "loading"
-  );
+  const confirm = useConfirm();
   const [fields, setFields] = React.useState<SchemaFieldRecord[]>([]);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
   const [optionsError, setOptionsError] = React.useState<string | null>(null);
@@ -185,42 +198,54 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
     [fields, activeFieldId]
   );
 
+  const fieldsQuery = useQuery({
+    queryKey: collectionId && !api
+      ? queryKeys.collections.fields(Number(collectionId))
+      : queryKeys.schemaTemplates.fields(sourceKey ?? "none"),
+    queryFn: () => schemaApi!.list(),
+    enabled: Boolean(schemaApi)
+  });
+
+  // Local copy so drag-reordering can update optimistically.
+  React.useEffect(() => {
+    if (fieldsQuery.data) {
+      setFields(sortFields(fieldsQuery.data));
+    }
+  }, [fieldsQuery.data]);
+
+  const status: "loading" | "ready" | "error" = !schemaApi
+    ? "error"
+    : fieldsQuery.isError
+      ? "error"
+      : fieldsQuery.isPending
+        ? "loading"
+        : "ready";
+  const loadError = !schemaApi
+    ? "Schema source is missing."
+    : fieldsQuery.isError
+      ? isApiError(fieldsQuery.error)
+        ? fieldsQuery.error.detail
+        : "We couldn't load schema fields."
+      : null;
+
+  const { refetch: refetchFields } = fieldsQuery;
   const loadFields = React.useCallback(async () => {
-    if (!schemaApi) {
-      setStatus("error");
-      setLoadError("Schema source is missing.");
-      return;
-    }
-    setStatus("loading");
-    setLoadError(null);
-    try {
-      const data = await schemaApi.list();
-      setFields(sortFields(data));
-      setStatus("ready");
-    } catch (error) {
-      setStatus("error");
-      setLoadError(
-        isApiError(error)
-          ? error.detail
-          : "We couldn't load schema fields."
-      );
-    }
-  }, [schemaApi]);
+    await refetchFields();
+  }, [refetchFields]);
 
-  React.useEffect(() => {
-    void loadFields();
-  }, [loadFields]);
-
-  React.useEffect(() => {
+  const selectField = (field: SchemaFieldRecord | null) => {
+    // Initialize in the selection event, before the editor becomes interactive.
+    // Background refetches must never reset unsaved form input.
+    setActiveFieldId(field?.id ?? null);
     setActionMessage(null);
-    if (activeField) {
+    if (field) {
       reset({
-        name: activeField.name,
-        field_type: activeField.field_type as FieldType,
-        is_required: activeField.is_required,
-        is_private: activeField.is_private
+        name: field.name,
+        field_type: field.field_type as FieldType,
+        is_required: field.is_required,
+        is_private: field.is_private
       });
-      setOptions(extractOptions(activeField.options));
+      setOptions(extractOptions(field.options));
     } else {
       reset(defaultValues);
       setOptions([]);
@@ -228,7 +253,7 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
     setOptionInput("");
     setOptionsError(null);
     setFormError(null);
-  }, [activeField, reset]);
+  };
 
   const addOptionsFromInput = React.useCallback(() => {
     const parsed = optionInput
@@ -291,7 +316,8 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
         setActionMessage("Field updated.");
       } else {
         const created = await schemaApi.create(payload);
-        setFields((prev) => sortFields([...prev, created]));
+        // A mutation-triggered refetch may already contain this field.
+        setFields((prev) => sortFields([...prev.filter((field) => field.id !== created.id), created]));
         setActionMessage("Field added.");
         reset(defaultValues);
         setOptions([]);
@@ -315,11 +341,13 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
     if (!field) {
       return;
     }
-    const confirmed = window.confirm(
-      t('Delete the "{name}" field? This cannot be undone.', {
+    const confirmed = await confirm({
+      title: t('Delete the "{name}" field? This cannot be undone.', {
         name: field.name
-      })
-    );
+      }),
+      confirmLabel: t("Delete"),
+      tone: "destructive"
+    });
     if (!confirmed) {
       return;
     }
@@ -330,7 +358,7 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
       await schemaApi.delete(fieldId);
       setFields((prev) => prev.filter((item) => item.id !== fieldId));
       if (activeFieldId === fieldId) {
-        setActiveFieldId(null);
+        selectField(null);
       }
       setActionMessage("Field deleted.");
     } catch (error) {
@@ -435,23 +463,20 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
   };
 
   const handleCancelEdit = () => {
-    setActiveFieldId(null);
-    setActionMessage(null);
-    setFormError(null);
-    setOptionsError(null);
+    selectField(null);
   };
 
   return (
-    <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+    <Card>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <Eyebrow>
             {t("Schema builder")}
-          </p>
-          <h2 className="font-display mt-3 text-2xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading className="mt-3">
             {t("Define the metadata you need.")}
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 max-w-2xl text-sm text-muted-strong">
             {t(
               "Add, edit, and reorder fields to match how you catalog each item. Drag fields to reorder and mark required attributes."
             )}
@@ -464,18 +489,17 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
       </div>
 
       {status === "loading" ? (
-        <div
-          className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/80 p-6 text-sm text-stone-500"
-          aria-busy="true"
-        >
+        <EmptyState size="sm"
+          className="mt-6"
+          aria-busy="true">
           {t("Loading schema fields...")}
-        </div>
+        </EmptyState>
       ) : status === "error" ? (
-        <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-6">
-          <p className="text-sm font-medium text-rose-700">
+        <Alert className="p-6 mt-6">
+          <p className="text-sm font-medium text-destructive">
             {t("We hit a snag loading your schema.")}
           </p>
-          <p className="mt-2 text-sm text-rose-600">
+          <p className="mt-2 text-sm text-destructive">
             {t(loadError ?? "Please try again.")}
           </p>
           <div className="mt-4">
@@ -483,29 +507,29 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
               {t("Try again")}
             </Button>
           </div>
-        </div>
+        </Alert>
       ) : (
         <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+              <Eyebrow>
                 {t("Fields")}
-              </p>
-              <span className="text-xs text-stone-400">
+              </Eyebrow>
+              <span className="text-xs text-muted-subtle">
                 {t("{count} total", { count: fields.length })}
               </span>
             </div>
 
             {reorderError ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs text-rose-700">
+              <Alert className="text-xs">
                 {t(reorderError)}
-              </div>
+              </Alert>
             ) : null}
 
             {fields.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-stone-200 bg-white/80 p-6 text-sm text-stone-500">
+              <EmptyState size="sm">
                 {t("No fields yet. Add your first field to define the schema.")}
-              </div>
+              </EmptyState>
             ) : (
               <div className="space-y-3">
                 {fields.map((field, index) => {
@@ -516,10 +540,10 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                     <div
                       key={field.id}
                       className={cn(
-                        "rounded-2xl border bg-white/80 p-4 shadow-sm transition",
+                        "rounded-2xl border bg-card/80 p-4 shadow-sm transition",
                         dragOverId === field.id
-                          ? "border-amber-300 bg-amber-50/70"
-                          : "border-stone-200"
+                          ? "border-brand-border bg-brand-muted/70"
+                          : "border-border"
                       )}
                       onDragOver={(event) => handleDragOver(event, field.id)}
                       onDrop={(event) => handleDrop(event, field.id)}
@@ -529,10 +553,10 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                           <button
                             type="button"
                             className={cn(
-                              "flex h-10 w-10 items-center justify-center rounded-xl border text-stone-500 transition",
+                              "flex h-10 w-10 items-center justify-center rounded-xl border text-muted-foreground transition",
                               draggingId === field.id
-                                ? "border-amber-300 bg-amber-50 text-amber-700"
-                                : "border-stone-200 bg-stone-50 hover:border-stone-300"
+                                ? "border-brand-border bg-brand-muted text-brand"
+                                : "border-border bg-background hover:border-muted-subtle"
                             )}
                             draggable={!isReordering}
                             aria-label={t("Drag to reorder {name}", {
@@ -547,25 +571,25 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                           </button>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-medium text-stone-900">
+                              <p className="text-sm font-medium text-foreground">
                                 {field.name}
                               </p>
                               {field.is_required ? (
-                                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.2em] text-amber-700">
+                                <span className="rounded-full border border-brand-border bg-brand-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.2em] text-brand">
                                   {t("Required")}
                                 </span>
                               ) : null}
                               {field.is_private ? (
-                                <span className="rounded-full border border-stone-200 bg-stone-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-600">
+                                <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-strong">
                                   {t("Private")}
                                 </span>
                               ) : null}
                             </div>
-                            <p className="mt-1 text-xs text-stone-500">
+                            <p className="mt-1 text-xs text-muted-foreground">
                               {typeMeta.label} · {typeMeta.helper}
                             </p>
                             {field.field_type === "select" && optionSummary ? (
-                              <p className="mt-2 text-xs text-stone-500">
+                              <p className="mt-2 text-xs text-muted-foreground">
                                 {t("Options: {options}", {
                                   options: optionSummary
                                 })}
@@ -577,7 +601,7 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                           <Button
                             size="sm"
                             variant={isActive ? "secondary" : "ghost"}
-                            onClick={() => setActiveFieldId(field.id)}
+                            onClick={() => { if (!isActive) selectField(field); }}
                           >
                             <PencilLine className="h-4 w-4" />
                             {isActive ? t("Editing") : t("Edit")}
@@ -595,8 +619,8 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                           </Button>
                         </div>
                       </div>
-                      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-                        <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
+                      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span className="rounded-full border border-border bg-background px-3 py-1">
                           {t("Position {position}", {
                             position: index + 1
                           })}
@@ -620,7 +644,7 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                           {t("Move down")}
                         </Button>
                         {isReordering ? (
-                          <span className="text-xs text-amber-700">
+                          <span className="text-xs text-brand">
                             {t("Saving order...")}
                           </span>
                         ) : null}
@@ -632,29 +656,29 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
             )}
           </div>
 
-          <div className="rounded-2xl border border-stone-200 bg-white/80 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <div className="rounded-2xl border border-border bg-card/80 p-4">
+            <Eyebrow>
               {activeField ? t("Edit field") : t("New field")}
-            </p>
-            <h3 className="mt-3 text-lg font-semibold text-stone-900">
+            </Eyebrow>
+            <h3 className="mt-3 text-lg font-semibold text-foreground">
               {activeField
                 ? t("Adjust the field details.")
                 : t("Add a new field.")}
             </h3>
-            <p className="mt-2 text-xs text-stone-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t("Changes apply to new items immediately.")}
             </p>
 
             {actionMessage ? (
-              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+              <Alert tone="success" className="px-3 py-2 mt-4 text-xs">
                 {t(actionMessage)}
-              </div>
+              </Alert>
             ) : null}
 
             {formError ? (
-              <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              <Alert className="px-3 py-2 mt-4 text-xs">
                 {t(formError)}
-              </div>
+              </Alert>
             ) : null}
 
             <form
@@ -662,19 +686,19 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
               onSubmit={handleSubmit(submitField)}
             >
               <div>
-                <label className="text-xs font-medium text-stone-700" htmlFor="field-name">
+                <label className="text-xs font-medium text-muted-strong" htmlFor="field-name">
                   {t("Field name")}
                 </label>
                 <input
                   id="field-name"
                   type="text"
                   autoComplete="off"
-                  className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                   aria-invalid={errors.name ? "true" : "false"}
                   {...register("name")}
                 />
                 {errors.name ? (
-                  <p className="mt-2 text-xs text-rose-600">
+                  <p className="mt-2 text-xs text-destructive">
                     {errors.name.message}
                   </p>
                 ) : null}
@@ -682,14 +706,14 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
 
               <div>
                 <label
-                  className="text-xs font-medium text-stone-700"
+                  className="text-xs font-medium text-muted-strong"
                   htmlFor="field-type"
                 >
                   {t("Field type")}
                 </label>
                 <select
                   id="field-type"
-                  className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                   {...register("field_type")}
                 >
                   {fieldTypes.map((option) => (
@@ -698,37 +722,37 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                     </option>
                   ))}
                 </select>
-                <p className="mt-2 text-xs text-stone-500">
+                <p className="mt-2 text-xs text-muted-foreground">
                   {resolveTypeMeta(fieldType).helper}
                 </p>
               </div>
 
               <label
-                className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2 text-xs text-stone-600"
+                className="flex items-center gap-3 rounded-xl border border-border bg-background/80 px-3 py-2 text-xs text-muted-strong"
                 title={t("This field must be set to save an item.")}
               >
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-amber-600"
+                  className="h-4 w-4 accent-brand"
                   {...register("is_required")}
                 />
                 {t("Required field")}
-                <span className="text-stone-400">
+                <span className="text-muted-subtle">
                   ?
                 </span>
               </label>
 
               <label
-                className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2 text-xs text-stone-600"
+                className="flex items-center gap-3 rounded-xl border border-border bg-background/80 px-3 py-2 text-xs text-muted-strong"
                 title={t("Hidden from public collections")}
               >
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-amber-600"
+                  className="h-4 w-4 accent-brand"
                   {...register("is_private")}
                 />
                 {t("Private field")}
-                <span className="text-stone-400">
+                <span className="text-muted-subtle">
                   ?
                 </span>
               </label>
@@ -737,7 +761,7 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                 <div className="space-y-3">
                   <div>
                     <label
-                      className="text-xs font-medium text-stone-700"
+                      className="text-xs font-medium text-muted-strong"
                       htmlFor="field-options"
                     >
                       {t("Options")}
@@ -750,7 +774,7 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                         onChange={(event) => setOptionInput(event.target.value)}
                         onKeyDown={handleOptionKeyDown}
                         placeholder={t("Add option values")}
-                        className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                        className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                       />
                       <Button
                         type="button"
@@ -762,11 +786,11 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                       </Button>
                     </div>
                     {optionsError ? (
-                      <p className="mt-2 text-xs text-rose-600">
+                      <p className="mt-2 text-xs text-destructive">
                         {t(optionsError)}
                       </p>
                     ) : (
-                      <p className="mt-2 text-xs text-stone-500">
+                      <p className="mt-2 text-xs text-muted-foreground">
                         {t(
                           "Separate options with commas or hit enter after each value."
                         )}
@@ -779,12 +803,12 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
                       {options.map((option) => (
                         <span
                           key={option}
-                          className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1 text-xs text-stone-600"
+                          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-strong"
                         >
                           {option}
                           <button
                             type="button"
-                            className="text-stone-400 transition hover:text-stone-600"
+                            className="text-muted-subtle transition hover:text-foreground"
                             onClick={() =>
                               setOptions((prev) =>
                                 prev.filter((value) => value !== option)
@@ -826,6 +850,6 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

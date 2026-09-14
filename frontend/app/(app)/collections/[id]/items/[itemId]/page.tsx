@@ -19,6 +19,8 @@ import {
 import { ItemForm, type ItemFormValues } from "@/components/item-form";
 import { ImageGallery } from "@/components/image-gallery";
 import { ImageUploader } from "@/components/image-uploader";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,19 +35,12 @@ import {
   type MovePreview,
   type ItemResponse
 } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
 import { formatMetadataNumber } from "@/lib/format";
-
-type LoadState<T> = {
-  status: "loading" | "ready" | "error";
-  data?: T;
-  error?: string;
-};
-
-type FieldsState = {
-  status: "loading" | "ready" | "error";
-  data: FieldDefinitionResponse[];
-  error?: string;
-};
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 
 type DeleteState = {
   status: "idle" | "working" | "error";
@@ -152,23 +147,64 @@ export default function ItemDetailPage() {
     [formatDate, formatDateTime, locale, t]
   );
 
-  const [collectionState, setCollectionState] = React.useState<
-    LoadState<CollectionResponse>
-  >({
-    status: "loading"
+  const queryClient = useQueryClient();
+  const itemKey = queryKeys.items.detail(Number(itemId));
+
+  const collectionQuery = useQuery({
+    queryKey: queryKeys.collections.detail(Number(collectionId)),
+    queryFn: ({ signal }) => collectionApi.get(collectionId!, { signal }),
+    enabled: Boolean(collectionId)
   });
-  const [collectionsState, setCollectionsState] = React.useState<
-    LoadState<CollectionResponse[]>
-  >({
-    status: "loading"
+  const collectionsQuery = useQuery({
+    queryKey: queryKeys.collections.list(),
+    queryFn: ({ signal }) => collectionApi.list({ signal })
   });
-  const [itemState, setItemState] = React.useState<LoadState<ItemResponse>>({
-    status: "loading"
+  const itemQuery = useQuery({
+    queryKey: itemKey,
+    queryFn: ({ signal }) => itemApi.get(collectionId!, itemId!, { signal }),
+    enabled: Boolean(collectionId) && Boolean(itemId)
   });
-  const [fieldsState, setFieldsState] = React.useState<FieldsState>({
-    status: "loading",
-    data: []
+  const fieldsQuery = useQuery({
+    queryKey: queryKeys.collections.fields(Number(collectionId)),
+    queryFn: ({ signal }) => fieldApi.list(collectionId!, { signal }),
+    enabled: Boolean(collectionId)
   });
+
+  const collectionState = toLoadState<CollectionResponse | undefined>(
+    collectionQuery,
+    "We couldn't load this collection.",
+    undefined
+  );
+  const collectionsState = toLoadState<CollectionResponse[] | undefined>(
+    collectionsQuery,
+    "We couldn't load your collections.",
+    undefined
+  );
+  const itemState = toLoadState<ItemResponse | undefined>(
+    itemQuery,
+    "We couldn't load this item.",
+    undefined
+  );
+  const fieldsState = toLoadState<FieldDefinitionResponse[]>(
+    fieldsQuery,
+    "We couldn't load the schema fields.",
+    []
+  );
+
+  const setItemData = React.useCallback(
+    (item: ItemResponse) => {
+      queryClient.setQueryData(itemKey, item);
+    },
+    [queryClient, itemKey]
+  );
+  const applyItemStarCount = React.useCallback(
+    (starCount: number) => {
+      queryClient.setQueryData<ItemResponse | undefined>(itemKey, (previous) =>
+        previous ? { ...previous, star_count: starCount } : previous
+      );
+    },
+    [queryClient, itemKey]
+  );
   const [isEditing, setIsEditing] = React.useState(false);
   const [movePreview, setMovePreview] = React.useState<MovePreview | null>(null);
   const [movePreviewError, setMovePreviewError] = React.useState<string | null>(null);
@@ -240,118 +276,23 @@ export default function ItemDetailPage() {
   const canEdit = itemState.status === "ready" && fieldsState.status !== "error";
   const confirmDeleteMatches = deletePhrase.trim().toUpperCase() === DELETE_TOKEN;
 
-  const loadCollection = React.useCallback(async () => {
-    if (!collectionId) {
-      setCollectionState({
-        status: "error",
-        error: "Collection ID was not provided."
-      });
-      return;
-    }
+  const { refetch: refetchCollection } = collectionQuery;
+  const { refetch: refetchCollections } = collectionsQuery;
+  const { refetch: refetchItem } = itemQuery;
+  const { refetch: refetchFields } = fieldsQuery;
+  const loadCollection = React.useCallback(() => {
+    void refetchCollection();
+  }, [refetchCollection]);
+  const loadCollections = React.useCallback(() => {
+    void refetchCollections();
+  }, [refetchCollections]);
+  const loadItem = React.useCallback(() => {
+    void refetchItem();
+  }, [refetchItem]);
+  const loadFields = React.useCallback(() => {
+    void refetchFields();
+  }, [refetchFields]);
 
-    setCollectionState({
-      status: "loading"
-    });
-    try {
-      const data = await collectionApi.get(collectionId);
-      setCollectionState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setCollectionState({
-        status: "error",
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load this collection."
-      });
-    }
-  }, [collectionId]);
-
-  const loadCollections = React.useCallback(async () => {
-    setCollectionsState({
-      status: "loading"
-    });
-    try {
-      const data = await collectionApi.list();
-      setCollectionsState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setCollectionsState({
-        status: "error",
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load your collections."
-      });
-    }
-  }, []);
-
-  const loadItem = React.useCallback(async () => {
-    if (!collectionId || !itemId) {
-      setItemState({
-        status: "error",
-        error: "Item ID was not provided."
-      });
-      return;
-    }
-
-    setItemState({
-      status: "loading"
-    });
-    try {
-      const data = await itemApi.get(collectionId, itemId);
-      setItemState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setItemState({
-        status: "error",
-        error: isApiError(error) ? error.detail : "We couldn't load this item."
-      });
-    }
-  }, [collectionId, itemId]);
-
-  const loadFields = React.useCallback(async () => {
-    if (!collectionId) {
-      setFieldsState({
-        status: "error",
-        data: [],
-        error: "Collection ID was not provided."
-      });
-      return;
-    }
-
-    setFieldsState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    try {
-      const data = await fieldApi.list(collectionId);
-      setFieldsState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setFieldsState({
-        status: "error",
-        data: [],
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load the schema fields."
-      });
-    }
-  }, [collectionId]);
-
-  React.useEffect(() => {
-    void loadCollection();
-    void loadCollections();
-    void loadItem();
-    void loadFields();
-  }, [loadCollection, loadCollections, loadFields, loadItem]);
 
   const loadItemStarStatus = React.useCallback(async () => {
     if (!collectionId || !itemId) {
@@ -360,18 +301,7 @@ export default function ItemDetailPage() {
     try {
       const status = await starsApi.itemStatus(collectionId, itemId);
       setItemStarred(status.starred);
-      setItemState((prev) => {
-        if (prev.status !== "ready" || !prev.data) {
-          return prev;
-        }
-        return {
-          ...prev,
-          data: {
-            ...prev.data,
-            star_count: status.star_count
-          }
-        };
-      });
+      applyItemStarCount(status.star_count);
     } catch (error) {
       if (!isApiError(error) || error.status !== 404) {
         setItemStarError(
@@ -379,7 +309,7 @@ export default function ItemDetailPage() {
         );
       }
     }
-  }, [collectionId, itemId]);
+  }, [applyItemStarCount, collectionId, itemId]);
 
   React.useEffect(() => {
     void loadItemStarStatus();
@@ -420,18 +350,7 @@ export default function ItemDetailPage() {
         ? await starsApi.unstarItem(collectionId, itemId)
         : await starsApi.starItem(collectionId, itemId);
       setItemStarred(status.starred);
-      setItemState((prev) => {
-        if (prev.status !== "ready" || !prev.data) {
-          return prev;
-        }
-        return {
-          ...prev,
-          data: {
-            ...prev.data,
-            star_count: status.star_count
-          }
-        };
-      });
+      applyItemStarCount(status.star_count);
     } catch (error) {
       setItemStarError(
         isApiError(error) ? error.detail : "We couldn't update stars."
@@ -470,10 +389,7 @@ export default function ItemDetailPage() {
 
     try {
       const updated = await itemApi.update(collectionId, itemId, payload);
-      setItemState({
-        status: "ready",
-        data: updated
-      });
+      setItemData(updated);
       setIsEditing(false);
       if (isMovingToAnotherCollection) {
         router.push(`/collections/${updated.collection_id}/items/${updated.id}`);
@@ -519,7 +435,7 @@ export default function ItemDetailPage() {
 
   return (
     <div className="space-y-8">
-      {itemState.data?.is_draft && <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{t("This item is a private draft. Complete its fields and save to publish it in this collection.")}</p>}
+      {itemState.data?.is_draft && <p role="status" className="rounded-xl bg-brand-muted p-4 text-sm text-brand-strong">{t("This item is a private draft. Complete its fields and save to publish it in this collection.")}</p>}
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-3">
           <Button variant="ghost" size="sm" asChild>
@@ -529,15 +445,15 @@ export default function ItemDetailPage() {
             </Link>
           </Button>
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+            <Eyebrow tone="brand" spacing="wide">
               {t("Item detail")}
-            </p>
-            <h1 className="font-display mt-4 text-3xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading as="h1" size="xl" className="mt-4">
               {itemState.status === "ready" && itemState.data
                 ? itemState.data.name
                 : t("Review item details")}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-3 max-w-2xl text-sm text-muted-strong">
               {t(
                 "View metadata, notes, and the current schema for this catalogued item."
               )}
@@ -571,22 +487,20 @@ export default function ItemDetailPage() {
         </div>
       </header>
       {itemStarError ? (
-        <p className="text-sm text-rose-600">{t(itemStarError)}</p>
+        <p className="text-sm text-destructive">{t(itemStarError)}</p>
       ) : null}
 
       {itemState.status === "loading" ? (
-        <div
-          className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
-          aria-busy="true"
-        >
+        <EmptyState
+          aria-busy="true">
           {t("Loading item details...")}
-        </div>
+        </EmptyState>
       ) : itemState.status === "error" ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
-          <p className="text-sm font-medium text-rose-700">
+        <Alert className="rounded-3xl p-6">
+          <p className="text-sm font-medium text-destructive">
             {t("We hit a snag loading this item.")}
           </p>
-          <p className="mt-2 text-sm text-rose-600">
+          <p className="mt-2 text-sm text-destructive">
             {t(itemState.error ?? "Please try again.")}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -597,7 +511,7 @@ export default function ItemDetailPage() {
               <Link href="/collections">{t("Back to collections")}</Link>
             </Button>
           </div>
-        </div>
+        </Alert>
       ) : (
         <section className="space-y-6">
           {isEditing ? (
@@ -626,14 +540,14 @@ export default function ItemDetailPage() {
               render={({ formError: formErrorNode, baseFields, metadataFields, actions }) => (
                 <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
                   <div className="space-y-6">
-                    <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-                      <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                    <Card>
+                      <Eyebrow>
                         {t("Edit item")}
-                      </p>
-                      <h2 className="font-display mt-3 text-2xl text-stone-900">
+                      </Eyebrow>
+                      <SectionHeading className="mt-3">
                         {t("Update item information.")}
-                      </h2>
-                      <p className="mt-3 text-sm text-stone-600">
+                      </SectionHeading>
+                      <p className="mt-3 text-sm text-muted-strong">
                         {t(
                           "Adjust the item name, notes, and schema-specific metadata fields."
                         )}
@@ -641,11 +555,11 @@ export default function ItemDetailPage() {
 
                       <div className="mt-6 space-y-6">
                         {fieldsState.status === "loading" ? (
-                          <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+                          <EmptyState size="sm">
                             {t("Loading schema fields...")}
-                          </div>
+                          </EmptyState>
                         ) : fieldsState.status === "error" ? (
-                          <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                          <Alert className="space-y-3">
                             <p>
                               {t(
                                 fieldsState.error ??
@@ -655,21 +569,21 @@ export default function ItemDetailPage() {
                             <Button size="sm" variant="outline" onClick={loadFields}>
                               {t("Try again")}
                             </Button>
-                          </div>
+                          </Alert>
                         ) : (
                           <>
                             {formErrorNode}
                             {baseFields}
                             <div className="space-y-2">
                               <label
-                                className="text-sm font-medium text-stone-700"
+                                className="text-sm font-medium text-muted-strong"
                                 htmlFor="destination-collection"
                               >
                                 {t("Collection")}
                               </label>
                               <select
                                 id="destination-collection"
-                                className="h-10 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                                className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
                                 value={destinationCollectionId}
                                 onChange={(event) =>
                                   setDestinationCollectionId(event.target.value)
@@ -689,12 +603,12 @@ export default function ItemDetailPage() {
                                 ))}
                               </select>
                               {collectionsState.status === "loading" ? (
-                                <p className="text-xs text-stone-500">
+                                <p className="text-xs text-muted-foreground">
                                   {t("Loading collections...")}
                                 </p>
                               ) : null}
                               {collectionsState.status === "error" ? (
-                                <p className="text-xs text-rose-600">
+                                <p className="text-xs text-destructive">
                                   {t(
                                     collectionsState.error ??
                                       "We couldn't load your collections."
@@ -705,8 +619,8 @@ export default function ItemDetailPage() {
                                 <p
                                   className={`text-xs ${
                                     isMovingToAnotherCollection
-                                      ? "text-amber-700"
-                                      : "text-stone-500"
+                                      ? "text-brand"
+                                      : "text-muted-foreground"
                                   }`}
                                 >
                                   {isMovingToAnotherCollection
@@ -719,7 +633,7 @@ export default function ItemDetailPage() {
                           </>
                         )}
                       </div>
-                    </div>
+                    </Card>
 
                     <ImageGallery
                       itemId={itemId ?? null}
@@ -736,20 +650,20 @@ export default function ItemDetailPage() {
                   </div>
 
                   <div className="space-y-6">
-                    <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+                    <Card>
                       {fieldsState.status === "loading" ? (
-                        <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+                        <EmptyState size="sm">
                           {t("Loading schema fields...")}
-                        </div>
+                        </EmptyState>
                       ) : fieldsState.status === "error" ? (
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        <Alert>
                           {t(
                             fieldsState.error ??
                               "We couldn't load schema fields. Metadata may be incomplete."
                           )}
-                        </div>
+                        </Alert>
                       ) : isMovingToAnotherCollection ? (
-                        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-800">
+                        <div className="rounded-2xl border border-brand-border bg-brand-muted/70 p-4 text-sm text-brand-strong">
                           <p>{t("Move preview")}</p>
                           {movePreviewError ? <p role="alert">{t(movePreviewError)}</p> : !movePreview ? <p>{t("Loading...")}</p> : (
                             <div className="mt-2 space-y-2">
@@ -763,25 +677,25 @@ export default function ItemDetailPage() {
                       ) : (
                         metadataFields
                       )}
-                    </div>
+                    </Card>
 
-                    <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
+                    <Alert className="rounded-3xl p-6 shadow-sm">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
+                          <Eyebrow className="text-destructive">
                             {t("Danger zone")}
-                          </p>
-                          <h3 className="font-display mt-3 text-2xl text-stone-900">
+                          </Eyebrow>
+                          <SectionHeading as="h3" className="mt-3">
                             {t("Permanently delete this item.")}
-                          </h3>
-                          <p className="mt-3 text-sm text-rose-700">
+                          </SectionHeading>
+                          <p className="mt-3 text-sm text-destructive">
                             {t(
                               "This removes the item and any attached imagery. Type {token} to confirm.",
                               { token: DELETE_TOKEN }
                             )}
                           </p>
                         </div>
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive-muted text-destructive">
                           <ShieldAlert className="h-6 w-6" />
                         </div>
                       </div>
@@ -789,7 +703,7 @@ export default function ItemDetailPage() {
                       <div className="mt-6 grid gap-4">
                         <div>
                           <label
-                            className="text-sm font-medium text-rose-700"
+                            className="text-sm font-medium text-destructive"
                             htmlFor="delete-confirm"
                           >
                             {t("Confirmation phrase")}
@@ -797,7 +711,7 @@ export default function ItemDetailPage() {
                           <input
                             id="delete-confirm"
                             type="text"
-                            className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                            className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-sm transition focus:border-destructive-border focus:outline-none focus:ring-2 focus:ring-destructive-border"
                             value={deletePhrase}
                             onChange={(event) => setDeletePhrase(event.target.value)}
                             placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}
@@ -806,7 +720,7 @@ export default function ItemDetailPage() {
                         <Button
                           type="button"
                           variant="outline"
-                          className="border-rose-200 text-rose-700 hover:bg-rose-100"
+                          className="border-destructive-border text-destructive hover:bg-destructive-muted"
                           disabled={!confirmDeleteMatches || deleteState.status === "working"}
                           onClick={handleDelete}
                         >
@@ -818,14 +732,13 @@ export default function ItemDetailPage() {
                       </div>
 
                       {deleteState.status === "error" && deleteState.message ? (
-                        <div
+                        <Alert
                           role="alert"
-                          className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
-                        >
+                          className="mt-4 bg-card/80">
                           {t(deleteState.message)}
-                        </div>
+                        </Alert>
                       ) : null}
-                    </div>
+                    </Alert>
                   </div>
                 </div>
               )}
@@ -833,48 +746,46 @@ export default function ItemDetailPage() {
           ) : (
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
               <div className="contents lg:block lg:space-y-6">
-                <div className="order-2 rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm lg:order-none">
-                  <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                <Card className="order-2  lg:order-none">
+                  <Eyebrow>
                     {t("Item overview")}
-                  </p>
+                  </Eyebrow>
                   <div className="mt-6 space-y-6">
-                    <p className="text-sm text-stone-600">
+                    <p className="text-sm text-muted-strong">
                       {collectionName
                         ? t("Collection: {name}", { name: collectionName })
                         : t("Collection details unavailable.")}
                     </p>
 
                     {saveMessage ? (
-                      <div
-                        role="status"
-                        className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-                      >
+                      <Alert tone="success"
+                        role="status">
                         {t(saveMessage)}
-                      </div>
+                      </Alert>
                     ) : null}
 
-                    <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                    <div className="rounded-2xl border border-border bg-background/80 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                          <Eyebrow>
                             {t("Notes")}
-                          </p>
-                          <p className="mt-2 text-sm text-stone-600">
+                          </Eyebrow>
+                          <p className="mt-2 text-sm text-muted-strong">
                             {itemState.data?.notes ? "" : t("No notes added yet.")}
                           </p>
                         </div>
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-600">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-muted text-muted-strong">
                           <ClipboardList className="h-5 w-5" />
                         </div>
                       </div>
                       {itemState.data?.notes ? (
-                        <p className="mt-3 whitespace-pre-wrap text-sm text-stone-700">
+                        <p className="mt-3 whitespace-pre-wrap text-sm text-muted-strong">
                           {itemState.data.notes}
                         </p>
                       ) : null}
                     </div>
                   </div>
-                </div>
+                </Card>
 
                 <div className="order-4 lg:order-none">
                   <ImageGallery
@@ -895,95 +806,95 @@ export default function ItemDetailPage() {
               </div>
 
               <div className="contents lg:block lg:space-y-6">
-                <div className="order-1 rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm lg:order-none">
-                  <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                <Card tone="subtle" className="order-1  lg:order-none">
+                  <Eyebrow>
                     {t("Item snapshot")}
-                  </p>
-                  <h3 className="font-display mt-3 text-2xl text-stone-900">
+                  </Eyebrow>
+                  <SectionHeading as="h3" className="mt-3">
                     {t("Quick overview")}
-                  </h3>
-                  <div className="mt-6 space-y-4 text-sm text-stone-600">
+                  </SectionHeading>
+                  <div className="mt-6 space-y-4 text-sm text-muted-strong">
                     <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-muted text-muted-strong">
                         <CalendarDays className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="font-medium text-stone-900">{t("Created")}</p>
+                        <p className="font-medium text-foreground">{t("Created")}</p>
                         <p>{formatDate(itemState.data?.created_at)}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-muted text-muted-strong">
                         <RefreshCcw className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="font-medium text-stone-900">{t("Updated")}</p>
+                        <p className="font-medium text-foreground">{t("Updated")}</p>
                         <p>{formatDate(itemState.data?.updated_at)}</p>
                       </div>
                     </div>
                     {itemState.data?.is_highlight ? (
                       <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-muted text-brand">
                           <Sparkles className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-medium text-stone-900">{t("Spotlight")}</p>
+                          <p className="font-medium text-foreground">{t("Spotlight")}</p>
                           <p>{t("Yes")}</p>
                         </div>
                       </div>
                     ) : null}
                     <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-muted text-muted-strong">
                         <Star className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="font-medium text-stone-900">{t("Stars")}</p>
+                        <p className="font-medium text-foreground">{t("Stars")}</p>
                         <p>{tc(itemState.data?.star_count ?? 0, "{count} star", "{count} stars")}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-muted text-muted-strong">
                         <Tag className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="font-medium text-stone-900">
+                        <p className="font-medium text-foreground">
                           {t("Metadata fields")}
                         </p>
                         <p>{tc(sortedFields.length, "{count} schema field", "{count} schema fields")}</p>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Card>
 
-                <div className="order-3 rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm lg:order-none">
-                  <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                <Card className="order-3  lg:order-none">
+                  <Eyebrow>
                     {t("Metadata")}
-                  </p>
-                  <h3 className="font-display mt-3 text-2xl text-stone-900">
+                  </Eyebrow>
+                  <SectionHeading as="h3" className="mt-3">
                     {t("Schema attributes")}
-                  </h3>
-                  <p className="mt-3 text-sm text-stone-600">
+                  </SectionHeading>
+                  <p className="mt-3 text-sm text-muted-strong">
                     {t("Review each field captured for this item.")}
                   </p>
 
                   <div className="mt-6">
                     {fieldsState.status === "loading" ? (
-                      <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+                      <EmptyState size="sm">
                         {t("Loading schema fields...")}
-                      </div>
+                      </EmptyState>
                     ) : fieldsState.status === "error" ? (
-                      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      <Alert>
                         {t(
                           fieldsState.error ??
                             "We couldn't load schema fields. Metadata may be incomplete."
                         )}
-                      </div>
+                      </Alert>
                     ) : sortedFields.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+                      <EmptyState size="sm">
                         {t(
                           "No schema fields yet. Define fields to capture structured metadata for this item."
                         )}
-                      </div>
+                      </EmptyState>
                     ) : (
                       <div className="grid gap-4">
                         {sortedFields.map((field) => {
@@ -999,13 +910,13 @@ export default function ItemDetailPage() {
                           return (
                             <div
                               key={field.id}
-                              className="rounded-2xl border border-stone-200 bg-white/80 p-4"
+                              className="rounded-2xl border border-border bg-card/80 p-4"
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-sm font-medium text-stone-900">
+                                <p className="text-sm font-medium text-foreground">
                                   {field.name}
                                 </p>
-                                <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
+                                <span className="text-xs uppercase tracking-[0.2em] text-muted-subtle">
                                   {fieldTypeLabels[field.field_type] ??
                                     field.field_type}
                                   {field.is_required ? ` · ${t("Required")}` : ""}
@@ -1013,7 +924,7 @@ export default function ItemDetailPage() {
                               </div>
                               <p
                                 className={`mt-3 text-sm ${
-                                  isMissing ? "text-stone-400" : "text-stone-700"
+                                  isMissing ? "text-muted-subtle" : "text-muted-strong"
                                 }`}
                               >
                                 {displayValue}
@@ -1026,7 +937,7 @@ export default function ItemDetailPage() {
                   </div>
 
                   {(itemState.data?.preserved_metadata?.length ?? 0) > 0 && (
-                    <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="mt-6 rounded-2xl border border-brand-border bg-brand-muted p-4">
                       <h3 className="font-medium">{t("Values preserved privately")}</h3>
                       <p className="mt-2 text-sm">{t("These values are visible only to you. Copy a value into a current field when you want to use it again.")}</p>
                       <dl className="mt-3 space-y-2">
@@ -1037,20 +948,20 @@ export default function ItemDetailPage() {
                     </div>
                   )}
                   {additionalMetadata.length > 0 ? (
-                    <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                      <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                    <div className="mt-6 rounded-2xl border border-border bg-background/80 p-4">
+                      <Eyebrow>
                         {t("Additional metadata")}
-                      </p>
-                      <div className="mt-3 space-y-2 text-sm text-stone-600">
+                      </Eyebrow>
+                      <div className="mt-3 space-y-2 text-sm text-muted-strong">
                         {additionalMetadata.map(([key, value]) => (
                           <div
                             key={key}
                             className="flex items-center justify-between gap-3"
                           >
-                            <span className="font-medium text-stone-700">
+                            <span className="font-medium text-muted-strong">
                               {key}
                             </span>
-                            <span className="text-stone-500">
+                            <span className="text-muted-foreground">
                               {formatFieldValue(value)}
                             </span>
                           </div>
@@ -1058,7 +969,7 @@ export default function ItemDetailPage() {
                       </div>
                     </div>
                   ) : null}
-                </div>
+                </Card>
               </div>
             </div>
           )}

@@ -6,7 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Copy, RefreshCcw, Trash2 } from "lucide-react";
 
 import { SchemaBuilder } from "@/components/schema-builder";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   isApiError,
@@ -15,12 +18,12 @@ import {
   type FieldDefinitionUpdatePayload,
   type SchemaTemplateResponse
 } from "@/lib/api";
-
-type LoadState = {
-  status: "loading" | "ready" | "error";
-  data?: SchemaTemplateResponse;
-  error?: string;
-};
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 
 const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
@@ -41,8 +44,20 @@ export default function SchemaTemplateDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { t, tc, locale } = useI18n();
+  const confirm = useConfirm();
   const templateId = Array.isArray(params?.id) ? params.id[0] : params?.id;
-  const [state, setState] = React.useState<LoadState>({ status: "loading" });
+  const queryClient = useQueryClient();
+  const templateKey = queryKeys.schemaTemplates.detail(Number(templateId));
+  const templateQuery = useQuery({
+    queryKey: templateKey,
+    queryFn: ({ signal }) => schemaTemplateApi.get(templateId!, { signal }),
+    enabled: Boolean(templateId)
+  });
+  const state = toLoadState<SchemaTemplateResponse | undefined>(
+    templateQuery,
+    "We couldn't load this schema template.",
+    undefined
+  );
   const [nameInput, setNameInput] = React.useState("");
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
@@ -50,40 +65,19 @@ export default function SchemaTemplateDetailPage() {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isCopying, setIsCopying] = React.useState(false);
 
-  const loadTemplate = React.useCallback(async () => {
-    if (!templateId) {
-      setState({
-        status: "error",
-        error: "Schema template ID was not provided."
-      });
-      return;
-    }
+  const { refetch: refetchTemplate } = templateQuery;
+  const loadTemplate = React.useCallback(() => {
+    void refetchTemplate();
+  }, [refetchTemplate]);
 
-    setState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    try {
-      const data = await schemaTemplateApi.get(templateId);
-      setState({
-        status: "ready",
-        data
-      });
-      setNameInput(data.name);
-    } catch (error) {
-      setState({
-        status: "error",
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load this schema template."
-      });
-    }
-  }, [templateId]);
-
+  // Mirror the loaded name into the editable field.
+  const loadedName = templateQuery.data?.name;
   React.useEffect(() => {
-    void loadTemplate();
-  }, [loadTemplate]);
+    if (loadedName) {
+      setNameInput(loadedName);
+    }
+  }, [loadedName]);
+
 
   const templateSchemaApi = React.useMemo(() => {
     if (!templateId) {
@@ -117,10 +111,7 @@ export default function SchemaTemplateDetailPage() {
     setSaveMessage(null);
     try {
       const updated = await schemaTemplateApi.update(templateId, { name: normalized });
-      setState({
-        status: "ready",
-        data: updated
-      });
+      queryClient.setQueryData(templateKey, updated);
       setNameInput(updated.name);
       setSaveMessage("Template updated.");
     } catch (error) {
@@ -139,11 +130,13 @@ export default function SchemaTemplateDetailPage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      t('Delete the "{name}" template? This cannot be undone.', {
+    const confirmed = await confirm({
+      title: t('Delete the "{name}" template? This cannot be undone.', {
         name: state.data.name
-      })
-    );
+      }),
+      confirmLabel: t("Delete"),
+      tone: "destructive"
+    });
     if (!confirmed) {
       return;
     }
@@ -193,15 +186,15 @@ export default function SchemaTemplateDetailPage() {
             </Link>
           </Button>
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+            <Eyebrow tone="brand" spacing="wide">
               {t("Schema template")}
-            </p>
-            <h1 className="font-display mt-4 text-3xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading as="h1" size="xl" className="mt-4">
               {state.status === "ready" && state.data
                 ? state.data.name
                 : t("Template details")}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-3 max-w-2xl text-sm text-muted-strong">
               {t(
                 "Update this template and reuse it when creating future collections."
               )}
@@ -229,18 +222,16 @@ export default function SchemaTemplateDetailPage() {
       </header>
 
       {state.status === "loading" ? (
-        <div
-          className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
-          aria-busy="true"
-        >
+        <EmptyState
+          aria-busy="true">
           {t("Loading schema template...")}
-        </div>
+        </EmptyState>
       ) : state.status === "error" ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
-          <p className="text-sm font-medium text-rose-700">
+        <Alert className="rounded-3xl p-6">
+          <p className="text-sm font-medium text-destructive">
             {t("We hit a snag loading this schema template.")}
           </p>
-          <p className="mt-2 text-sm text-rose-600">
+          <p className="mt-2 text-sm text-destructive">
             {t(state.error ?? "Please try again.")}
           </p>
           <div className="mt-4">
@@ -248,49 +239,47 @@ export default function SchemaTemplateDetailPage() {
               {t("Try again")}
             </Button>
           </div>
-        </div>
+        </Alert>
       ) : (
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <div className="space-y-6">
-            <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            <Card>
+              <Eyebrow>
                 {t("Template details")}
-              </p>
-              <h2 className="font-display mt-3 text-2xl text-stone-900">
+              </Eyebrow>
+              <SectionHeading className="mt-3">
                 {t("Manage template identity.")}
-              </h2>
-              <p className="mt-3 text-sm text-stone-600">
+              </SectionHeading>
+              <p className="mt-3 text-sm text-muted-strong">
                 {t("Template names are searchable during collection creation.")}
               </p>
 
               {formError ? (
-                <div
+                <Alert
                   role="alert"
-                  className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-                >
+                  className="mt-6">
                   {t(formError)}
-                </div>
+                </Alert>
               ) : null}
 
               {saveMessage ? (
-                <div
+                <Alert tone="success"
                   role="status"
-                  className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-                >
+                  className="mt-6">
                   {t(saveMessage)}
-                </div>
+                </Alert>
               ) : null}
 
               <div className="mt-6 space-y-3">
-                <label className="text-sm font-medium text-stone-700" htmlFor="template-name">
+                <label className="text-sm font-medium text-muted-strong" htmlFor="template-name">
                   {t("Template name")}
                 </label>
-                <input
+                <Input
                   id="template-name"
                   type="text"
                   value={nameInput}
                   onChange={(event) => setNameInput(event.target.value)}
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+
                 />
               </div>
 
@@ -299,20 +288,26 @@ export default function SchemaTemplateDetailPage() {
                   {isSaving ? t("Saving changes...") : t("Save changes")}
                 </Button>
               </div>
-            </div>
+            </Card>
 
-            {templateSchemaApi ? <SchemaBuilder api={templateSchemaApi} /> : null}
+            {templateSchemaApi ? (
+              <SchemaBuilder
+                key={`template:${templateId}`}
+                api={templateSchemaApi}
+                sourceKey={`template:${templateId}`}
+              />
+            ) : null}
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            <Card tone="subtle">
+              <Eyebrow>
                 {t("Template snapshot")}
-              </p>
-              <h3 className="font-display mt-3 text-2xl text-stone-900">
+              </Eyebrow>
+              <SectionHeading as="h3" className="mt-3">
                 {t("Quick details")}
-              </h3>
-              <div className="mt-6 space-y-2 text-sm text-stone-600">
+              </SectionHeading>
+              <div className="mt-6 space-y-2 text-sm text-muted-strong">
                 <p>
                   {tc(state.data?.field_count ?? 0, "{count} field", "{count} fields")}
                 </p>
@@ -327,13 +322,13 @@ export default function SchemaTemplateDetailPage() {
                   })}
                 </p>
               </div>
-            </div>
+            </Card>
 
-            <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+              <Eyebrow tone="subtle">
                 {t("Template behavior")}
-              </p>
-              <p className="mt-3 text-sm text-stone-300">
+              </Eyebrow>
+              <p className="mt-3 text-sm text-panel-muted-foreground">
                 {t(
                   "Collections created from this template get a copy of these fields. Future template edits do not change existing collections."
                 )}

@@ -30,15 +30,15 @@ const ToastContext = React.createContext<ToastContextValue | null>(null);
 let toastId = 0;
 
 const toneStyles: Record<ToastTone, string> = {
-  success: "border-emerald-300 text-emerald-800",
-  error: "border-rose-300 text-rose-700",
-  info: "border-stone-300 text-stone-800"
+  success: "border-success-border text-success",
+  error: "border-destructive-border text-destructive",
+  info: "border-border text-foreground"
 };
 
 const iconStyles: Record<ToastTone, string> = {
-  success: "text-emerald-600",
-  error: "text-rose-600",
-  info: "text-stone-600"
+  success: "text-success",
+  error: "text-destructive",
+  info: "text-muted-strong"
 };
 
 const toneIcon: Record<ToastTone, React.ComponentType<{ className?: string }>> = {

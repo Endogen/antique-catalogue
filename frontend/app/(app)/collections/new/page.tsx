@@ -9,6 +9,8 @@ import {
   CollectionForm,
   type CollectionFormValues
 } from "@/components/collection-form";
+import { useQuery } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +19,12 @@ import {
   schemaTemplateApi,
   type SchemaTemplateSummaryResponse
 } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
 
 const buildPayload = (
   values: CollectionFormValues,
@@ -40,59 +47,19 @@ export default function NewCollectionPage() {
   const [selectedTemplateId, setSelectedTemplateId] = React.useState<
     number | null
   >(null);
-  const [templatesState, setTemplatesState] = React.useState<{
-    status: "idle" | "loading" | "ready" | "error";
-    data: SchemaTemplateSummaryResponse[];
-    error?: string;
-  }>({
-    status: "idle",
-    data: []
+  const term = useDebouncedValue(templateQuery).trim();
+  const templatesQuery = useQuery({
+    queryKey: [...queryKeys.schemaTemplates.list(), "picker", term],
+    queryFn: ({ signal }) =>
+      schemaTemplateApi.list({ q: term || undefined, limit: 50, signal }),
+    enabled: schemaMode === "template"
   });
+  const templatesState = toLoadState<SchemaTemplateSummaryResponse[]>(
+    templatesQuery,
+    "We couldn't load schema templates.",
+    []
+  );
 
-  React.useEffect(() => {
-    if (schemaMode !== "template") {
-      return;
-    }
-    let isActive = true;
-    const handle = setTimeout(() => {
-      void (async () => {
-        setTemplatesState((prev) => ({
-          ...prev,
-          status: "loading",
-          error: undefined
-        }));
-        try {
-          const data = await schemaTemplateApi.list({
-            q: templateQuery.trim() || undefined,
-            limit: 50
-          });
-          if (!isActive) {
-            return;
-          }
-          setTemplatesState({
-            status: "ready",
-            data
-          });
-        } catch (error) {
-          if (!isActive) {
-            return;
-          }
-          setTemplatesState((prev) => ({
-            ...prev,
-            status: "error",
-            error: isApiError(error)
-              ? error.detail
-              : "We couldn't load schema templates."
-          }));
-        }
-      })();
-    }, 250);
-
-    return () => {
-      isActive = false;
-      clearTimeout(handle);
-    };
-  }, [schemaMode, templateQuery]);
 
   const handleSubmit = async (values: CollectionFormValues) => {
     setFormError(null);
@@ -124,13 +91,13 @@ export default function NewCollectionPage() {
             </Link>
           </Button>
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+            <Eyebrow tone="brand" spacing="wide">
               {t("New collection")}
-            </p>
-            <h1 className="font-display mt-4 text-3xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading as="h1" size="xl" className="mt-4">
               {t("Design the foundation for your archive.")}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-3 max-w-2xl text-sm text-muted-strong">
               {t(
                 "Give the collection a clear name, describe what belongs in it, and decide whether it is visible in the public directory."
               )}
@@ -140,22 +107,22 @@ export default function NewCollectionPage() {
       </header>
 
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+        <Card>
+          <Eyebrow>
             {t("Collection details")}
-          </p>
-          <h2 className="font-display mt-3 text-2xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading className="mt-3">
             {t("Capture the story you want to document.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t("You can adjust the details later, including public visibility.")}
           </p>
 
-          <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-stone-500">
+          <div className="mt-6 rounded-2xl border border-border bg-background/80 p-4">
+            <Eyebrow className="tracking-[0.25em]">
               {t("Schema setup")}
-            </p>
-            <p className="mt-2 text-sm text-stone-600">
+            </Eyebrow>
+            <p className="mt-2 text-sm text-muted-strong">
               {t(
                 "Choose whether to start with a blank schema or copy an existing template."
               )}
@@ -166,18 +133,18 @@ export default function NewCollectionPage() {
                 className={cn(
                   "rounded-2xl border p-4 text-left text-sm transition",
                   schemaMode === "scratch"
-                    ? "border-amber-200 bg-amber-50/80 text-stone-900"
-                    : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                    ? "border-brand-border bg-brand-muted/80 text-foreground"
+                    : "border-border bg-card text-muted-strong hover:border-muted-subtle"
                 )}
                 onClick={() => {
                   setSchemaMode("scratch");
                   setFormError(null);
                 }}
               >
-                <p className="font-medium text-stone-900">
+                <p className="font-medium text-foreground">
                   {t("Start from scratch")}
                 </p>
-                <p className="mt-1 text-xs text-stone-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t("Define fields manually after collection creation.")}
                 </p>
               </button>
@@ -186,16 +153,16 @@ export default function NewCollectionPage() {
                 className={cn(
                   "rounded-2xl border p-4 text-left text-sm transition",
                   schemaMode === "template"
-                    ? "border-amber-200 bg-amber-50/80 text-stone-900"
-                    : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                    ? "border-brand-border bg-brand-muted/80 text-foreground"
+                    : "border-border bg-card text-muted-strong hover:border-muted-subtle"
                 )}
                 onClick={() => {
                   setSchemaMode("template");
                   setFormError(null);
                 }}
               >
-                <p className="font-medium text-stone-900">{t("Use template")}</p>
-                <p className="mt-1 text-xs text-stone-500">
+                <p className="font-medium text-foreground">{t("Use template")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t("Copy fields from a saved schema template.")}
                 </p>
               </button>
@@ -204,28 +171,28 @@ export default function NewCollectionPage() {
             {schemaMode === "template" ? (
               <div className="mt-4 space-y-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
                   <input
                     type="search"
                     value={templateQuery}
                     onChange={(event) => setTemplateQuery(event.target.value)}
                     placeholder={t("Search schema templates")}
-                    className="h-10 w-full rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
 
                 {templatesState.status === "loading" && templatesState.data.length === 0 ? (
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-muted-foreground">
                     {t("Loading schema templates...")}
                   </p>
                 ) : templatesState.status === "error" ? (
-                  <p className="text-xs text-rose-600">
+                  <p className="text-xs text-destructive">
                     {t(
                       templatesState.error ?? "We couldn't load schema templates."
                     )}
                   </p>
                 ) : templatesState.data.length === 0 ? (
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-muted-foreground">
                     {t("No schema templates found.")}
                   </p>
                 ) : (
@@ -238,15 +205,15 @@ export default function NewCollectionPage() {
                         className={cn(
                           "w-full rounded-xl border p-3 text-left transition",
                           selectedTemplateId === template.id
-                            ? "border-amber-300 bg-amber-50/80"
-                            : "border-stone-200 bg-white hover:border-stone-300"
+                            ? "border-brand-border bg-brand-muted/80"
+                            : "border-border bg-card hover:border-muted-subtle"
                         )}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium text-stone-900">
+                          <p className="text-sm font-medium text-foreground">
                             {template.name}
                           </p>
-                          <span className="text-xs text-stone-500">
+                          <span className="text-xs text-muted-foreground">
                             {tc(template.field_count, "{count} field", "{count} fields")}
                           </span>
                         </div>
@@ -255,10 +222,10 @@ export default function NewCollectionPage() {
                   </div>
                 )}
 
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-muted-foreground">
                   {t("Need a new template?")}
                   {" "}
-                  <Link href="/schema-templates" className="font-medium text-amber-700">
+                  <Link href="/schema-templates" className="font-medium text-brand">
                     {t("Manage schema templates")}
                   </Link>
                 </p>
@@ -279,63 +246,63 @@ export default function NewCollectionPage() {
               formError={formError}
             />
           </div>
-        </div>
+        </Card>
 
         <aside className="space-y-6">
-          <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <Card tone="subtle">
+            <Eyebrow>
               {t("What happens next")}
-            </p>
-            <h3 className="font-display mt-3 text-2xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading as="h3" className="mt-3">
               {t("Build your schema and start cataloguing.")}
-            </h3>
-            <p className="mt-3 text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-3 text-sm text-muted-strong">
               {t(
                 "After creating the collection, define metadata fields, then add items and images from any device."
               )}
             </p>
-            <div className="mt-6 space-y-4 text-sm text-stone-600">
+            <div className="mt-6 space-y-4 text-sm text-muted-strong">
               <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-muted text-brand">
                   <FolderPlus className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900">{t("Define fields")}</p>
-                  <p className="mt-1 text-xs text-stone-500">
+                  <p className="font-medium text-foreground">{t("Define fields")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {t("Set up condition, era, provenance, and more.")}
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-muted text-muted-strong">
                   <Camera className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900">{t("Capture imagery")}</p>
-                  <p className="mt-1 text-xs text-stone-500">
+                  <p className="font-medium text-foreground">{t("Capture imagery")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {t("Upload photos or use the mobile camera capture button.")}
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-success-muted text-success">
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900">{t("Share publicly")}</p>
-                  <p className="mt-1 text-xs text-stone-500">
+                  <p className="font-medium text-foreground">{t("Share publicly")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {t("Publish the collection when you are ready.")}
                   </p>
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+          <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+            <Eyebrow tone="subtle">
               {t("Studio note")}
-            </p>
-            <p className="mt-3 text-sm text-stone-300">
+            </Eyebrow>
+            <p className="mt-3 text-sm text-panel-muted-foreground">
               {t(
                 "Start with a simple collection and expand its schema once you see how you want to capture details."
               )}

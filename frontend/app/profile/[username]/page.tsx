@@ -14,29 +14,23 @@ import {
   Star
 } from "lucide-react";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { SocialShareActions } from "@/components/social-share-actions";
 import { Button } from "@/components/ui/button";
 import {
   avatarUrl,
-  isApiError,
   profileApi,
   type CollectionResponse,
   type PublicProfileResponse
 } from "@/lib/api";
-
-type LoadState = {
-  status: "loading" | "ready" | "error";
-  data: PublicProfileResponse | null;
-  error?: string;
-};
-
-type CollectionsState = {
-  status: "loading" | "ready" | "error";
-  data: CollectionResponse[];
-  error?: string;
-};
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 
 export default function PublicProfilePage() {
   const params = useParams();
@@ -45,15 +39,30 @@ export default function PublicProfilePage() {
     : params?.username;
   const { t, locale } = useI18n();
   const { user } = useAuth();
-  const [state, setState] = React.useState<LoadState>({
-    status: "loading",
-    data: null
-  });
-  const [collectionsState, setCollectionsState] = React.useState<CollectionsState>({
-    status: "loading",
-    data: []
-  });
   const [collectionSearch, setCollectionSearch] = React.useState("");
+
+  const profileQuery = useQuery({
+    queryKey: queryKeys.profile.public(usernameParam ?? ""),
+    queryFn: ({ signal }) => profileApi.getPublic(usernameParam!, { signal }),
+    enabled: Boolean(usernameParam)
+  });
+  const collectionsQuery = useQuery({
+    queryKey: queryKeys.profile.publicCollections(usernameParam ?? ""),
+    queryFn: ({ signal }) =>
+      profileApi.listPublicCollections(usernameParam!, { signal }),
+    enabled: Boolean(usernameParam)
+  });
+
+  const state = toLoadState<PublicProfileResponse | null>(
+    profileQuery,
+    "Profile not found",
+    null
+  );
+  const collectionsState = toLoadState<CollectionResponse[]>(
+    collectionsQuery,
+    "We couldn't load public collections.",
+    []
+  );
 
   const formatDate = React.useCallback(
     (value: string | null | undefined) => {
@@ -73,70 +82,14 @@ export default function PublicProfilePage() {
     [locale]
   );
 
-  const loadProfile = React.useCallback(async () => {
-    if (!usernameParam) {
-      setState({
-        status: "error",
-        data: null,
-        error: "Profile not found"
-      });
-      return;
-    }
-    setState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    try {
-      const data = await profileApi.getPublic(usernameParam);
-      setState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setState((prev) => ({
-        status: "error",
-        data: prev.data,
-        error: isApiError(error) ? error.detail : "Profile not found"
-      }));
-    }
-  }, [usernameParam]);
-
-  const loadCollections = React.useCallback(async () => {
-    if (!usernameParam) {
-      setCollectionsState({
-        status: "error",
-        data: [],
-        error: "Profile not found"
-      });
-      return;
-    }
-    setCollectionsState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    try {
-      const data = await profileApi.listPublicCollections(usernameParam);
-      setCollectionsState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setCollectionsState((prev) => ({
-        status: "error",
-        data: prev.data,
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load public collections."
-      }));
-    }
-  }, [usernameParam]);
-
-  React.useEffect(() => {
-    void loadProfile();
-    void loadCollections();
-  }, [loadCollections, loadProfile]);
+  const { refetch: refetchProfile } = profileQuery;
+  const { refetch: refetchCollections } = collectionsQuery;
+  const loadProfile = React.useCallback(() => {
+    void refetchProfile();
+  }, [refetchProfile]);
+  const loadCollections = React.useCallback(() => {
+    void refetchCollections();
+  }, [refetchCollections]);
 
   const isOwnProfile = state.data?.username === user?.username;
   const filteredCollections = React.useMemo(() => {
@@ -154,8 +107,8 @@ export default function PublicProfilePage() {
   }, [collectionSearch, collectionsState.data]);
 
   return (
-    <main className="min-h-screen bg-stone-50 text-stone-950">
-      <header className="border-b border-stone-200/80 bg-stone-50/80 px-6 py-6 backdrop-blur lg:px-12">
+    <main className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border/80 bg-background/80 px-6 py-6 backdrop-blur lg:px-12">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <Image
@@ -167,9 +120,9 @@ export default function PublicProfilePage() {
             />
             <div>
               <p className="font-display text-lg tracking-tight">{t("Antique Catalogue")}</p>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+              <Eyebrow className="tracking-[0.35em]">
                 {t("Studio Archive")}
-              </p>
+              </Eyebrow>
             </div>
           </Link>
           <div className="flex items-center gap-3">
@@ -190,22 +143,22 @@ export default function PublicProfilePage() {
 
       <section className="mx-auto max-w-6xl px-6 py-10 lg:px-12">
         {state.status === "loading" ? (
-          <div className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500">
+          <EmptyState>
             {t("Loading profile...")}
-          </div>
+          </EmptyState>
         ) : state.status === "error" || !state.data ? (
-          <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-8">
-            <p className="text-sm font-medium text-rose-700">{t("Profile not found")}</p>
-            <p className="mt-2 text-sm text-rose-600">
+          <Alert className="rounded-3xl p-8">
+            <p className="text-sm font-medium text-destructive">{t("Profile not found")}</p>
+            <p className="mt-2 text-sm text-destructive">
               {t(state.error ?? "Profile not found")}
             </p>
-          </div>
+          </Alert>
         ) : (
           <div className="space-y-6">
-            <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.4em] text-amber-700">{t("Profile")}</p>
+            <Card>
+              <Eyebrow tone="brand" spacing="wide">{t("Profile")}</Eyebrow>
               <div className="mt-4 flex items-center gap-5">
-                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-stone-200 bg-stone-100">
+                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
                   {state.data.has_avatar ? (
                     <Image
                       src={avatarUrl(state.data.id, "medium")}
@@ -216,16 +169,16 @@ export default function PublicProfilePage() {
                       unoptimized
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-stone-900 text-lg font-semibold text-stone-50">
+                    <div className="flex h-full w-full items-center justify-center bg-panel text-lg font-semibold text-panel-foreground">
                       {state.data.username.charAt(0).toUpperCase()}
                     </div>
                   )}
                 </div>
                 <div>
-                  <h1 className="font-display text-3xl text-stone-900">
+                  <SectionHeading as="h1" size="xl">
                     @{state.data.username}
-                  </h1>
-                  <p className="mt-1 text-sm text-stone-600">
+                  </SectionHeading>
+                  <p className="mt-1 text-sm text-muted-strong">
                     {t("Member since {date}", { date: formatDate(state.data.created_at) })}
                   </p>
                   <SocialShareActions
@@ -236,63 +189,63 @@ export default function PublicProfilePage() {
                   />
                 </div>
               </div>
-            </div>
+            </Card>
 
-            <div className="rounded-3xl border border-stone-900 bg-stone-950 p-5 text-stone-100">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+            <div className="rounded-3xl border border-panel-border bg-panel-deep p-5 text-panel-foreground">
+              <Eyebrow tone="subtle">
                 {t("Public summary")}
-              </p>
+              </Eyebrow>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border border-stone-800 bg-stone-900/70 p-4">
-                  <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                <div className="rounded-2xl border border-panel-border bg-panel/70 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs text-panel-muted-foreground">
                     <Folder className="h-4 w-4 text-amber-300" />
                     {t("Public collections")}
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-stone-100">
+                  <p className="mt-2 text-2xl font-semibold text-panel-foreground">
                     {state.data.public_collection_count}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-stone-800 bg-stone-900/70 p-4">
-                  <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                <div className="rounded-2xl border border-panel-border bg-panel/70 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs text-panel-muted-foreground">
                     <Package className="h-4 w-4 text-amber-300" />
                     {t("Public items")}
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-stone-100">
+                  <p className="mt-2 text-2xl font-semibold text-panel-foreground">
                     {state.data.public_item_count}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-stone-800 bg-stone-900/70 p-4">
-                  <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                <div className="rounded-2xl border border-panel-border bg-panel/70 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs text-panel-muted-foreground">
                     <Star className="h-4 w-4 text-amber-300" />
                     {t("Stars earned")}
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-stone-100">
+                  <p className="mt-2 text-2xl font-semibold text-panel-foreground">
                     {state.data.earned_star_count}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-stone-800 bg-stone-900/70 p-4">
-                  <p className="inline-flex items-center gap-2 text-xs text-stone-300">
+                <div className="rounded-2xl border border-panel-border bg-panel/70 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs text-panel-muted-foreground">
                     <Award className="h-4 w-4 text-amber-300" />
                     {t("Star rank")}
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-stone-100">
+                  <p className="mt-2 text-2xl font-semibold text-panel-foreground">
                     #{state.data.star_rank}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+            <Card>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                  <Eyebrow>
                     {t("Public collections")}
-                  </p>
-                  <h2 className="font-display mt-3 text-2xl text-stone-900">
+                  </Eyebrow>
+                  <SectionHeading className="mt-3">
                     {t("Browse public collections")}
-                  </h2>
+                  </SectionHeading>
                 </div>
-                <span className="text-xs text-stone-500">
+                <span className="text-xs text-muted-foreground">
                   {t("{count} total", {
                     count: collectionsState.data.length
                   })}
@@ -300,10 +253,10 @@ export default function PublicProfilePage() {
               </div>
 
               <div className="relative mt-4 max-w-xl">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
                 <input
                   type="search"
-                  className="h-10 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  className="h-10 w-full rounded-full border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder={t("Search collections")}
                   value={collectionSearch}
                   onChange={(event) => setCollectionSearch(event.target.value)}
@@ -311,13 +264,13 @@ export default function PublicProfilePage() {
               </div>
 
               {collectionsState.status === "loading" && collectionsState.data.length === 0 ? (
-                <p className="mt-6 text-sm text-stone-500">{t("Loading collections...")}</p>
+                <p className="mt-6 text-sm text-muted-foreground">{t("Loading collections...")}</p>
               ) : collectionsState.status === "error" && collectionsState.data.length === 0 ? (
-                <p className="mt-6 text-sm text-rose-600">
+                <p className="mt-6 text-sm text-destructive">
                   {t(collectionsState.error ?? "We couldn't load public collections.")}
                 </p>
               ) : filteredCollections.length === 0 ? (
-                <p className="mt-6 text-sm text-stone-600">
+                <p className="mt-6 text-sm text-muted-strong">
                   {t("No collections available yet.")}
                 </p>
               ) : (
@@ -325,28 +278,28 @@ export default function PublicProfilePage() {
                   {filteredCollections.map((collection) => (
                     <div
                       key={collection.id}
-                      className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm"
+                      className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm"
                     >
-                      <h3 className="text-base font-semibold text-stone-900">
+                      <h3 className="text-base font-semibold text-foreground">
                         {collection.name}
                       </h3>
-                      <p className="mt-1 text-xs text-stone-600">
+                      <p className="mt-1 text-xs text-muted-strong">
                         {collection.description ?? t("No description provided.")}
                       </p>
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="inline-flex items-center gap-1">
-                            <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
+                            <CalendarDays className="h-3.5 w-3.5 text-brand" />
                             {t("Created {date}", {
                               date: formatDate(collection.created_at)
                             })}
                           </span>
                           <span className="inline-flex items-center gap-1">
-                            <Star className="h-3.5 w-3.5 text-amber-600" />
+                            <Star className="h-3.5 w-3.5 text-brand" />
                             {collection.star_count ?? 0}
                           </span>
                           <span className="inline-flex items-center gap-1">
-                            <Folder className="h-3.5 w-3.5 text-amber-600" />
+                            <Folder className="h-3.5 w-3.5 text-brand" />
                             {collection.item_count ?? 0}
                           </span>
                         </div>
@@ -358,7 +311,7 @@ export default function PublicProfilePage() {
                   ))}
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         )}
       </section>

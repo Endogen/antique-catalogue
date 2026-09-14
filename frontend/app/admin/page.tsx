@@ -15,18 +15,22 @@ import {
   Users
 } from "lucide-react";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   adminApi,
   getAdminToken,
   isApiError,
-  type AdminCollectionResponse,
-  type AdminFeaturedItemResponse,
   type AdminItemResponse,
-  type AdminStatsResponse,
   type AdminUserResponse
 } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
+import { Card, EmptyState } from "@/components/ui/card";
 
 const PAGE_SIZE = 10;
 const MAX_FEATURED_ITEMS = 4;
@@ -48,183 +52,195 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 
 export default function AdminPage() {
   const { t, locale } = useI18n();
+  const confirm = useConfirm();
   const [isReady, setIsReady] = React.useState(false);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loginError, setLoginError] = React.useState<string | null>(null);
 
-  const [stats, setStats] = React.useState<AdminStatsResponse | null>(null);
+  const queryClient = useQueryClient();
 
-  const [collections, setCollections] = React.useState<AdminCollectionResponse[]>([]);
-  const [totalCollections, setTotalCollections] = React.useState(0);
   const [collectionsPage, setCollectionsPage] = React.useState(0);
-  const [collectionsStatus, setCollectionsStatus] = React.useState<
-    "idle" | "loading" | "error"
-  >("idle");
-
-  const [users, setUsers] = React.useState<AdminUserResponse[]>([]);
-  const [totalUsers, setTotalUsers] = React.useState(0);
   const [usersPage, setUsersPage] = React.useState(0);
-  const [usersStatus, setUsersStatus] = React.useState<"idle" | "loading" | "error">(
-    "idle"
-  );
-  const [usersError, setUsersError] = React.useState<string | null>(null);
+  const [usersActionError, setUsersActionError] = React.useState<string | null>(null);
   const [usersSearchInput, setUsersSearchInput] = React.useState("");
   const [usersSearchQuery, setUsersSearchQuery] = React.useState("");
 
-  const [items, setItems] = React.useState<AdminItemResponse[]>([]);
-  const [totalItems, setTotalItems] = React.useState(0);
   const [itemsPage, setItemsPage] = React.useState(0);
-  const [itemsStatus, setItemsStatus] = React.useState<"idle" | "loading" | "error">(
-    "idle"
-  );
-  const [itemsError, setItemsError] = React.useState<string | null>(null);
+  const [itemsActionError, setItemsActionError] = React.useState<string | null>(null);
   const [itemsSearchInput, setItemsSearchInput] = React.useState("");
   const [itemsSearchQuery, setItemsSearchQuery] = React.useState("");
 
-  const [featuredItemsState, setFeaturedItemsState] = React.useState<{
-    status: "idle" | "loading" | "ready" | "error";
-    data: AdminFeaturedItemResponse[];
-    error?: string;
-  }>({ status: "idle", data: [] });
   const [featuredItemSelection, setFeaturedItemSelection] = React.useState<number[]>([]);
   const [featuredItemsMessage, setFeaturedItemsMessage] = React.useState<string | null>(null);
   const [featuredItemsError, setFeaturedItemsError] = React.useState<string | null>(null);
   const [featuredItemsPending, setFeaturedItemsPending] = React.useState(false);
 
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = React.useState<string | null>(null);
   const [featurePending, setFeaturePending] = React.useState<number | null>(null);
   const [userLockPending, setUserLockPending] = React.useState<number | null>(null);
   const [userDeletePending, setUserDeletePending] = React.useState<number | null>(null);
   const [itemDeletePending, setItemDeletePending] = React.useState<number | null>(null);
 
-  const loadCollectionsData = React.useCallback(async (pageIndex: number) => {
-    setCollectionsStatus("loading");
-    setErrorMessage(null);
-    try {
-      const [statsResponse, collectionsResponse] = await Promise.all([
-        adminApi.stats(),
-        adminApi.collections({
-          offset: pageIndex * PAGE_SIZE,
-          limit: PAGE_SIZE
-        })
-      ]);
-      setStats(statsResponse);
-      setCollections(collectionsResponse.items);
-      setTotalCollections(collectionsResponse.total_count);
-      setCollectionsStatus("idle");
-    } catch (error) {
-      setCollectionsStatus("error");
-      setErrorMessage(isApiError(error) ? error.detail : "We couldn't load admin data.");
-    }
-  }, []);
-
-  const loadUsers = React.useCallback(async (pageIndex: number) => {
-    setUsersStatus("loading");
-    setUsersError(null);
-    try {
-      const query = usersSearchQuery.trim();
-      const response = await adminApi.users({
-        offset: pageIndex * PAGE_SIZE,
+  // Every admin table is a keyed query: page and search term are part of the
+  // key, so switching pages or searching cancels the previous request instead
+  // of racing it.
+  const statsQuery = useQuery({
+    queryKey: queryKeys.admin.stats(),
+    queryFn: ({ signal }) => adminApi.stats({ signal }),
+    enabled: isAuthenticated
+  });
+  const collectionsQuery = useQuery({
+    queryKey: queryKeys.admin.collections(collectionsPage),
+    queryFn: ({ signal }) =>
+      adminApi.collections({
+        offset: collectionsPage * PAGE_SIZE,
         limit: PAGE_SIZE,
-        q: query || undefined
-      });
-      setUsers(response.items);
-      setTotalUsers(response.total_count);
-      setUsersStatus("idle");
-    } catch (error) {
-      setUsersStatus("error");
-      setUsersError(isApiError(error) ? error.detail : "Unable to load users.");
-    }
-  }, [usersSearchQuery]);
-
-  const loadItems = React.useCallback(async (pageIndex: number) => {
-    setItemsStatus("loading");
-    setItemsError(null);
-    try {
-      const query = itemsSearchQuery.trim();
-      const response = await adminApi.items({
-        offset: pageIndex * PAGE_SIZE,
+        signal
+      }),
+    enabled: isAuthenticated
+  });
+  const usersQuery = useQuery({
+    queryKey: queryKeys.admin.users(usersPage, usersSearchQuery.trim()),
+    queryFn: ({ signal }) =>
+      adminApi.users({
+        offset: usersPage * PAGE_SIZE,
         limit: PAGE_SIZE,
-        q: query || undefined
-      });
-      setItems(response.items);
-      setTotalItems(response.total_count);
-      setItemsStatus("idle");
-    } catch (error) {
-      setItemsStatus("error");
-      setItemsError(isApiError(error) ? error.detail : "Unable to load items.");
-    }
-  }, [itemsSearchQuery]);
+        q: usersSearchQuery.trim() || undefined,
+        signal
+      }),
+    enabled: isAuthenticated
+  });
+  const itemsQuery = useQuery({
+    queryKey: queryKeys.admin.items(itemsPage, itemsSearchQuery.trim()),
+    queryFn: ({ signal }) =>
+      adminApi.items({
+        offset: itemsPage * PAGE_SIZE,
+        limit: PAGE_SIZE,
+        q: itemsSearchQuery.trim() || undefined,
+        signal
+      }),
+    enabled: isAuthenticated
+  });
 
-  const loadFeaturedItems = React.useCallback(async (collectionId: number | null | undefined) => {
-    if (!collectionId) {
-      setFeaturedItemsState({ status: "ready", data: [] });
-      setFeaturedItemSelection([]);
-      setFeaturedItemsMessage(null);
-      return;
-    }
-    setFeaturedItemsState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    setFeaturedItemsError(null);
-    setFeaturedItemsMessage(null);
-    try {
-      const fetchedItems = await adminApi.featuredItems();
-      setFeaturedItemsState({ status: "ready", data: fetchedItems });
+  const stats = statsQuery.data ?? null;
+  const featuredCollectionId = stats?.featured_collection_id ?? null;
+
+  const featuredItemsQuery = useQuery({
+    queryKey: queryKeys.admin.featuredItems(),
+    queryFn: ({ signal }) => adminApi.featuredItems({ signal }),
+    enabled: isAuthenticated && Boolean(featuredCollectionId)
+  });
+
+  const collections = collectionsQuery.data?.items ?? [];
+  const totalCollections = collectionsQuery.data?.total_count ?? 0;
+  const users = usersQuery.data?.items ?? [];
+  const totalUsers = usersQuery.data?.total_count ?? 0;
+  const items = itemsQuery.data?.items ?? [];
+  const totalItems = itemsQuery.data?.total_count ?? 0;
+
+  const collectionsStatus: "idle" | "loading" | "error" =
+    statsQuery.isError || collectionsQuery.isError
+      ? "error"
+      : statsQuery.isFetching || collectionsQuery.isFetching
+        ? "loading"
+        : "idle";
+  const usersStatus: "idle" | "loading" | "error" = usersQuery.isError
+    ? "error"
+    : usersQuery.isFetching
+      ? "loading"
+      : "idle";
+  const itemsStatus: "idle" | "loading" | "error" = itemsQuery.isError
+    ? "error"
+    : itemsQuery.isFetching
+      ? "loading"
+      : "idle";
+
+  const featuredItemsState = {
+    status: (!featuredCollectionId
+      ? "ready"
+      : featuredItemsQuery.isError
+        ? "error"
+        : featuredItemsQuery.isPending
+          ? "loading"
+          : "ready") as "idle" | "loading" | "ready" | "error",
+    data: featuredCollectionId ? (featuredItemsQuery.data ?? []) : [],
+    error: featuredItemsQuery.isError
+      ? isApiError(featuredItemsQuery.error)
+        ? featuredItemsQuery.error.detail
+        : "Unable to load featured items."
+      : undefined
+  };
+
+  // Query failures surface in the same banners the manual loaders used.
+  const loadFailure = statsQuery.error ?? collectionsQuery.error;
+  const collectionsErrorMessage = loadFailure
+    ? isApiError(loadFailure)
+      ? loadFailure.detail
+      : "We couldn't load admin data."
+    : null;
+  const usersLoadError = usersQuery.isError
+    ? isApiError(usersQuery.error)
+      ? usersQuery.error.detail
+      : "Unable to load users."
+    : null;
+  const itemsLoadError = itemsQuery.isError
+    ? isApiError(itemsQuery.error)
+      ? itemsQuery.error.detail
+      : "Unable to load items."
+    : null;
+
+  // Reset the checkbox selection whenever the server list changes.
+  const featuredItemsData = featuredItemsQuery.data;
+  React.useEffect(() => {
+    if (featuredItemsData) {
       setFeaturedItemSelection(
-        fetchedItems.filter((item) => item.is_featured).map((item) => item.id)
+        featuredItemsData.filter((item) => item.is_featured).map((item) => item.id)
       );
-    } catch (error) {
-      setFeaturedItemsState((prev) => ({
-        status: "error",
-        data: prev.data,
-        error: isApiError(error) ? error.detail : "Unable to load featured items."
-      }));
     }
-  }, []);
+  }, [featuredItemsData]);
+
+  // A failed action takes precedence over a stale load error in the banner.
+  const errorMessage = actionErrorMessage ?? collectionsErrorMessage;
+  const usersError = usersActionError ?? usersLoadError;
+  const itemsError = itemsActionError ?? itemsLoadError;
+
+  const refreshAdminData = React.useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.admin.all }),
+    [queryClient]
+  );
+
+  const loadCollectionsData = React.useCallback(
+    async (_pageIndex?: number) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
+      await collectionsQuery.refetch();
+    },
+    [queryClient, collectionsQuery]
+  );
+  const loadUsers = React.useCallback(
+    async (_pageIndex?: number) => {
+      await usersQuery.refetch();
+    },
+    [usersQuery]
+  );
+  const loadItems = React.useCallback(
+    async (_pageIndex?: number) => {
+      await itemsQuery.refetch();
+    },
+    [itemsQuery]
+  );
+  const loadFeaturedItems = React.useCallback(
+    async (_collectionId?: number | null) => {
+      await featuredItemsQuery.refetch();
+    },
+    [featuredItemsQuery]
+  );
 
   React.useEffect(() => {
-    const token = getAdminToken();
-    setIsAuthenticated(Boolean(token));
+    setIsAuthenticated(Boolean(getAdminToken()));
     setIsReady(true);
-    if (token) {
-      void loadCollectionsData(0);
-      void loadUsers(0);
-      void loadItems(0);
-    }
-  }, [loadCollectionsData, loadUsers, loadItems]);
-
-  React.useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-    void loadCollectionsData(collectionsPage);
-  }, [isAuthenticated, collectionsPage, loadCollectionsData]);
-
-  React.useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-    void loadUsers(usersPage);
-  }, [isAuthenticated, usersPage, loadUsers]);
-
-  React.useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-    void loadItems(itemsPage);
-  }, [isAuthenticated, itemsPage, loadItems]);
-
-  React.useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-    void loadFeaturedItems(stats?.featured_collection_id ?? null);
-  }, [isAuthenticated, stats?.featured_collection_id, loadFeaturedItems]);
+  }, []);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -235,9 +251,7 @@ export default function AdminPage() {
       setCollectionsPage(0);
       setUsersPage(0);
       setItemsPage(0);
-      void loadCollectionsData(0);
-      void loadUsers(0);
-      void loadItems(0);
+      void refreshAdminData();
     } catch (error) {
       setLoginError(
         isApiError(error) ? error.detail : "Unable to sign in to the admin console."
@@ -248,20 +262,14 @@ export default function AdminPage() {
   const handleLogout = () => {
     adminApi.logout();
     setIsAuthenticated(false);
-    setStats(null);
-    setCollections([]);
-    setTotalCollections(0);
-    setUsers([]);
-    setTotalUsers(0);
-    setItems([]);
-    setTotalItems(0);
-    setFeaturedItemsState({ status: "idle", data: [] });
+    // Drop every cached admin response so the next sign-in starts clean.
+    queryClient.removeQueries({ queryKey: queryKeys.admin.all });
     setFeaturedItemSelection([]);
     setFeaturedItemsMessage(null);
     setFeaturedItemsError(null);
-    setErrorMessage(null);
-    setUsersError(null);
-    setItemsError(null);
+    setActionErrorMessage(null);
+    setUsersActionError(null);
+    setItemsActionError(null);
     setUsersSearchInput("");
     setUsersSearchQuery("");
     setItemsSearchInput("");
@@ -269,23 +277,20 @@ export default function AdminPage() {
   };
 
   const handleRefreshAll = () => {
-    setErrorMessage(null);
-    setUsersError(null);
-    setItemsError(null);
-    void loadCollectionsData(collectionsPage);
-    void loadUsers(usersPage);
-    void loadItems(itemsPage);
-    void loadFeaturedItems(stats?.featured_collection_id ?? null);
+    setActionErrorMessage(null);
+    setUsersActionError(null);
+    setItemsActionError(null);
+    void refreshAdminData();
   };
 
   const handleFeature = async (collectionId: number | null) => {
     setFeaturePending(collectionId ?? -1);
-    setErrorMessage(null);
+    setActionErrorMessage(null);
     try {
       await adminApi.feature(collectionId);
       await loadCollectionsData(collectionsPage);
     } catch (error) {
-      setErrorMessage(
+      setActionErrorMessage(
         isApiError(error) ? error.detail : "Unable to update featured collection."
       );
     } finally {
@@ -295,12 +300,12 @@ export default function AdminPage() {
 
   const handleToggleUserLock = async (user: AdminUserResponse) => {
     setUserLockPending(user.id);
-    setUsersError(null);
+    setUsersActionError(null);
     try {
       await adminApi.setUserLocked(user.id, user.is_active);
       await loadUsers(usersPage);
     } catch (error) {
-      setUsersError(
+      setUsersActionError(
         isApiError(error) ? error.detail : "Unable to update user lock status."
       );
     } finally {
@@ -309,16 +314,18 @@ export default function AdminPage() {
   };
 
   const handleDeleteUser = async (user: AdminUserResponse) => {
-    const confirmed = window.confirm(
-      t('Delete user "{email}"? This permanently removes their collections and items.', {
+    const confirmed = await confirm({
+      title: t('Delete user "{email}"? This permanently removes their collections and items.', {
         email: user.email
-      })
-    );
+      }),
+      confirmLabel: t("Delete"),
+      tone: "destructive"
+    });
     if (!confirmed) {
       return;
     }
     setUserDeletePending(user.id);
-    setUsersError(null);
+    setUsersActionError(null);
     try {
       await adminApi.deleteUser(user.id);
       await Promise.all([
@@ -327,21 +334,23 @@ export default function AdminPage() {
         loadItems(itemsPage)
       ]);
     } catch (error) {
-      setUsersError(isApiError(error) ? error.detail : "Unable to delete user.");
+      setUsersActionError(isApiError(error) ? error.detail : "Unable to delete user.");
     } finally {
       setUserDeletePending(null);
     }
   };
 
   const handleDeleteItem = async (item: AdminItemResponse) => {
-    const confirmed = window.confirm(
-      t('Delete item "{name}"? This cannot be undone.', { name: item.name })
-    );
+    const confirmed = await confirm({
+      title: t('Delete item "{name}"? This cannot be undone.', { name: item.name }),
+      confirmLabel: t("Delete"),
+      tone: "destructive"
+    });
     if (!confirmed) {
       return;
     }
     setItemDeletePending(item.id);
-    setItemsError(null);
+    setItemsActionError(null);
     try {
       await adminApi.deleteItem(item.id);
       await loadItems(itemsPage);
@@ -349,7 +358,7 @@ export default function AdminPage() {
         await loadFeaturedItems(item.collection_id);
       }
     } catch (error) {
-      setItemsError(isApiError(error) ? error.detail : "Unable to delete item.");
+      setItemsActionError(isApiError(error) ? error.detail : "Unable to delete item.");
     } finally {
       setItemDeletePending(null);
     }
@@ -416,7 +425,7 @@ export default function AdminPage() {
 
   if (!isReady) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-stone-500">
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
         {t("Loading admin console...")}
       </div>
     );
@@ -424,8 +433,8 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-stone-50 px-6 py-12">
-        <div className="mx-auto w-full max-w-md rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
+      <div className="min-h-screen bg-background px-6 py-12">
+        <Card padding="lg" className="mx-auto w-full max-w-md">
           <div className="flex items-center gap-3">
             <Image
               src="/logo.png"
@@ -436,24 +445,24 @@ export default function AdminPage() {
             />
             <div>
               <p className="font-display text-lg tracking-tight">{t("Admin Console")}</p>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+              <Eyebrow className="tracking-[0.35em]">
                 {t("Antique Catalogue")}
-              </p>
+              </Eyebrow>
             </div>
           </div>
-          <p className="mt-4 text-sm text-stone-600">
+          <p className="mt-4 text-sm text-muted-strong">
             {t("Sign in with your admin credentials to manage users, collections, and featured content.")}
           </p>
 
           {loginError ? (
-            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <Alert className="px-3 py-2 mt-4 text-xs">
               {t(loginError)}
-            </div>
+            </Alert>
           ) : null}
 
           <form className="mt-6 space-y-4" onSubmit={handleLogin}>
             <div>
-              <label className="text-xs font-medium text-stone-700" htmlFor="admin-email">
+              <label className="text-xs font-medium text-muted-strong" htmlFor="admin-email">
                 {t("Email")}
               </label>
               <input
@@ -462,11 +471,11 @@ export default function AdminPage() {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-stone-700" htmlFor="admin-password">
+              <label className="text-xs font-medium text-muted-strong" htmlFor="admin-password">
                 {t("Password")}
               </label>
               <input
@@ -475,14 +484,14 @@ export default function AdminPage() {
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <Button type="submit" className="w-full">
               {t("Sign in")}
             </Button>
           </form>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -492,7 +501,7 @@ export default function AdminPage() {
   const totalItemsPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
   return (
-    <main className="min-h-screen bg-stone-50 px-6 py-10 lg:px-12">
+    <main className="min-h-screen bg-background px-6 py-10 lg:px-12">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-start gap-4">
@@ -506,18 +515,18 @@ export default function AdminPage() {
               />
               <div>
                 <p className="font-display text-lg tracking-tight">{t("Antique Catalogue")}</p>
-                <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+                <Eyebrow className="tracking-[0.35em]">
                   {t("Studio Archive")}
-                </p>
+                </Eyebrow>
               </div>
             </Link>
-            <div className="hidden h-11 border-l border-stone-200 lg:block" />
+            <div className="hidden h-11 border-l border-border lg:block" />
             <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-amber-700">{t("Admin")}</p>
-              <h1 className="font-display mt-3 text-3xl text-stone-900">
+              <Eyebrow tone="brand" spacing="wide">{t("Admin")}</Eyebrow>
+              <SectionHeading as="h1" size="xl" className="mt-3">
                 {t("Catalogue administration")}
-              </h1>
-              <p className="mt-2 text-sm text-stone-600">
+              </SectionHeading>
+              <p className="mt-2 text-sm text-muted-strong">
                 {t("Monitor platform activity, moderate users, and curate featured content.")}
               </p>
             </div>
@@ -535,48 +544,48 @@ export default function AdminPage() {
         </header>
 
         {errorMessage ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <Alert>
             {t(errorMessage)}
-          </div>
+          </Alert>
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-400">{t("Total users")}</p>
-            <p className="mt-4 text-3xl font-semibold text-stone-900">{stats?.total_users ?? "-"}</p>
-            <p className="mt-2 text-sm text-stone-500">{t("Registered accounts")}</p>
+          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-sm">
+            <Eyebrow tone="subtle">{t("Total users")}</Eyebrow>
+            <p className="mt-4 text-3xl font-semibold text-foreground">{stats?.total_users ?? "-"}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("Registered accounts")}</p>
           </div>
-          <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-sm">
+            <Eyebrow tone="subtle">
               {t("Total collections")}
-            </p>
-            <p className="mt-4 text-3xl font-semibold text-stone-900">
+            </Eyebrow>
+            <p className="mt-4 text-3xl font-semibold text-foreground">
               {stats?.total_collections ?? "-"}
             </p>
-            <p className="mt-2 text-sm text-stone-500">{t("Across all users")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("Across all users")}</p>
           </div>
-          <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-sm">
+            <Eyebrow tone="subtle">
               {t("Featured collection")}
-            </p>
-            <p className="mt-4 text-3xl font-semibold text-stone-900">
+            </Eyebrow>
+            <p className="mt-4 text-3xl font-semibold text-foreground">
               {stats?.featured_collection_id ?? "-"}
             </p>
-            <p className="mt-2 text-sm text-stone-500">{t("Current featured ID")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("Current featured ID")}</p>
           </div>
         </section>
 
         <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-          <section className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                <Eyebrow>
                   {t("Featured selection")}
-                </p>
-                <h2 className="font-display mt-3 text-2xl text-stone-900">
+                </Eyebrow>
+                <SectionHeading className="mt-3">
                   {t("Choose a public collection to highlight.")}
-                </h2>
-                <p className="mt-2 text-sm text-stone-600">
+                </SectionHeading>
+                <p className="mt-2 text-sm text-muted-strong">
                   {t("Collections are sorted by newest first.")}
                 </p>
               </div>
@@ -591,41 +600,41 @@ export default function AdminPage() {
             </div>
 
             {collectionsStatus === "loading" ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {t("Loading collections...")}
-              </div>
+              </EmptyState>
             ) : collections.length === 0 ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {t("No collections available yet.")}
-              </div>
+              </EmptyState>
             ) : (
               <div className="mt-6 space-y-4">
                 {collections.map((collection) => (
                   <div
                     key={collection.id}
-                    className="rounded-2xl border border-stone-200 bg-white/80 p-4"
+                    className="rounded-2xl border border-border bg-card/80 p-4"
                   >
                     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
                       <div className="min-w-0">
-                        <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+                        <Eyebrow tone="subtle">
                           {t("Collection #{id}", { id: collection.id })}
-                        </p>
-                        <h3 className="mt-2 text-lg font-semibold text-stone-900">
+                        </Eyebrow>
+                        <h3 className="mt-2 text-lg font-semibold text-foreground">
                           {collection.name}
                         </h3>
-                        <p className="mt-2 text-sm text-stone-600">
+                        <p className="mt-2 text-sm text-muted-strong">
                           {collection.description ?? t("No description provided.")}
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-3 text-xs text-stone-500">
-                          <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
+                        <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1">
                             {t("Owner: {email}", {
                               email: collection.owner_email
                             })}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
+                          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1">
                             {collection.is_public ? t("Public") : t("Private")}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
+                          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1">
                             <CalendarDays className="h-3.5 w-3.5" />
                             {formatDate(collection.created_at, locale)}
                           </span>
@@ -633,7 +642,7 @@ export default function AdminPage() {
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
                         {collection.is_featured ? (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                          <span className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-muted px-3 py-1 text-xs font-medium text-brand">
                             <Crown className="h-3.5 w-3.5" />
                             {t("Featured")}
                           </span>
@@ -651,7 +660,7 @@ export default function AdminPage() {
                   </div>
                 ))}
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-stone-500">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
                   <span>
                     {t("Page {page} of {total}", {
                       page: collectionsPage + 1,
@@ -683,22 +692,22 @@ export default function AdminPage() {
             )}
           </section>
 
-          <section className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                <Eyebrow>
                   {t("Featured items")}
-                </p>
-                <h2 className="font-display mt-3 text-2xl text-stone-900">
+                </Eyebrow>
+                <SectionHeading className="mt-3">
                   {t("Curate highlights from the featured collection.")}
-                </h2>
-                <p className="mt-2 text-sm text-stone-600">
+                </SectionHeading>
+                <p className="mt-2 text-sm text-muted-strong">
                   {t("Select up to {count} items to spotlight on the homepage.", {
                     count: MAX_FEATURED_ITEMS
                   })}
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span>
                   {t("{selected} of {count} selected", {
                     selected: selectionCount,
@@ -706,7 +715,7 @@ export default function AdminPage() {
                   })}
                 </span>
                 {featuredItemsPending ? (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1">
                     {t("Saving...")}
                   </span>
                 ) : null}
@@ -714,33 +723,33 @@ export default function AdminPage() {
             </div>
 
             {featuredItemsMessage ? (
-              <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <Alert tone="success" className="mt-6">
                 {t(featuredItemsMessage)}
-              </div>
+              </Alert>
             ) : null}
 
             {featuredItemsError ? (
-              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <Alert className="mt-6">
                 {t(featuredItemsError)}
-              </div>
+              </Alert>
             ) : null}
 
             {!stats?.featured_collection_id ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {t("Choose a featured collection to manage highlighted items.")}
-              </div>
+              </EmptyState>
             ) : featuredItemsState.status === "loading" ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {t("Loading featured items...")}
-              </div>
+              </EmptyState>
             ) : featuredItemsState.status === "error" ? (
-              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <Alert className="mt-6">
                 {t(featuredItemsState.error ?? "Unable to load featured items.")}
-              </div>
+              </Alert>
             ) : featuredItemsState.data.length === 0 ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {t("No items yet in this collection.")}
-              </div>
+              </EmptyState>
             ) : (
               <div className="mt-6 space-y-3">
                 {featuredItemsState.data.map((item) => {
@@ -749,17 +758,17 @@ export default function AdminPage() {
                   return (
                     <div
                       key={item.id}
-                      className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 rounded-2xl border border-stone-200 bg-white/80 p-4"
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 rounded-2xl border border-border bg-card/80 p-4"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-stone-900">{item.name}</p>
-                        <p className="mt-1 text-xs text-stone-500">
+                        <p className="text-sm font-medium text-foreground">{item.name}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {t("Added {date}", {
                             date: formatDate(item.created_at, locale)
                           })}
                         </p>
                         {item.notes ? (
-                          <p className="mt-2 text-xs text-stone-500">{item.notes}</p>
+                          <p className="mt-2 text-xs text-muted-foreground">{item.notes}</p>
                         ) : null}
                       </div>
                       <Button
@@ -780,17 +789,17 @@ export default function AdminPage() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-          <section className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                <Eyebrow>
                   {t("User management")}
-                </p>
-                <h2 className="font-display mt-3 text-2xl text-stone-900">
+                </Eyebrow>
+                <SectionHeading className="mt-3">
                   {t("Review users, lock access, or remove accounts and their catalogue data.")}
-                </h2>
+                </SectionHeading>
               </div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-strong">
                 <Users className="h-3.5 w-3.5" />
                 {t("Total users")}: {totalUsers}
               </span>
@@ -801,7 +810,7 @@ export default function AdminPage() {
                 value={usersSearchInput}
                 onChange={(event) => setUsersSearchInput(event.target.value)}
                 placeholder={t("Search users by email or username")}
-                className="h-9 min-w-[220px] flex-1 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="h-9 min-w-[220px] flex-1 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <Button type="submit" size="sm" variant="outline" disabled={usersStatus === "loading"}>
                 {t("Search")}
@@ -820,54 +829,54 @@ export default function AdminPage() {
             </form>
 
             {usersSearchQuery ? (
-              <p className="mt-3 text-xs text-stone-500">
+              <p className="mt-3 text-xs text-muted-foreground">
                 {t('Showing results for "{query}"', { query: usersSearchQuery })}
               </p>
             ) : null}
 
             {usersError ? (
-              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <Alert className="mt-6">
                 {t(usersError)}
-              </div>
+              </Alert>
             ) : null}
 
             {usersStatus === "loading" ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {t("Loading users...")}
-              </div>
+              </EmptyState>
             ) : users.length === 0 ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {usersSearchQuery ? t("No users match this search.") : t("No users available yet.")}
-              </div>
+              </EmptyState>
             ) : (
               <div className="mt-6 space-y-3">
                 {users.map((user) => (
                   <div
                     key={user.id}
-                    className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-stone-200 bg-white/80 p-4"
+                    className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border bg-card/80 p-4"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-stone-900">{user.email}</p>
-                      <p className="mt-1 text-xs text-stone-500">
+                      <p className="text-sm font-semibold text-foreground">{user.email}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {t("Username")}: {user.username}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
                         <span
                           className={`inline-flex items-center rounded-full border px-2.5 py-1 ${
                             user.is_active
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-rose-200 bg-rose-50 text-rose-700"
+                              ? "border-success-border bg-success-muted text-success"
+                              : "border-destructive-border bg-destructive-muted text-destructive"
                           }`}
                         >
                           {user.is_active ? t("Active") : t("Locked")}
                         </span>
-                        <span className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-stone-600">
+                        <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-muted-strong">
                           {user.is_verified ? t("Verified") : t("Unverified")}
                         </span>
-                        <span className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-stone-600">
+                        <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-muted-strong">
                           {t("Collections: {count}", { count: user.collection_count })}
                         </span>
-                        <span className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-stone-600">
+                        <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-muted-strong">
                           {t("Items: {count}", { count: user.item_count })}
                         </span>
                       </div>
@@ -891,7 +900,7 @@ export default function AdminPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                        className="border-destructive-border text-destructive hover:bg-destructive-muted"
                         onClick={() => handleDeleteUser(user)}
                         disabled={userDeletePending !== null || userLockPending !== null}
                       >
@@ -902,7 +911,7 @@ export default function AdminPage() {
                   </div>
                 ))}
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-stone-500">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
                   <span>
                     {t("Page {page} of {total}", {
                       page: usersPage + 1,
@@ -932,17 +941,17 @@ export default function AdminPage() {
             )}
           </section>
 
-          <section className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                <Eyebrow>
                   {t("Item moderation")}
-                </p>
-                <h2 className="font-display mt-3 text-2xl text-stone-900">
+                </Eyebrow>
+                <SectionHeading className="mt-3">
                   {t("Review the latest items across all collections and remove entries when needed.")}
-                </h2>
+                </SectionHeading>
               </div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-strong">
                 <Package className="h-3.5 w-3.5" />
                 {t("Total items")}: {totalItems}
               </span>
@@ -953,7 +962,7 @@ export default function AdminPage() {
                 value={itemsSearchInput}
                 onChange={(event) => setItemsSearchInput(event.target.value)}
                 placeholder={t("Search items by name, notes, collection, or owner")}
-                className="h-9 min-w-[220px] flex-1 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="h-9 min-w-[220px] flex-1 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <Button type="submit" size="sm" variant="outline" disabled={itemsStatus === "loading"}>
                 {t("Search")}
@@ -972,68 +981,68 @@ export default function AdminPage() {
             </form>
 
             {itemsSearchQuery ? (
-              <p className="mt-3 text-xs text-stone-500">
+              <p className="mt-3 text-xs text-muted-foreground">
                 {t('Showing results for "{query}"', { query: itemsSearchQuery })}
               </p>
             ) : null}
 
             {itemsError ? (
-              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <Alert className="mt-6">
                 {t(itemsError)}
-              </div>
+              </Alert>
             ) : null}
 
             {itemsStatus === "loading" ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {t("Loading items...")}
-              </div>
+              </EmptyState>
             ) : items.length === 0 ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+              <EmptyState size="sm" className="mt-6">
                 {itemsSearchQuery ? t("No items match this search.") : t("No items available yet.")}
-              </div>
+              </EmptyState>
             ) : (
               <div className="mt-6 space-y-3">
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-stone-200 bg-white/80 p-4"
+                    className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border bg-card/80 p-4"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-stone-900">{item.name}</p>
-                      <p className="mt-1 text-xs text-stone-500">
+                      <p className="text-sm font-semibold text-foreground">{item.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {t("Collection #{id}", { id: item.collection_id })}: {item.collection_name}
                       </p>
-                      <p className="mt-1 text-xs text-stone-500">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {t("Owner: {email}", { email: item.owner_email })}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-stone-600">
-                        <span className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1">
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-strong">
+                        <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1">
                           {t("Images: {count}", { count: item.image_count })}
                         </span>
                         {item.is_featured ? (
-                          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-700">
+                          <span className="inline-flex items-center rounded-full border border-brand-border bg-brand-muted px-2.5 py-1 text-brand">
                             {t("Featured")}
                           </span>
                         ) : null}
                         {item.is_highlight ? (
-                          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-700">
+                          <span className="inline-flex items-center rounded-full border border-brand-border bg-brand-muted px-2.5 py-1 text-brand">
                             {t("Spotlight")}
                           </span>
                         ) : null}
                       </div>
                       {item.notes ? (
-                        <p className="mt-2 line-clamp-2 text-xs text-stone-500">{item.notes}</p>
+                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{item.notes}</p>
                       ) : null}
                     </div>
                     <div className="flex flex-wrap justify-end gap-2">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-strong">
                         <CalendarDays className="h-3.5 w-3.5" />
                         {formatDate(item.created_at, locale)}
                       </span>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                        className="border-destructive-border text-destructive hover:bg-destructive-muted"
                         onClick={() => handleDeleteItem(item)}
                         disabled={itemDeletePending !== null}
                       >
@@ -1044,7 +1053,7 @@ export default function AdminPage() {
                   </div>
                 ))}
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-stone-500">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
                   <span>
                     {t("Page {page} of {total}", {
                       page: itemsPage + 1,

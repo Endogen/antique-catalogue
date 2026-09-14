@@ -5,16 +5,25 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy, PencilLine, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   isApiError,
   schemaTemplateApi,
   type SchemaTemplateSummaryResponse
 } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
+import { Card, EmptyState } from "@/components/ui/card";
 
 type TemplatesState = {
-  status: "loading" | "ready" | "error";
+  status: "idle" | "loading" | "ready" | "error";
   data: SchemaTemplateSummaryResponse[];
   error?: string;
 };
@@ -37,59 +46,40 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 export default function SchemaTemplatesPage() {
   const router = useRouter();
   const { t, tc, locale } = useI18n();
+  const confirm = useConfirm();
   const [query, setQuery] = React.useState("");
-  const [refreshToken, setRefreshToken] = React.useState(0);
-  const [state, setState] = React.useState<TemplatesState>({
-    status: "loading",
-    data: []
-  });
+  const queryClient = useQueryClient();
+  const [actionError, setActionError] = React.useState<string | null>(null);
   const [templateName, setTemplateName] = React.useState("");
   const [createError, setCreateError] = React.useState<string | null>(null);
   const [isCreating, setIsCreating] = React.useState(false);
   const [deletePending, setDeletePending] = React.useState<number | null>(null);
   const [copyPending, setCopyPending] = React.useState<number | null>(null);
 
-  React.useEffect(() => {
-    let isActive = true;
-    const handle = setTimeout(() => {
-      void (async () => {
-        setState((prev) => ({
-          ...prev,
-          status: "loading",
-          error: undefined
-        }));
-        try {
-          const data = await schemaTemplateApi.list({
-            q: query.trim() || undefined,
-            limit: 100
-          });
-          if (!isActive) {
-            return;
-          }
-          setState({
-            status: "ready",
-            data
-          });
-        } catch (error) {
-          if (!isActive) {
-            return;
-          }
-          setState((prev) => ({
-            status: "error",
-            data: prev.data,
-            error: isApiError(error)
-              ? error.detail
-              : "We couldn't load your schema templates."
-          }));
-        }
-      })();
-    }, 250);
+  const term = useDebouncedValue(query).trim();
+  const templatesQuery = useQuery({
+    queryKey: [...queryKeys.schemaTemplates.list(), term],
+    queryFn: ({ signal }) =>
+      schemaTemplateApi.list({ q: term || undefined, limit: 100, signal })
+  });
 
-    return () => {
-      isActive = false;
-      clearTimeout(handle);
-    };
-  }, [query, refreshToken]);
+  const listState = toLoadState<SchemaTemplateSummaryResponse[]>(
+    templatesQuery,
+    "We couldn't load your schema templates.",
+    []
+  );
+  // A failed delete or copy surfaces in the same banner as a failed load.
+  const state: TemplatesState = actionError
+    ? { ...listState, status: "error", error: actionError }
+    : listState;
+
+  const refresh = React.useCallback(() => {
+    setActionError(null);
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.schemaTemplates.all
+    });
+  }, [queryClient]);
+
 
   const handleCreate = async () => {
     if (isCreating) {
@@ -106,7 +96,7 @@ export default function SchemaTemplatesPage() {
     try {
       const created = await schemaTemplateApi.create({ name: normalizedName });
       setTemplateName("");
-      setRefreshToken((prev) => prev + 1);
+      refresh();
       router.push(`/schema-templates/${created.id}`);
     } catch (error) {
       setCreateError(
@@ -120,11 +110,13 @@ export default function SchemaTemplatesPage() {
   };
 
   const handleDelete = async (template: SchemaTemplateSummaryResponse) => {
-    const confirmed = window.confirm(
-      t('Delete the "{name}" template? This cannot be undone.', {
+    const confirmed = await confirm({
+      title: t('Delete the "{name}" template? This cannot be undone.', {
         name: template.name
-      })
-    );
+      }),
+      confirmLabel: t("Delete"),
+      tone: "destructive"
+    });
     if (!confirmed) {
       return;
     }
@@ -132,18 +124,16 @@ export default function SchemaTemplatesPage() {
     setDeletePending(template.id);
     try {
       await schemaTemplateApi.delete(template.id);
-      setState((prev) => ({
-        ...prev,
-        data: prev.data.filter((item) => item.id !== template.id)
-      }));
+      setActionError(null);
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.schemaTemplates.all
+      });
     } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        status: "error",
-        error: isApiError(error)
+      setActionError(
+        isApiError(error)
           ? error.detail
           : "We couldn't delete the schema template."
-      }));
+      );
     } finally {
       setDeletePending(null);
     }
@@ -158,13 +148,11 @@ export default function SchemaTemplatesPage() {
       const copied = await schemaTemplateApi.copy(template.id);
       router.push(`/schema-templates/${copied.id}`);
     } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        status: "error",
-        error: isApiError(error)
+      setActionError(
+        isApiError(error)
           ? error.detail
           : "We couldn't copy the schema template."
-      }));
+      );
     } finally {
       setCopyPending(null);
     }
@@ -172,22 +160,22 @@ export default function SchemaTemplatesPage() {
 
   return (
     <div className="space-y-8">
-      <header className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
+      <header className="rounded-3xl border border-border bg-card/80 p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+            <Eyebrow tone="brand" spacing="wide">
               {t("Schema templates")}
-            </p>
-            <h1 className="font-display mt-3 text-3xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading as="h1" size="xl" className="mt-3">
               {t("Create reusable schema blueprints.")}
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-2 max-w-2xl text-sm text-muted-strong">
               {t(
                 "Save schema definitions as templates, then apply them when creating new collections."
               )}
             </p>
           </div>
-          <Button variant="outline" onClick={() => setRefreshToken((prev) => prev + 1)}>
+          <Button variant="outline" onClick={refresh}>
             <RefreshCcw className="h-4 w-4" />
             {t("Refresh")}
           </Button>
@@ -195,11 +183,11 @@ export default function SchemaTemplatesPage() {
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="relative self-start">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
             <input
               type="search"
               placeholder={t("Search schema templates")}
-              className="block h-11 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              className="block h-11 w-full rounded-full border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -212,7 +200,7 @@ export default function SchemaTemplatesPage() {
                 value={templateName}
                 onChange={(event) => setTemplateName(event.target.value)}
                 placeholder={t("Template name")}
-                className="h-11 min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <Button type="button" onClick={handleCreate} disabled={isCreating}>
                 <Plus className="h-4 w-4" />
@@ -220,9 +208,9 @@ export default function SchemaTemplatesPage() {
               </Button>
             </div>
             {createError ? (
-              <p className="text-xs text-rose-600">{t(createError)}</p>
+              <p className="text-xs text-destructive">{t(createError)}</p>
             ) : (
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-muted-foreground">
                 {t("Create a blank template, then add fields in the editor.")}
               </p>
             )}
@@ -231,22 +219,20 @@ export default function SchemaTemplatesPage() {
       </header>
 
       {state.status === "loading" && state.data.length === 0 ? (
-        <div
-          className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-8 text-sm text-stone-500"
-          aria-busy="true"
-        >
+        <EmptyState
+          aria-busy="true">
           {t("Loading schema templates...")}
-        </div>
+        </EmptyState>
       ) : state.status === "error" && state.data.length === 0 ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50/70 p-6 text-sm text-rose-700">
+        <Alert className="rounded-3xl p-6">
           {t(state.error ?? "We couldn't load your schema templates.")}
-        </div>
+        </Alert>
       ) : state.data.length === 0 ? (
-        <div className="rounded-3xl border border-stone-200 bg-white/80 p-8">
-          <p className="text-sm font-medium text-stone-700">
+        <Card tone="subtle" padding="lg">
+          <p className="text-sm font-medium text-muted-strong">
             {t("No schema templates found.")}
           </p>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             {t("Create your first template to speed up new collection setup.")}
           </p>
           <div className="mt-6">
@@ -254,29 +240,29 @@ export default function SchemaTemplatesPage() {
               <Link href="/collections/new">{t("New collection")}</Link>
             </Button>
           </div>
-        </div>
+        </Card>
       ) : (
         <section className="grid gap-4 md:grid-cols-2">
           {state.data.map((template) => (
             <article
               key={template.id}
-              className="rounded-3xl border border-stone-200 bg-white/90 p-5 shadow-sm"
+              className="rounded-3xl border border-border bg-card/90 p-5 shadow-sm"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-stone-400">
+                  <Eyebrow tone="subtle" spacing="tight">
                     {t("Template")}
-                  </p>
-                  <h2 className="mt-2 text-lg font-semibold text-stone-900">
+                  </Eyebrow>
+                  <h2 className="mt-2 text-lg font-semibold text-foreground">
                     {template.name}
                   </h2>
                 </div>
-                <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600">
+                <span className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-strong">
                   {tc(template.field_count, "{count} field", "{count} fields")}
                 </span>
               </div>
 
-              <p className="mt-3 text-xs text-stone-500">
+              <p className="mt-3 text-xs text-muted-foreground">
                 {t("Updated {date}", {
                   date: formatDate(template.updated_at, locale)
                 })}

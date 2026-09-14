@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Playfair_Display, Space_Grotesk } from "next/font/google";
 
 import { AppProviders } from "@/components/app-providers";
+import { THEME_INIT_SCRIPT } from "@/components/theme-provider";
+import { resolveServerLocale } from "@/lib/i18n-server";
 
 import "./globals.css";
 
@@ -30,15 +32,21 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await resolveServerLocale();
+
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
-      <body className="min-h-screen bg-stone-50 text-stone-950">
-        <AppProviders>{children}</AppProviders>
+    <html lang={locale} className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Applies the stored theme before first paint to avoid a light flash. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-screen bg-background text-foreground">
+        <AppProviders initialLocale={locale}>{children}</AppProviders>
       </body>
     </html>
   );

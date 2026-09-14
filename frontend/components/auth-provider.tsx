@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   authApi,
   isApiError,
   type UserResponse
 } from "@/lib/api";
+import { clearAuthenticatedImageCache } from "@/lib/use-authenticated-image";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -30,6 +32,7 @@ export const AuthProvider = ({
   const [user, setUser] = React.useState<UserResponse | null>(null);
   const [status, setStatus] = React.useState<AuthStatus>("loading");
   const [error, setError] = React.useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const loadUser = React.useCallback(async () => {
     setStatus("loading");
@@ -57,9 +60,11 @@ export const AuthProvider = ({
     async (payload: { email: string; password: string }) => {
       setError(null);
       await authApi.login(payload);
+      queryClient.clear();
+      clearAuthenticatedImageCache();
       await loadUser();
     },
-    [loadUser]
+    [loadUser, queryClient]
   );
 
   const logout = React.useCallback(async () => {
@@ -69,8 +74,12 @@ export const AuthProvider = ({
     } finally {
       setUser(null);
       setStatus("unauthenticated");
+      // Drop every cached response and image blob, so the next account that
+      // signs in on this device never sees the previous one's data.
+      queryClient.clear();
+      clearAuthenticatedImageCache();
     }
-  }, []);
+  }, [queryClient]);
 
   const refresh = React.useCallback(async () => {
     await loadUser();

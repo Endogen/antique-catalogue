@@ -18,6 +18,9 @@ import {
 } from "@/lib/api";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -205,22 +208,22 @@ export function ImageUploader({
   const hasUploads = uploads.length > 0;
 
   return (
-    <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+    <Card>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <Eyebrow>
             {t("Images")}
-          </p>
-          <h3 className="font-display mt-3 text-2xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h3" className="mt-3">
             {t("Upload imagery")}
-          </h3>
-          <p className="mt-3 max-w-xl text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 max-w-xl text-sm text-muted-strong">
             {t(
               "Drag photos here, browse files, or capture new images straight from your device camera."
             )}
           </p>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-muted text-brand">
           <ImagePlus className="h-6 w-6" />
         </div>
       </div>
@@ -230,24 +233,24 @@ export function ImageUploader({
           className={cn(
             "rounded-2xl border border-dashed px-6 py-8 text-center transition",
             isReady
-              ? "border-stone-200 bg-stone-50/70"
-              : "border-stone-200 bg-stone-50/40",
-            isDragging ? "border-amber-400 bg-amber-50/70" : ""
+              ? "border-border bg-background/70"
+              : "border-border bg-background/40",
+            isDragging ? "border-brand bg-brand-muted/70" : ""
           )}
           onDrop={isReady ? handleDrop : undefined}
           onDragEnter={isReady ? handleDragEnter : undefined}
           onDragLeave={isReady ? handleDragLeave : undefined}
           onDragOver={isReady ? handleDragOver : undefined}
         >
-          <div className="mx-auto flex max-w-xs flex-col items-center gap-3 text-sm text-stone-600">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-amber-700 shadow-sm">
+          <div className="mx-auto flex max-w-xs flex-col items-center gap-3 text-sm text-muted-strong">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card text-brand shadow-sm">
               <UploadCloud className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-medium text-stone-900">
+              <p className="font-medium text-foreground">
                 {t("Drop images to upload")}
               </p>
-              <p className="mt-1 text-xs text-stone-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {t("JPG, PNG, WebP, or HEIC. Up to 10MB each.")}
               </p>
             </div>
@@ -293,26 +296,24 @@ export function ImageUploader({
         </div>
 
         {!isReady ? (
-          <div className="flex items-center gap-2 text-xs text-stone-500">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <AlertTriangle className="h-4 w-4 text-brand" />
             {t("Finish loading the item to enable image uploads.")}
           </div>
         ) : null}
 
         {globalError ? (
-          <div
-            role="alert"
-            className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-          >
+          <Alert
+            role="alert">
             {globalError}
-          </div>
+          </Alert>
         ) : null}
 
         {hasUploads ? (
-          <div className="rounded-2xl border border-stone-200 bg-stone-50/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-stone-500">
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <Eyebrow spacing="tight">
               {t("Upload queue")}
-            </p>
+            </Eyebrow>
             <div className="mt-3 max-h-40 space-y-3 overflow-y-auto pr-2 text-sm">
               {uploads.map((entry) => (
                 <div
@@ -320,33 +321,33 @@ export function ImageUploader({
                   className="flex flex-wrap items-center justify-between gap-3"
                 >
                   <div>
-                    <p className="font-medium text-stone-900">
+                    <p className="font-medium text-foreground">
                       {entry.file.name}
                     </p>
-                    <p className="text-xs text-stone-500">
+                    <p className="text-xs text-muted-foreground">
                       {formatFileSize(entry.file.size)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     {entry.status === "uploading" ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-                        <span className="text-amber-700">{t("Uploading")}</span>
+                        <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                        <span className="text-brand">{t("Uploading")}</span>
                       </>
                     ) : entry.status === "success" ? (
                       <>
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        <span className="text-emerald-700">{t("Uploaded")}</span>
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                        <span className="text-success">{t("Uploaded")}</span>
                       </>
                     ) : entry.status === "error" ? (
                       <>
-                        <AlertTriangle className="h-4 w-4 text-rose-600" />
-                        <span className="text-rose-600">
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                        <span className="text-destructive">
                           {entry.error ?? t("Upload failed")}
                         </span>
                       </>
                     ) : (
-                      <span className="text-stone-500">{t("Queued")}</span>
+                      <span className="text-muted-foreground">{t("Queued")}</span>
                     )}
                   </div>
                 </div>
@@ -355,6 +356,6 @@ export function ImageUploader({
           </div>
         ) : null}
       </div>
-    </div>
+    </Card>
   );
 }

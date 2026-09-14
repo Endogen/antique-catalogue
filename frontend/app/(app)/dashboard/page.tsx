@@ -4,28 +4,22 @@ import * as React from "react";
 import Link from "next/link";
 import { CalendarDays, Folder, Star } from "lucide-react";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { activityActionLabel, describeActivity } from "@/lib/activity";
 import {
   activityApi,
   collectionApi,
-  isApiError,
   type ActivityLogResponse,
   type CollectionResponse
 } from "@/lib/api";
-
-type CollectionsState = {
-  status: "loading" | "ready" | "error";
-  data: CollectionResponse[];
-  error?: string;
-};
-
-type ActivityState = {
-  status: "loading" | "ready" | "error";
-  data: ActivityLogResponse[];
-  error?: string;
-};
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 
 const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
@@ -61,63 +55,34 @@ const formatDateTime = (value: string | null | undefined, locale: string) => {
 
 export default function DashboardPage() {
   const { t, tc, locale } = useI18n();
-  const [collectionsState, setCollectionsState] = React.useState<CollectionsState>({
-    status: "loading",
-    data: []
+  const collectionsQuery = useQuery({
+    queryKey: queryKeys.collections.list(),
+    queryFn: ({ signal }) => collectionApi.list({ signal })
   });
-  const [activityState, setActivityState] = React.useState<ActivityState>({
-    status: "loading",
-    data: []
+  const activityQuery = useQuery({
+    queryKey: queryKeys.activity.list(5),
+    queryFn: ({ signal }) => activityApi.list({ limit: 5, signal })
   });
 
-  const loadCollections = React.useCallback(async () => {
-    setCollectionsState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    try {
-      const data = await collectionApi.list();
-      setCollectionsState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setCollectionsState((prev) => ({
-        status: "error",
-        data: prev.data,
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load your collections."
-      }));
-    }
-  }, []);
+  const collectionsState = toLoadState<CollectionResponse[]>(
+    collectionsQuery,
+    "We couldn't load your collections.",
+    []
+  );
+  const activityState = toLoadState<ActivityLogResponse[]>(
+    activityQuery,
+    "Activity unavailable right now.",
+    []
+  );
 
-  const loadActivity = React.useCallback(async () => {
-    setActivityState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    try {
-      const data = await activityApi.list({ limit: 5 });
-      setActivityState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setActivityState((prev) => ({
-        status: "error",
-        data: prev.data,
-        error: isApiError(error) ? error.detail : "Activity unavailable right now."
-      }));
-    }
-  }, []);
-
-  React.useEffect(() => {
-    void loadCollections();
-    void loadActivity();
-  }, [loadActivity, loadCollections]);
+  const { refetch: refetchCollections } = collectionsQuery;
+  const { refetch: refetchActivity } = activityQuery;
+  const loadCollections = React.useCallback(() => {
+    void refetchCollections();
+  }, [refetchCollections]);
+  const loadActivity = React.useCallback(() => {
+    void refetchActivity();
+  }, [refetchActivity]);
 
   const totalCount = collectionsState.data.length;
   const hasCollections = collectionsState.status === "ready" && totalCount > 0;
@@ -134,16 +99,16 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
-        <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+        <Card tone="subtle">
+          <Eyebrow>
             {t("Your collections")}
-          </p>
-          <h2 className="font-display mt-3 text-2xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading className="mt-3">
             {hasCollections
               ? t("Continue your catalogue.")
               : t("Start shaping your first collection.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {hasCollections
               ? t(
                   "Jump back into a collection to refine metadata, add items, and keep your archive up to date."
@@ -154,15 +119,15 @@ export default function DashboardPage() {
           </p>
 
           {collectionsState.status === "loading" ? (
-            <div className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-white/60 p-4 text-sm text-stone-500">
+            <EmptyState size="sm" className="p-4 mt-6">
               {t("Loading your collections...")}
-            </div>
+            </EmptyState>
           ) : collectionsState.status === "error" ? (
-            <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-sm text-rose-600">
+            <Alert className="p-4 mt-6">
               {t(collectionsState.error ?? "We couldn't load your collections.")}
-            </div>
+            </Alert>
           ) : collectionsState.data.length === 0 ? (
-            <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 text-sm text-stone-600">
+            <div className="mt-6 rounded-2xl border border-border bg-background/80 p-4 text-sm text-muted-strong">
               {t("No collections yet. Create one to start cataloguing.")}
             </div>
           ) : (
@@ -170,11 +135,11 @@ export default function DashboardPage() {
               {recentCollections.map((collection) => (
                 <div
                   key={collection.id}
-                  className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm"
+                  className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm"
                 >
-                  <div className="flex items-center justify-between text-xs text-stone-500">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-2">
-                      <Folder className="h-3.5 w-3.5 text-amber-600" />
+                      <Folder className="h-3.5 w-3.5 text-brand" />
                       {collection.is_public ? t("Public") : t("Private")}
                     </span>
                     <span>
@@ -183,25 +148,25 @@ export default function DashboardPage() {
                       })}
                     </span>
                   </div>
-                  <h3 className="mt-3 text-base font-semibold text-stone-900">
+                  <h3 className="mt-3 text-base font-semibold text-foreground">
                     {collection.name}
                   </h3>
-                  <p className="mt-1 text-xs text-stone-600">
+                  <p className="mt-1 text-xs text-muted-strong">
                     {collection.description ??
                       t(
                         "Add a description to capture the story behind this collection."
                       )}
                   </p>
-                  <div className="mt-4 flex items-center justify-between text-xs text-stone-500">
+                  <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="inline-flex items-center gap-2">
-                        <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
+                        <CalendarDays className="h-3.5 w-3.5 text-brand" />
                         {t("Created {date}", {
                           date: formatDate(collection.created_at, locale)
                         })}
                       </span>
                       <span className="inline-flex items-center gap-1">
-                        <Star className="h-3.5 w-3.5 text-amber-600" />
+                        <Star className="h-3.5 w-3.5 text-brand" />
                         {tc(collection.star_count ?? 0, "{count} star", "{count} stars")}
                       </span>
                     </div>
@@ -224,26 +189,26 @@ export default function DashboardPage() {
               <Link href="/collections/new">{t("New collection")}</Link>
             </Button>
           </div>
-        </div>
+        </Card>
 
         <div className="space-y-6">
-          <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <Card tone="subtle">
+            <Eyebrow>
               {t("Recent activity")}
-            </p>
-            <h2 className="font-display mt-3 text-2xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading className="mt-3">
               {t("Latest updates from your archive.")}
-            </h2>
+            </SectionHeading>
             {activityState.status === "loading" && activityState.data.length === 0 ? (
-              <p className="mt-4 text-sm text-stone-500">
+              <p className="mt-4 text-sm text-muted-foreground">
                 {t("Loading activity...")}
               </p>
             ) : activityState.status === "error" && activityState.data.length === 0 ? (
-              <p className="mt-4 text-sm text-rose-600">
+              <p className="mt-4 text-sm text-destructive">
                 {t(activityState.error ?? "Activity unavailable right now.")}
               </p>
             ) : activityState.data.length === 0 ? (
-              <p className="mt-4 text-sm text-stone-600">
+              <p className="mt-4 text-sm text-muted-strong">
                 {t("No activity yet. Create a collection to start your timeline.")}
               </p>
             ) : (
@@ -258,18 +223,18 @@ export default function DashboardPage() {
                   return (
                     <li
                       key={entry.id}
-                      className="rounded-2xl border border-stone-200 bg-white p-3"
+                      className="rounded-2xl border border-border bg-card p-3"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs uppercase tracking-[0.2em] text-amber-700">
+                        <Eyebrow tone="brand" spacing="tight">
                           {activityActionLabel(entry, t)}
-                        </p>
-                        <span className="text-xs text-stone-500">
+                        </Eyebrow>
+                        <span className="text-xs text-muted-foreground">
                           {formatDateTime(entry.created_at, locale)}
                         </span>
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-stone-900">
+                        <p className="text-sm font-medium text-foreground">
                           {describeActivity(entry, t)}
                         </p>
                         {targetHref ? (
@@ -285,7 +250,7 @@ export default function DashboardPage() {
                 })}
               </ul>
             )}
-          </div>
+          </Card>
         </div>
       </section>
     </div>

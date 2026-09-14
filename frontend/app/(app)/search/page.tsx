@@ -2,23 +2,18 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw, Search } from "lucide-react";
 
 import { ItemPreviewCard } from "@/components/item-preview-card";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
-import {
-  imageApi,
-  isApiError,
-  searchApi,
-  type ItemSearchResponse
-} from "@/lib/api";
-
-type LoadState = {
-  status: "idle" | "loading" | "ready" | "error";
-  data: ItemSearchResponse[];
-  error?: string;
-};
+import { Card, EmptyState } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { imageApi, searchApi } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
 
 const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
@@ -36,75 +31,58 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 };
 
 const highlightCardClass =
-  "border-amber-400 ring-2 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.85),0_0_28px_2px_rgba(217,119,6,0.25)]";
+  "border-brand ring-2 ring-brand/40 shadow-[0_0_0_1px_hsl(var(--brand)/0.85),0_0_28px_2px_hsl(var(--brand)/0.25)]";
 
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, tc, locale } = useI18n();
   const queryParam = searchParams.get("query") ?? "";
+  const term = queryParam.trim();
   const [searchValue, setSearchValue] = React.useState(queryParam);
-  const [state, setState] = React.useState<LoadState>({
-    status: "idle",
-    data: []
-  });
-
-  const runSearch = React.useCallback(async (term: string) => {
-    setState({ status: "loading", data: [] });
-    try {
-      const data = await searchApi.items(term, { limit: 100 });
-      setState({ status: "ready", data });
-    } catch (error) {
-      setState({
-        status: "error",
-        data: [],
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load search results."
-      });
-    }
-  }, []);
 
   React.useEffect(() => {
     setSearchValue(queryParam);
-    const term = queryParam.trim();
-    if (!term) {
-      setState({ status: "idle", data: [] });
-      return;
-    }
-    void runSearch(term);
-  }, [queryParam, runSearch]);
+  }, [queryParam]);
+
+  // react-query keys the request by search term, so a slower response for an
+  // earlier term can never overwrite the results for the current one.
+  const query = useQuery({
+    queryKey: queryKeys.search.items(term),
+    queryFn: ({ signal }) => searchApi.items(term, { limit: 100, signal }),
+    enabled: term.length > 0
+  });
+
+  const state = toLoadState(query, "We couldn't load search results.", []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const term = searchValue.trim();
-    if (!term) {
-      setState({ status: "idle", data: [] });
+    const next = searchValue.trim();
+    if (!next) {
+      router.push("/search");
       return;
     }
-    router.push(`/search?query=${encodeURIComponent(term)}`);
+    router.push(`/search?query=${encodeURIComponent(next)}`);
   };
 
   const handleRefresh = () => {
-    const term = queryParam.trim();
-    if (!term) {
-      return;
+    if (term) {
+      void query.refetch();
     }
-    void runSearch(term);
   };
 
   return (
     <div className="space-y-8">
-      <header className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
+      <Card tone="subtle">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+            <Eyebrow tone="brand" spacing="wide">
               {t("Search")}
-            </p>
-            <h1 className="font-display mt-3 text-3xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading as="h1" size="xl" className="mt-3">
               {t("Search your items.")}
-            </h1>
-            <p className="mt-2 text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-2 text-sm text-muted-foreground">
               {t("Find items across every collection by name or notes.")}
             </p>
           </div>
@@ -118,11 +96,11 @@ function SearchContent() {
           onSubmit={handleSubmit}
         >
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="search"
               placeholder={t("Search items by name or notes")}
-              className="h-11 w-full rounded-full border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              className="h-11 w-full rounded-full border border-input bg-card pl-9 pr-3 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
             />
@@ -131,39 +109,30 @@ function SearchContent() {
             {t("Search")}
           </Button>
         </form>
-      </header>
+      </Card>
 
       {state.status === "idle" ? (
-        <div className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-8 text-sm text-stone-500">
-          {t("Enter a search term to see matching items.")}
-        </div>
+        <EmptyState>{t("Enter a search term to see matching items.")}</EmptyState>
       ) : state.status === "loading" ? (
-        <div
-          className="rounded-3xl border border-dashed border-stone-200 bg-white/70 p-8 text-sm text-stone-500"
-          aria-busy="true"
-        >
-          {t("Searching items...")}
-        </div>
+        <EmptyState aria-busy="true">{t("Searching items...")}</EmptyState>
       ) : state.status === "error" ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50/70 p-6 text-sm text-rose-700">
+        <Alert className="rounded-3xl p-6">
           {t(state.error ?? "We couldn't load search results.")}
-        </div>
+        </Alert>
       ) : state.data.length === 0 ? (
-        <div className="rounded-3xl border border-stone-200 bg-white/70 p-8">
-          <p className="text-sm font-medium text-stone-700">
+        <Card tone="subtle" padding="lg">
+          <p className="text-sm font-medium text-foreground">
             {t("No items matched your search.")}
           </p>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             {t("Try another term or check spelling.")}
           </p>
-        </div>
+        </Card>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
-              {t("Results")}
-            </p>
-            <span className="text-xs text-stone-400">
+            <Eyebrow>{t("Results")}</Eyebrow>
+            <span className="text-xs text-muted-foreground">
               {tc(state.data.length, "{count} item found", "{count} items found")}
             </span>
           </div>
@@ -206,7 +175,7 @@ function SearchContent() {
 function SearchFallback() {
   const { t } = useI18n();
   return (
-    <div className="flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+    <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
       {t("Loading...")}
     </div>
   );

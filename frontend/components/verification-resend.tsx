@@ -22,12 +22,12 @@ export function VerificationResend() {
         setError(isApiError(error) ? error.detail : "Could not send email. Please retry.");
       } finally { setPending(false); }
     }}>
-      <p className="text-sm text-stone-700">{t("Expired or missing verification email? Request a new one here.")}</p>
+      <p className="text-sm text-muted-strong">{t("Expired or missing verification email? Request a new one here.")}</p>
       <label className="block text-sm" htmlFor="resend-email">{t("Email")}</label>
-      <input id="resend-email" className="h-10 w-full rounded-xl border border-stone-300 px-3" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} />
+      <input id="resend-email" className="h-10 w-full rounded-xl border border-border px-3" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} />
       <Button type="submit" disabled={pending}>{t(pending ? "Sending..." : "Resend verification email")}</Button>
-      {message && <p role="status" className="text-sm text-emerald-700">{t(message)}</p>}
-      {error && <p role="alert" className="text-sm text-rose-700">{t(error)}</p>}
+      {message && <p role="status" className="text-sm text-success">{t(message)}</p>}
+      {error && <p role="alert" className="text-sm text-destructive">{t(error)}</p>}
     </form>
   );
 }

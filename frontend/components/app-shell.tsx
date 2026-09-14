@@ -23,7 +23,9 @@ import {
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+import { Eyebrow } from "@/components/ui/typography";
 
 type NavItem = {
   label: string;
@@ -128,18 +130,18 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
             className="rounded-full"
           />
           <div>
-            <p className="font-display text-lg tracking-tight text-stone-100">
+            <p className="font-display text-lg tracking-tight text-panel-foreground">
               {t("Antique Catalogue")}
             </p>
-            <p className="text-xs uppercase tracking-[0.35em] text-stone-400">
+            <Eyebrow tone="subtle" className="tracking-[0.35em]">
               {t("Studio Archive")}
-            </p>
+            </Eyebrow>
           </div>
         </Link>
         {onClose ? (
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-700 text-stone-200 transition hover:border-stone-500 hover:text-stone-100"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-panel-border text-panel-muted-foreground transition hover:border-muted-subtle hover:text-panel-foreground"
             onClick={onClose}
             aria-label={t("Close menu")}
           >
@@ -161,8 +163,8 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
               className={cn(
                 "group flex items-start gap-3 rounded-2xl px-3 py-3 transition",
                 isActive
-                  ? "bg-amber-100/10 text-amber-50 ring-1 ring-amber-200/30"
-                  : "text-stone-200 hover:bg-stone-900/60 hover:text-stone-100"
+                  ? "bg-amber-100/10 text-amber-50 ring-1 ring-ring/30"
+                  : "text-panel-muted-foreground hover:bg-panel-border/60 hover:text-panel-foreground"
               )}
             >
               <span
@@ -170,7 +172,7 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
                   "mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl transition",
                   isActive
                     ? "bg-amber-200/15 text-amber-200"
-                    : "bg-stone-900 text-stone-400 group-hover:text-stone-200"
+                    : "bg-panel text-muted-subtle group-hover:text-panel-muted-foreground"
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -180,7 +182,7 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
                 <span
                   className={cn(
                     "mt-1 block text-xs",
-                    isActive ? "text-amber-200/80" : "text-stone-400"
+                    isActive ? "text-amber-200/80" : "text-muted-subtle"
                   )}
                 >
                   {item.description}
@@ -191,7 +193,7 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
         })}
       </nav>
 
-      <div className="my-2 border-t border-stone-800/70" />
+      <div className="my-2 border-t border-panel-border/70" />
 
       <nav className="space-y-2">
         {secondaryNav.map((item) => {
@@ -206,8 +208,8 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
               className={cn(
                 "group flex items-start gap-3 rounded-2xl px-3 py-3 transition",
                 isActive
-                  ? "bg-amber-100/10 text-amber-50 ring-1 ring-amber-200/30"
-                  : "text-stone-200 hover:bg-stone-900/60 hover:text-stone-100"
+                  ? "bg-amber-100/10 text-amber-50 ring-1 ring-ring/30"
+                  : "text-panel-muted-foreground hover:bg-panel-border/60 hover:text-panel-foreground"
               )}
             >
               <span
@@ -215,7 +217,7 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
                   "mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl transition",
                   isActive
                     ? "bg-amber-200/15 text-amber-200"
-                    : "bg-stone-900 text-stone-400 group-hover:text-stone-200"
+                    : "bg-panel text-muted-subtle group-hover:text-panel-muted-foreground"
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -225,7 +227,7 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
                 <span
                   className={cn(
                     "mt-1 block text-xs",
-                    isActive ? "text-amber-200/80" : "text-stone-400"
+                    isActive ? "text-amber-200/80" : "text-muted-subtle"
                   )}
                 >
                   {item.description}
@@ -237,20 +239,20 @@ const SidebarContent = ({ onNavigate, onClose }: SidebarContentProps) => {
       </nav>
 
       {user ? (
-        <div className="mt-auto border-t border-stone-800/70 pt-4">
+        <div className="mt-auto border-t border-panel-border/70 pt-4">
           <Link
             href="/profile"
             onClick={onNavigate}
-            className="flex items-center gap-3 rounded-2xl px-3 py-3 transition hover:bg-stone-900/60"
+            className="flex items-center gap-3 rounded-2xl px-3 py-3 transition hover:bg-panel-border/60"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200/15 font-display text-lg text-amber-200 ring-1 ring-amber-200/30">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200/15 font-display text-lg text-amber-200 ring-1 ring-ring/30">
               {user.username.charAt(0).toUpperCase()}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium text-stone-100">
+              <span className="block truncate text-sm font-medium text-panel-foreground">
                 @{user.username}
               </span>
-              <span className="block truncate text-xs text-stone-400">
+              <span className="block truncate text-xs text-muted-subtle">
                 {user.email}
               </span>
             </span>
@@ -337,15 +339,15 @@ export const AppShell = ({ children }: AppShellProps) => {
   }, [mobileOpen]);
 
   return (
-    <div className="relative min-h-screen bg-stone-50 text-stone-950">
+    <div className="relative min-h-screen bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 right-[-6rem] h-72 w-72 rounded-full bg-amber-200/30 blur-[140px]" />
-        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-stone-900/10 blur-[120px]" />
-        <div className="absolute top-1/3 right-1/4 h-40 w-40 rounded-full bg-amber-100/40 blur-[90px]" />
+        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-panel/10 blur-[120px]" />
+        <div className="absolute top-1/3 right-1/4 h-40 w-40 rounded-full bg-brand-muted/40 blur-[90px]" />
       </div>
 
       <div className="relative flex min-h-screen">
-        <aside className="relative hidden h-screen w-72 flex-col overflow-y-auto overscroll-contain border-r border-stone-900/80 bg-stone-950 text-stone-100 lg:sticky lg:top-0 lg:flex">
+        <aside className="relative hidden h-screen w-72 flex-col overflow-y-auto overscroll-contain border-r border-panel-border/80 bg-panel-deep text-panel-foreground lg:sticky lg:top-0 lg:flex">
           <div className="pointer-events-none absolute -top-24 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-[90px]" />
           <div className="relative flex h-full flex-col p-6">
             <SidebarContent />
@@ -353,33 +355,35 @@ export const AppShell = ({ children }: AppShellProps) => {
         </aside>
 
         <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+          <header className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur">
             <div className="flex items-center justify-between px-6 py-4 lg:px-10">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white/80 text-stone-700 shadow-sm transition hover:border-stone-300 hover:text-stone-900 lg:hidden"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/80 text-muted-strong shadow-sm transition hover:border-muted-subtle hover:text-foreground lg:hidden"
                   onClick={() => setMobileOpen(true)}
                   aria-label={t("Open menu")}
                 >
                   <Menu className="h-5 w-5" />
                 </button>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+                  <Eyebrow tone="brand" spacing="wide">
                     {t("Workspace")}
-                  </p>
-                  <p className="font-display text-xl text-stone-900">
+                  </Eyebrow>
+                  <p className="font-display text-xl text-foreground">
                     {t("Catalogue Studio")}
                   </p>
                 </div>
               </div>
-              <div className="hidden items-center gap-3 md:flex">
+              <div className="flex items-center gap-3">
+                <ThemeToggle className="md:hidden" />
+                <div className="hidden items-center gap-3 md:flex">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
                   <input
                     type="search"
                     placeholder={t("Search all items")}
-                    className="h-10 w-64 rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    className="h-10 w-64 rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
                     onKeyDown={handleSearchKeyDown}
@@ -394,16 +398,18 @@ export const AppShell = ({ children }: AppShellProps) => {
                   <LogOut className="h-4 w-4" />
                   {isLoggingOut ? t("Logging out...") : t("Log out")}
                 </Button>
+                <ThemeToggle />
+                </div>
               </div>
             </div>
             <div className="px-6 pb-4 md:hidden">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
                   <input
                     type="search"
                     placeholder={t("Search all items")}
-                    className="h-10 w-full rounded-full border border-stone-200 bg-white/90 pl-9 pr-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    className="h-10 w-full rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
                     onKeyDown={handleSearchKeyDown}
@@ -433,7 +439,7 @@ export const AppShell = ({ children }: AppShellProps) => {
             className="absolute inset-0 bg-stone-950/60"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] overflow-y-auto overscroll-contain border-r border-stone-900 bg-stone-950 p-6 text-stone-100 shadow-2xl">
+          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] overflow-y-auto overscroll-contain border-r border-panel-border bg-panel-deep p-6 text-panel-foreground shadow-2xl">
             <SidebarContent
               onNavigate={() => setMobileOpen(false)}
               onClose={() => setMobileOpen(false)}

@@ -1,4 +1,5 @@
 import { uploadPhoto } from "@/lib/upload-queue";
+import { publishApiMutation } from "@/lib/api-mutations";
 
 export type MessageResponse = {
   message: string;
@@ -665,10 +666,18 @@ export const apiRequest = async <T>(
     }
   }
 
-  return parseResponse<T>(await apiFetch(path, {
+  const data = await parseResponse<T>(await apiFetch(path, {
     ...init, headers: requestHeaders, body: resolvedBody,
     credentials, skipAuth, skipRefresh
   }));
+  const pathname = new URL(buildApiUrl(path), "http://api.local").pathname;
+  const basePath = new URL(API_BASE_URL, "http://api.local").pathname.replace(/\/$/, "");
+  publishApiMutation({
+    path: pathname.startsWith(`${basePath}/`) ? pathname.slice(basePath.length) : pathname,
+    method: (init.method ?? "GET").toUpperCase(),
+    data
+  });
+  return data;
 };
 
 // JSON and images share token renewal, request deduplication, and memory fallback.
@@ -794,24 +803,30 @@ export function avatarUrl(
   return `${API_BASE_URL}/avatars/${userId}/${variant}.jpg`;
 }
 
+/** Passed by react-query so an abandoned read is aborted, not just ignored. */
+export type ReadOptions = { signal?: AbortSignal };
+
 export const profileApi = {
-  me: () => apiRequest<PublicProfileResponse>("/profiles/me"),
+  me: (options: ReadOptions = {}) =>
+    apiRequest<PublicProfileResponse>("/profiles/me", { signal: options.signal }),
   updateMe: (payload: { username: string }) =>
     apiRequest<PublicProfileResponse>("/profiles/me", {
       method: "PATCH",
       body: payload
     }),
-  getPublic: (username: string) =>
+  getPublic: (username: string, options: ReadOptions = {}) =>
     apiRequest<PublicProfileResponse>(`/profiles/${encodeURIComponent(username)}`, {
       skipAuth: true,
-      skipRefresh: true
+      skipRefresh: true,
+      signal: options.signal
     }),
-  listPublicCollections: (username: string) =>
+  listPublicCollections: (username: string, options: ReadOptions = {}) =>
     apiRequest<CollectionResponse[]>(
       `/profiles/${encodeURIComponent(username)}/collections`,
       {
         skipAuth: true,
-        skipRefresh: true
+        skipRefresh: true,
+        signal: options.signal
       }
     ),
   uploadAvatar: (file: File) => {
@@ -842,9 +857,10 @@ export const adminApi = {
   logout: () => {
     setAdminToken(null);
   },
-  stats: () => adminRequest<AdminStatsResponse>("/admin/stats"),
+  stats: (options: ReadOptions = {}) =>
+    adminRequest<AdminStatsResponse>("/admin/stats", { signal: options.signal }),
   collections: (
-    options: { offset?: number; limit?: number; publicOnly?: boolean } = {}
+    options: { offset?: number; limit?: number; publicOnly?: boolean } & ReadOptions = {}
   ) => {
     const params = new URLSearchParams();
     if (typeof options.offset === "number") {
@@ -858,7 +874,8 @@ export const adminApi = {
     }
     const query = params.toString();
     return adminRequest<AdminCollectionListResponse>(
-      `/admin/collections${query ? `?${query}` : ""}`
+      `/admin/collections${query ? `?${query}` : ""}`,
+      { signal: options.signal }
     );
   },
   deleteCollection: (collectionId: number) =>
@@ -866,7 +883,7 @@ export const adminApi = {
       method: "DELETE"
     }),
   users: (
-    options: { offset?: number; limit?: number; q?: string } = {}
+    options: { offset?: number; limit?: number; q?: string } & ReadOptions = {}
   ) => {
     const params = new URLSearchParams();
     if (typeof options.offset === "number") {
@@ -880,7 +897,8 @@ export const adminApi = {
     }
     const query = params.toString();
     return adminRequest<AdminUserListResponse>(
-      `/admin/users${query ? `?${query}` : ""}`
+      `/admin/users${query ? `?${query}` : ""}`,
+      { signal: options.signal }
     );
   },
   setUserLocked: (userId: number, locked: boolean) =>
@@ -898,7 +916,7 @@ export const adminApi = {
       limit?: number;
       q?: string;
       collectionId?: number;
-    } = {}
+    } & ReadOptions = {}
   ) => {
     const params = new URLSearchParams();
     if (typeof options.offset === "number") {
@@ -915,7 +933,8 @@ export const adminApi = {
     }
     const query = params.toString();
     return adminRequest<AdminItemListResponse>(
-      `/admin/items${query ? `?${query}` : ""}`
+      `/admin/items${query ? `?${query}` : ""}`,
+      { signal: options.signal }
     );
   },
   deleteItem: (itemId: number) =>
@@ -927,8 +946,10 @@ export const adminApi = {
       method: "POST",
       body: { collection_id: collectionId }
     }),
-  featuredItems: () =>
-    adminRequest<AdminFeaturedItemResponse[]>("/admin/featured/items"),
+  featuredItems: (options: ReadOptions = {}) =>
+    adminRequest<AdminFeaturedItemResponse[]>("/admin/featured/items", {
+      signal: options.signal
+    }),
   setFeaturedItems: (itemIds: number[]) =>
     adminRequest<MessageResponse>("/admin/featured/items", {
       method: "POST",
@@ -937,14 +958,17 @@ export const adminApi = {
 };
 
 export const collectionApi = {
-  list: () => apiRequest<CollectionResponse[]>("/collections"),
+  list: (options: ReadOptions = {}) =>
+    apiRequest<CollectionResponse[]>("/collections", { signal: options.signal }),
   create: (payload: CollectionCreatePayload) =>
     apiRequest<CollectionResponse>("/collections", {
       method: "POST",
       body: payload
     }),
-  get: (collectionId: number | string) =>
-    apiRequest<CollectionResponse>(`/collections/${collectionId}`),
+  get: (collectionId: number | string, options: ReadOptions = {}) =>
+    apiRequest<CollectionResponse>(`/collections/${collectionId}`, {
+      signal: options.signal
+    }),
   update: (collectionId: number | string, payload: CollectionUpdatePayload) =>
     apiRequest<CollectionResponse>(`/collections/${collectionId}`, {
       method: "PATCH",
@@ -965,17 +989,22 @@ export const collectionApi = {
 };
 
 export const schemaTemplateApi = {
-  list: (options: { q?: string; limit?: number; offset?: number } = {}) =>
+  list: (
+    options: { q?: string; limit?: number; offset?: number } & ReadOptions = {}
+  ) =>
     apiRequest<SchemaTemplateSummaryResponse[]>(
-      `/schema-templates${buildSchemaTemplateListQuery(options)}`
+      `/schema-templates${buildSchemaTemplateListQuery(options)}`,
+      { signal: options.signal }
     ),
   create: (payload: SchemaTemplateCreatePayload) =>
     apiRequest<SchemaTemplateResponse>("/schema-templates", {
       method: "POST",
       body: payload
     }),
-  get: (templateId: number | string) =>
-    apiRequest<SchemaTemplateResponse>(`/schema-templates/${templateId}`),
+  get: (templateId: number | string, options: ReadOptions = {}) =>
+    apiRequest<SchemaTemplateResponse>(`/schema-templates/${templateId}`, {
+      signal: options.signal
+    }),
   update: (
     templateId: number | string,
     payload: SchemaTemplateUpdatePayload
@@ -996,9 +1025,10 @@ export const schemaTemplateApi = {
       method: "POST",
       body: payload
     }),
-  listFields: (templateId: number | string) =>
+  listFields: (templateId: number | string, options: ReadOptions = {}) =>
     apiRequest<SchemaTemplateFieldResponse[]>(
-      `/schema-templates/${templateId}/fields`
+      `/schema-templates/${templateId}/fields`,
+      { signal: options.signal }
     ),
   createField: (
     templateId: number | string,
@@ -1041,23 +1071,33 @@ export const schemaTemplateApi = {
 };
 
 export const activityApi = {
-  list: (options: { limit?: number } = {}) => {
+  list: (options: { limit?: number } & ReadOptions = {}) => {
     const params = new URLSearchParams();
     if (typeof options.limit === "number") {
       params.set("limit", String(options.limit));
     }
     const query = params.toString();
-    return apiRequest<ActivityLogResponse[]>(`/activity${query ? `?${query}` : ""}`);
+    return apiRequest<ActivityLogResponse[]>(
+      `/activity${query ? `?${query}` : ""}`,
+      { signal: options.signal }
+    );
   }
 };
 
 export const starsApi = {
-  listCollections: (options: { q?: string; limit?: number; offset?: number } = {}) =>
+  listCollections: (
+    options: { q?: string; limit?: number; offset?: number } & ReadOptions = {}
+  ) =>
     apiRequest<StarredCollectionResponse[]>(
-      `/stars/collections${buildStarsListQuery(options)}`
+      `/stars/collections${buildStarsListQuery(options)}`,
+      { signal: options.signal }
     ),
-  listItems: (options: { q?: string; limit?: number; offset?: number } = {}) =>
-    apiRequest<StarredItemResponse[]>(`/stars/items${buildStarsListQuery(options)}`),
+  listItems: (
+    options: { q?: string; limit?: number; offset?: number } & ReadOptions = {}
+  ) =>
+    apiRequest<StarredItemResponse[]>(`/stars/items${buildStarsListQuery(options)}`, {
+      signal: options.signal
+    }),
   collectionStatus: (collectionId: number | string) =>
     apiRequest<StarStatusResponse>(`/stars/collections/${collectionId}`),
   starCollection: (collectionId: number | string) =>
@@ -1089,32 +1129,36 @@ export const starsApi = {
 };
 
 export const publicCollectionApi = {
-  list: () =>
+  list: (options: ReadOptions = {}) =>
     apiRequest<CollectionResponse[]>("/public/collections", {
       skipAuth: true,
-      skipRefresh: true
+      skipRefresh: true,
+      signal: options.signal
     }),
-  featured: () =>
+  featured: (options: ReadOptions = {}) =>
     apiRequest<CollectionResponse | null>("/public/collections/featured", {
       skipAuth: true,
-      skipRefresh: true
+      skipRefresh: true,
+      signal: options.signal
     }),
-  featuredItems: () =>
+  featuredItems: (options: ReadOptions = {}) =>
     apiRequest<FeaturedItemResponse[]>("/public/collections/featured/items", {
       skipAuth: true,
-      skipRefresh: true
+      skipRefresh: true,
+      signal: options.signal
     }),
-  get: (collectionId: number | string) =>
+  get: (collectionId: number | string, options: ReadOptions = {}) =>
     apiRequest<CollectionResponse>(`/public/collections/${collectionId}`, {
       skipAuth: true,
-      skipRefresh: true
+      skipRefresh: true,
+      signal: options.signal
     })
 };
 
 export const searchApi = {
   items: (
     query: string,
-    options: { offset?: number; limit?: number } = {}
+    options: { offset?: number; limit?: number } & ReadOptions = {}
   ) => {
     const params = new URLSearchParams({ q: query });
     if (typeof options.offset === "number") {
@@ -1123,25 +1167,36 @@ export const searchApi = {
     if (typeof options.limit === "number") {
       params.set("limit", String(options.limit));
     }
-    return apiRequest<ItemSearchResponse[]>(`/search/items?${params.toString()}`);
+    return apiRequest<ItemSearchResponse[]>(`/search/items?${params.toString()}`, {
+      signal: options.signal
+    });
   }
 };
 
 export const publicItemApi = {
-  list: (collectionId: number | string, options?: ItemListOptions) =>
+  list: (
+    collectionId: number | string,
+    options?: ItemListOptions & ReadOptions
+  ) =>
     apiRequest<ItemResponse[]>(
       `/public/collections/${collectionId}/items${buildItemListQuery(options)}`,
       {
         skipAuth: true,
-        skipRefresh: true
+        skipRefresh: true,
+        signal: options?.signal
       }
     ),
-  get: (collectionId: number | string, itemId: number | string) =>
+  get: (
+    collectionId: number | string,
+    itemId: number | string,
+    options: ReadOptions = {}
+  ) =>
     apiRequest<ItemResponse>(
       `/public/collections/${collectionId}/items/${itemId}`,
       {
         skipAuth: true,
-        skipRefresh: true
+        skipRefresh: true,
+        signal: options.signal
       }
     )
 };
@@ -1157,17 +1212,27 @@ export type MovePreview = {
 export const itemApi = {
   previewMove: (collectionId: number | string, itemId: number | string, destination: number) =>
     apiRequest<MovePreview>(`/collections/${collectionId}/items/${itemId}/move-preview?destination_collection_id=${destination}`),
-  list: (collectionId: number | string, options?: ItemListOptions) =>
+  list: (
+    collectionId: number | string,
+    options?: ItemListOptions & ReadOptions
+  ) =>
     apiRequest<ItemResponse[]>(
-      `/collections/${collectionId}/items${buildItemListQuery(options)}`
+      `/collections/${collectionId}/items${buildItemListQuery(options)}`,
+      { signal: options?.signal }
     ),
   create: (collectionId: number | string, payload: ItemCreatePayload) =>
     apiRequest<ItemResponse>(`/collections/${collectionId}/items`, {
       method: "POST",
       body: payload
     }),
-  get: (collectionId: number | string, itemId: number | string) =>
-    apiRequest<ItemResponse>(`/collections/${collectionId}/items/${itemId}`),
+  get: (
+    collectionId: number | string,
+    itemId: number | string,
+    options: ReadOptions = {}
+  ) =>
+    apiRequest<ItemResponse>(`/collections/${collectionId}/items/${itemId}`, {
+      signal: options.signal
+    }),
   update: (
     collectionId: number | string,
     itemId: number | string,
@@ -1184,9 +1249,10 @@ export const itemApi = {
 };
 
 export const fieldApi = {
-  list: (collectionId: number | string) =>
+  list: (collectionId: number | string, options: ReadOptions = {}) =>
     apiRequest<FieldDefinitionResponse[]>(
-      `/collections/${collectionId}/fields`
+      `/collections/${collectionId}/fields`,
+      { signal: options.signal }
     ),
   create: (
     collectionId: number | string,
@@ -1230,8 +1296,10 @@ export const fieldApi = {
 
 export const imageApi = {
   upload: (itemId: number | string, file: File) => uploadPhoto({ mode: "item", item_id: Number(itemId) }, file),
-  list: (itemId: number | string) =>
-    apiRequest<ItemImageResponse[]>(`/items/${itemId}/images`),
+  list: (itemId: number | string, options: ReadOptions = {}) =>
+    apiRequest<ItemImageResponse[]>(`/items/${itemId}/images`, {
+      signal: options.signal
+    }),
   update: (
     itemId: number | string,
     imageId: number | string,

@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 
 import { useI18n } from "@/components/i18n-provider";
 import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { cn } from "@/lib/utils";
 
 type LightboxProps = {
@@ -18,50 +19,41 @@ type LightboxProps = {
 export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
   const { t } = useI18n();
   const resolvedSrc = useAuthenticatedImageUrl(src);
-  React.useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", handleKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, onClose]);
+  const isOpen = open && Boolean(src);
+  // Handles Escape, body scroll lock, focus containment and focus restore.
+  const containerRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
+  const labelId = React.useId();
 
-  if (!open || !src) {
+  if (!isOpen) {
     return null;
   }
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/90 p-6"
-      role="dialog"
-      aria-modal="true"
       onClick={onClose}
     >
-      <button
-        type="button"
-        className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
-        onClick={onClose}
-        aria-label={t("Close image")}
-      >
-        <X className="h-5 w-5" />
-      </button>
       <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={alt ? undefined : t("Expanded image")}
+        aria-labelledby={alt ? labelId : undefined}
+        tabIndex={-1}
         className={cn(
-          "max-h-full max-w-5xl",
+          "relative max-h-full max-w-5xl outline-none",
           "rounded-2xl border border-white/10 bg-black/20 p-2"
         )}
         onClick={(event) => event.stopPropagation()}
       >
+        <button
+          type="button"
+          className="absolute -top-14 right-0 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          onClick={onClose}
+          aria-label={t("Close image")}
+        >
+          <X className="h-5 w-5" />
+        </button>
         {resolvedSrc ? (
           <Image
             src={resolvedSrc}
@@ -72,12 +64,14 @@ export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
             unoptimized
           />
         ) : (
-          <p className="px-6 py-12 text-center text-sm text-stone-200">
+          <p className="px-6 py-12 text-center text-sm text-panel-muted-foreground">
             {t("Loading image...")}
           </p>
         )}
         {alt ? (
-          <p className="mt-3 text-center text-xs text-stone-200">{alt}</p>
+          <p id={labelId} className="mt-3 text-center text-xs text-panel-muted-foreground">
+            {alt}
+          </p>
         ) : null}
       </div>
     </div>

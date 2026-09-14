@@ -13,6 +13,10 @@ import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { VerificationResend } from "@/components/verification-resend";
 import { authApi, isApiError } from "@/lib/api";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
 
 const createVerifySchema = (t: (key: string) => string) =>
   z.object({
@@ -95,7 +99,7 @@ function VerifyContent() {
 
   if (status === "authenticated") {
     return (
-      <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+      <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
         {t("Redirecting to your workspace...")}
       </div>
     );
@@ -119,12 +123,12 @@ function VerifyContent() {
               <p className="font-display text-lg tracking-tight">
                 {t("Antique Catalogue")}
               </p>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+              <Eyebrow className="tracking-[0.35em]">
                 {t("Studio Archive")}
-              </p>
+              </Eyebrow>
             </div>
           </Link>
-          <div className="flex items-center gap-3 text-sm text-stone-600">
+          <div className="flex items-center gap-3 text-sm text-muted-strong">
             <span className="hidden sm:inline">{t("Already verified?")}</span>
             <Button variant="outline" size="sm" asChild>
               <Link href="/login">{t("Sign in")}</Link>
@@ -132,57 +136,55 @@ function VerifyContent() {
           </div>
         </header>
 
-        <section className="mt-10 rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+        <section className="mt-10 rounded-3xl border border-border bg-card/90 p-8 shadow-sm">
+          <Eyebrow tone="brand" spacing="wide">
             {t("Verify your email")}
-          </p>
-          <h1 className="font-display mt-4 text-3xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h1" size="xl" className="mt-4">
             {t("Activate your archive.")}
-          </h1>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t(
               "Enter the verification token we sent to your inbox to complete setup."
             )}
           </p>
 
           {formError ? (
-            <div
+            <Alert
               role="alert"
-              className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-            >
+              className="mt-6">
               {t(formError)}
-            </div>
+            </Alert>
           ) : null}
 
           {successMessage ? (
-            <div
+            <Alert tone="success"
               role="status"
-              className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-            >
+              className="mt-6">
               <p className="font-medium">{t(successMessage)}</p>
-              <p className="mt-2 text-xs text-emerald-700">
+              <p className="mt-2 text-xs text-success">
                 {t("You can now sign in and start building your collection archive.")}
               </p>
-            </div>
+            </Alert>
           ) : null}
 
           <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
-              <label className="text-sm font-medium text-stone-700" htmlFor="token">
+              <label className="text-sm font-medium text-muted-strong" htmlFor="token">
                 {t("Verification token")}
               </label>
-              <input
+              <Input
                 id="token"
                 type="text"
                 autoComplete="one-time-code"
                 disabled={isVerified}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                className="mt-2"
                 aria-invalid={errors.token ? "true" : "false"}
                 placeholder={t("Paste your token")}
                 {...register("token")}
               />
               {errors.token ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.token.message}
                 </p>
               ) : null}
@@ -202,11 +204,11 @@ function VerifyContent() {
             </Button>
           </form>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
             <span>{t("Need a fresh token?")}</span>
             <a
               href="#resend-verification"
-              className="font-medium text-amber-700 hover:text-amber-800"
+              className="font-medium text-brand hover:text-brand-strong"
             >
               {t("Resend verification email")}
             </a>
@@ -215,14 +217,14 @@ function VerifyContent() {
       </div>
 
       <aside className="order-first lg:order-none">
-        <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-8 text-stone-100 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.4em] text-stone-400">
+        <div className="rounded-3xl border border-panel-border/90 surface-panel p-8 text-panel-foreground shadow-sm">
+          <Eyebrow tone="subtle" spacing="wide">
             {t("Next steps")}
-          </p>
-          <h2 className="font-display mt-4 text-3xl">
+          </Eyebrow>
+          <SectionHeading size="xl" className="mt-4">
             {t("Confirm your studio access.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-300">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-panel-muted-foreground">
             {t(
               "Verification keeps your catalogue secure and ensures notifications land in the right place."
             )}
@@ -230,26 +232,26 @@ function VerifyContent() {
           <ul className="mt-6 space-y-4 text-sm">
             {nextSteps.map((step, index) => (
               <li key={step.title} className="flex items-start gap-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-200 text-sm font-semibold text-stone-900">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-200 text-sm font-semibold text-foreground">
                   0{index + 1}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-stone-100">
+                  <p className="text-sm font-medium text-panel-foreground">
                     {t(step.title)}
                   </p>
-                  <p className="mt-1 text-xs text-stone-300">{t(step.detail)}</p>
+                  <p className="mt-1 text-xs text-panel-muted-foreground">{t(step.detail)}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <div id="resend-verification" className="mt-6 rounded-3xl border border-stone-200 bg-white/85 p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+        <Card tone="subtle" id="resend-verification" className="mt-6">
+          <Eyebrow>
             {t("Helpful tip")}
-          </p>
+          </Eyebrow>
           <VerificationResend />
-        </div>
+        </Card>
       </aside>
     </>
   );
@@ -261,7 +263,7 @@ export default function VerifyPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+        <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
           {t("Loading...")}
         </div>
       }

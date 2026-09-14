@@ -12,6 +12,9 @@ import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { isApiError } from "@/lib/api";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 
 const createLoginSchema = (t: (key: string) => string) =>
   z.object({
@@ -104,7 +107,7 @@ function LoginContent() {
 
   if (status === "authenticated") {
     return (
-      <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+      <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
         {t("Redirecting to your workspace...")}
       </div>
     );
@@ -126,12 +129,12 @@ function LoginContent() {
               <p className="font-display text-lg tracking-tight">
                 {t("Antique Catalogue")}
               </p>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+              <Eyebrow className="tracking-[0.35em]">
                 {t("Studio Archive")}
-              </p>
+              </Eyebrow>
             </div>
           </Link>
-          <div className="flex items-center gap-3 text-sm text-stone-600">
+          <div className="flex items-center gap-3 text-sm text-muted-strong">
             <span className="hidden sm:inline">{t("New here?")}</span>
             <Button variant="outline" size="sm" asChild>
               <Link href="/register">{t("Create account")}</Link>
@@ -139,41 +142,40 @@ function LoginContent() {
           </div>
         </header>
 
-        <section className="mt-10 rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+        <section className="mt-10 rounded-3xl border border-border bg-card/90 p-8 shadow-sm">
+          <Eyebrow tone="brand" spacing="wide">
             {t("Welcome back")}
-          </p>
-          <h1 className="font-display mt-4 text-3xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h1" size="xl" className="mt-4">
             {t("Sign in to your archive.")}
-          </h1>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t("Keep your collections, schema, and imagery in one focused workspace.")}
           </p>
 
           {formError ? (
-            <div
+            <Alert
               role="alert"
-              className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-            >
+              className="mt-6">
               {t(formError)}
-            </div>
+            </Alert>
           ) : null}
 
           <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
-              <label className="text-sm font-medium text-stone-700" htmlFor="email">
+              <label className="text-sm font-medium text-muted-strong" htmlFor="email">
                 {t("Email address")}
               </label>
-              <input
+              <Input
                 id="email"
                 type="email"
                 autoComplete="email"
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="mt-2"
                 aria-invalid={errors.email ? "true" : "false"}
                 {...register("email")}
               />
               {errors.email ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.email.message}
                 </p>
               ) : null}
@@ -182,28 +184,28 @@ function LoginContent() {
             <div>
               <div className="flex items-center justify-between">
                 <label
-                  className="text-sm font-medium text-stone-700"
+                  className="text-sm font-medium text-muted-strong"
                   htmlFor="password"
                 >
                   {t("Password")}
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs font-medium text-amber-700 hover:text-amber-800"
+                  className="text-xs font-medium text-brand hover:text-brand-strong"
                 >
                   {t("Forgot password?")}
                 </Link>
               </div>
-              <input
+              <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="mt-2"
                 aria-invalid={errors.password ? "true" : "false"}
                 {...register("password")}
               />
               {errors.password ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.password.message}
                 </p>
               ) : null}
@@ -219,11 +221,11 @@ function LoginContent() {
             </Button>
           </form>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
             <span>{t("Need to verify your email first?")}</span>
             <Link
               href="/verify"
-              className="font-medium text-amber-700 hover:text-amber-800"
+              className="font-medium text-brand hover:text-brand-strong"
             >
               {t("Enter verification token")}
             </Link>
@@ -232,14 +234,14 @@ function LoginContent() {
       </div>
 
       <aside className="order-first lg:order-none">
-        <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-8 text-stone-100 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.4em] text-stone-400">
+        <div className="rounded-3xl border border-panel-border/90 surface-panel p-8 text-panel-foreground shadow-sm">
+          <Eyebrow tone="subtle" spacing="wide">
             {t("Archive overview")}
-          </p>
-          <h2 className="font-display mt-4 text-3xl">
+          </Eyebrow>
+          <SectionHeading size="xl" className="mt-4">
             {t("Keep provenance close at hand.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-300">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-panel-muted-foreground">
             {t(
               "Your catalogue becomes a living reference for every acquisition, with structured fields and curated imagery."
             )}
@@ -248,7 +250,7 @@ function LoginContent() {
             {highlights.map((item) => (
               <li key={item} className="flex items-start gap-3">
                 <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-                <span className="text-stone-200">{t(item)}</span>
+                <span className="text-panel-muted-foreground">{t(item)}</span>
               </li>
             ))}
           </ul>
@@ -258,12 +260,12 @@ function LoginContent() {
           {quickCards.map((item) => (
             <div
               key={item.title}
-              className="rounded-2xl border border-stone-200 bg-white/80 p-4 shadow-sm"
+              className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm"
             >
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+              <Eyebrow tone="subtle">
                 {t(item.title)}
-              </p>
-              <p className="mt-2 text-sm text-stone-700">{t(item.detail)}</p>
+              </Eyebrow>
+              <p className="mt-2 text-sm text-muted-strong">{t(item.detail)}</p>
             </div>
           ))}
         </div>
@@ -275,7 +277,7 @@ function LoginContent() {
 function LoginFallback() {
   const { t } = useI18n();
   return (
-    <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+    <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
       {t("Loading...")}
     </div>
   );

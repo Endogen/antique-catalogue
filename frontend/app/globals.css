@@ -2,50 +2,127 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Semantic design tokens.
+ *
+ * Light values are the stone/amber palette the app already used, expressed once
+ * here instead of being hardcoded per component. The dark block is the same
+ * design re-pitched onto stone-950/stone-900 surfaces with amber-400 as the
+ * brand accent (amber-700 fails contrast on dark grounds).
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    color-scheme: light;
+
+    /* Surfaces */
+    --background: 60 9% 98%; /* stone-50 */
+    --foreground: 24 10% 10%; /* stone-900 */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 24 10% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --popover-foreground: 24 10% 10%;
+
+    /* Neutrals */
+    --primary: 24 10% 10%; /* stone-900 */
+    --primary-foreground: 60 9% 98%;
+    --secondary: 60 5% 96%; /* stone-100 */
+    --secondary-foreground: 24 10% 10%;
+    --muted: 60 5% 96%; /* stone-100 */
+    --muted-foreground: 25 5% 45%; /* stone-500 */
+    --muted-strong: 33 5% 32%; /* stone-600 */
+    --muted-subtle: 24 5% 64%; /* stone-400 */
+    --accent: 60 5% 96%; /* hover surface */
+    --accent-foreground: 24 10% 10%;
+
+    /* Brand (amber) */
+    --brand: 26 90% 37%; /* amber-700 */
+    --brand-foreground: 48 100% 96%;
+    --brand-strong: 23 83% 31%; /* amber-800 */
+    --brand-muted: 48 100% 96%; /* amber-50 */
+    --brand-border: 48 97% 77%; /* amber-200 */
+
+    /* Destructive (rose) */
+    --destructive: 345 83% 41%; /* rose-700 */
+    --destructive-foreground: 356 100% 97%;
+    --destructive-muted: 356 100% 97%; /* rose-50 */
+    --destructive-border: 353 96% 90%; /* rose-200 */
+
+    /* Success (emerald) */
+    --success: 163 94% 24%; /* emerald-700 */
+    --success-foreground: 152 81% 96%;
+    --success-muted: 152 81% 96%; /* emerald-50 */
+    --success-border: 156 72% 80%; /* emerald-200 */
+
+    /*
+     * Inverted panel: the dark hero/sidebar surfaces. In light mode it is a
+     * near-black panel on a pale page. In dark mode it inverts role and becomes
+     * an *elevated* surface, so it stays distinct instead of vanishing into the
+     * background.
+     */
+    --panel: 24 10% 10%; /* stone-900 */
+    --panel-from: 20 14% 4%; /* stone-950 */
+    --panel-via: 24 10% 10%; /* stone-900 */
+    --panel-to: 12 6% 15%; /* stone-800 */
+    --panel-foreground: 60 5% 96%; /* stone-100 */
+    --panel-muted-foreground: 24 6% 83%; /* stone-300 */
+    --panel-border: 24 10% 10%;
+
+    /* Lines and focus */
+    --border: 20 6% 90%; /* stone-200 */
+    --input: 20 6% 90%;
+    --ring: 46 97% 65%; /* amber-300 */
+
     --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    color-scheme: dark;
+
+    --background: 20 14% 4%; /* stone-950 */
+    --foreground: 60 5% 96%; /* stone-100 */
+    --card: 24 10% 10%; /* stone-900 */
+    --card-foreground: 60 5% 96%;
+    --popover: 24 10% 10%;
+    --popover-foreground: 60 5% 96%;
+
+    --primary: 60 5% 96%;
+    --primary-foreground: 24 10% 10%;
+    --secondary: 12 6% 15%; /* stone-800 */
+    --secondary-foreground: 60 5% 96%;
+    --muted: 12 6% 15%;
+    --muted-foreground: 24 5% 64%; /* stone-400 */
+    --muted-strong: 24 6% 83%; /* stone-300 */
+    --muted-subtle: 25 5% 45%; /* stone-500 */
+    --accent: 12 6% 15%;
+    --accent-foreground: 60 5% 96%;
+
+    --brand: 43 96% 56%; /* amber-400 */
+    --brand-foreground: 20 14% 4%;
+    --brand-strong: 46 97% 65%; /* amber-300 */
+    --brand-muted: 26 55% 13%;
+    --brand-border: 26 60% 28%;
+
+    --destructive: 353 96% 90%; /* rose-200 */
+    --destructive-foreground: 20 14% 4%;
+    --destructive-muted: 345 50% 14%;
+    --destructive-border: 345 45% 30%;
+
+    --success: 156 72% 80%; /* emerald-200 */
+    --success-foreground: 20 14% 4%;
+    --success-muted: 163 60% 10%;
+    --success-border: 163 50% 25%;
+
+    --panel: 12 6% 15%; /* stone-800, lifted above the stone-950 page */
+    --panel-from: 12 6% 15%;
+    --panel-via: 12 6% 17%;
+    --panel-to: 30 6% 25%; /* stone-700 */
+    --panel-foreground: 60 5% 96%;
+    --panel-muted-foreground: 24 5% 64%; /* stone-400 */
+    --panel-border: 30 6% 25%;
+
+    --border: 12 6% 15%; /* stone-800 */
+    --input: 12 6% 15%;
+    --ring: 43 96% 56%; /* amber-400 */
   }
 
   * {
@@ -58,6 +135,27 @@
   }
 }
 
+@layer components {
+  /* The dark gradient hero/summary panels used across the app. */
+  .surface-panel {
+    background-image: linear-gradient(
+      to bottom right,
+      hsl(var(--panel-from)),
+      hsl(var(--panel-via)),
+      hsl(var(--panel-to))
+    );
+    color: hsl(var(--panel-foreground));
+    border-color: hsl(var(--panel-border));
+  }
+}
+
 .font-display {
   font-family: var(--font-display), "Playfair Display", "Times New Roman", serif;
+}
+
+/* Disable transitions while the theme swaps so the whole page doesn't animate. */
+.theme-transitions-disabled *,
+.theme-transitions-disabled *::before,
+.theme-transitions-disabled *::after {
+  transition: none !important;
 }

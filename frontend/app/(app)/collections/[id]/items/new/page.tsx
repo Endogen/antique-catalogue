@@ -6,6 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ClipboardList, RefreshCcw } from "lucide-react";
 
 import { ItemForm, type ItemFormValues } from "@/components/item-form";
+import { useQuery } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,18 +18,11 @@ import {
   type CollectionResponse,
   type FieldDefinitionResponse
 } from "@/lib/api";
-
-type LoadState = {
-  status: "loading" | "ready" | "error";
-  data?: CollectionResponse;
-  error?: string;
-};
-
-type FieldsState = {
-  status: "loading" | "ready" | "error";
-  data: FieldDefinitionResponse[];
-  error?: string;
-};
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 
 export default function NewItemPage() {
   const params = useParams();
@@ -35,71 +30,38 @@ export default function NewItemPage() {
   const { t, tc } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
-  const [collectionState, setCollectionState] = React.useState<LoadState>({
-    status: "loading"
+  const collectionQuery = useQuery({
+    queryKey: queryKeys.collections.detail(Number(collectionId)),
+    queryFn: ({ signal }) => collectionApi.get(collectionId!, { signal }),
+    enabled: Boolean(collectionId)
   });
-  const [fieldsState, setFieldsState] = React.useState<FieldsState>({
-    status: "loading",
-    data: []
+  const fieldsQuery = useQuery({
+    queryKey: queryKeys.collections.fields(Number(collectionId)),
+    queryFn: ({ signal }) => fieldApi.list(collectionId!, { signal }),
+    enabled: Boolean(collectionId)
   });
+
+  const collectionState = toLoadState<CollectionResponse | undefined>(
+    collectionQuery,
+    "We couldn't load this collection.",
+    undefined
+  );
+  const fieldsState = toLoadState<FieldDefinitionResponse[]>(
+    fieldsQuery,
+    "We couldn't load the collection schema.",
+    []
+  );
   const [formError, setFormError] = React.useState<string | null>(null);
 
-  const loadCollection = React.useCallback(async () => {
-    if (!collectionId) {
-      setCollectionState({
-        status: "error",
-        error: "Collection ID was not provided."
-      });
-      return;
-    }
+  const { refetch: refetchCollection } = collectionQuery;
+  const { refetch: refetchFields } = fieldsQuery;
+  const loadCollection = React.useCallback(() => {
+    void refetchCollection();
+  }, [refetchCollection]);
+  const loadFields = React.useCallback(() => {
+    void refetchFields();
+  }, [refetchFields]);
 
-    setCollectionState({ status: "loading" });
-    try {
-      const data = await collectionApi.get(collectionId);
-      setCollectionState({ status: "ready", data });
-    } catch (error) {
-      setCollectionState({
-        status: "error",
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load this collection."
-      });
-    }
-  }, [collectionId]);
-
-  const loadFields = React.useCallback(async () => {
-    if (!collectionId) {
-      setFieldsState({
-        status: "error",
-        data: [],
-        error: "Collection ID was not provided."
-      });
-      return;
-    }
-
-    setFieldsState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    try {
-      const data = await fieldApi.list(collectionId);
-      setFieldsState({ status: "ready", data });
-    } catch (error) {
-      setFieldsState({
-        status: "error",
-        data: [],
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load the collection schema."
-      });
-    }
-  }, [collectionId]);
-
-  React.useEffect(() => {
-    void loadCollection();
-    void loadFields();
-  }, [loadCollection, loadFields]);
 
   const handleSubmit = async (values: ItemFormValues) => {
     if (!collectionId) {
@@ -134,13 +96,13 @@ export default function NewItemPage() {
             </Link>
           </Button>
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+            <Eyebrow tone="brand" spacing="wide">
               {t("New item")}
-            </p>
-            <h1 className="font-display mt-4 text-3xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading as="h1" size="xl" className="mt-4">
               {t("Capture a new item for your archive.")}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-3 max-w-2xl text-sm text-muted-strong">
               {t(
                 "Record the item name, optional notes, and the metadata fields you defined in your schema."
               )}
@@ -156,18 +118,16 @@ export default function NewItemPage() {
       </header>
 
       {collectionState.status === "loading" ? (
-        <div
-          className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
-          aria-busy="true"
-        >
+        <EmptyState
+          aria-busy="true">
           {t("Loading collection details...")}
-        </div>
+        </EmptyState>
       ) : collectionState.status === "error" ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
-          <p className="text-sm font-medium text-rose-700">
+        <Alert className="rounded-3xl p-6">
+          <p className="text-sm font-medium text-destructive">
             {t("We hit a snag loading this collection.")}
           </p>
-          <p className="mt-2 text-sm text-rose-600">
+          <p className="mt-2 text-sm text-destructive">
             {t(collectionState.error ?? "Please try again.")}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -178,17 +138,17 @@ export default function NewItemPage() {
               <Link href="/collections">{t("Back to collections")}</Link>
             </Button>
           </div>
-        </div>
+        </Alert>
       ) : (
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <Card>
+            <Eyebrow>
               {t("Item details")}
-            </p>
-            <h2 className="font-display mt-3 text-2xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading className="mt-3">
               {collectionState.data?.name}
-            </h2>
-            <p className="mt-3 text-sm text-stone-600">
+            </SectionHeading>
+            <p className="mt-3 text-sm text-muted-strong">
               {collectionState.data?.description ??
                 t(
                   "Add a description to capture the story behind this collection."
@@ -197,11 +157,11 @@ export default function NewItemPage() {
 
             <div className="mt-6">
               {fieldsState.status === "loading" ? (
-                <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+                <EmptyState size="sm">
                   {t("Loading schema fields...")}
-                </div>
+                </EmptyState>
               ) : fieldsState.status === "error" ? (
-                <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <Alert className="space-y-3">
                   <p>
                     {t(
                       fieldsState.error ??
@@ -211,7 +171,7 @@ export default function NewItemPage() {
                   <Button size="sm" variant="outline" onClick={loadFields}>
                     {t("Try again")}
                   </Button>
-                </div>
+                </Alert>
               ) : (
                 <ItemForm
                   fields={fieldsState.data}
@@ -227,23 +187,23 @@ export default function NewItemPage() {
                 />
               )}
             </div>
-          </div>
+          </Card>
 
           <aside className="space-y-6">
-            <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            <Card tone="subtle">
+              <Eyebrow>
                 {t("Schema snapshot")}
-              </p>
+              </Eyebrow>
               {fieldsState.status === "loading" ? (
-                <p className="mt-4 text-sm text-stone-500">
+                <p className="mt-4 text-sm text-muted-foreground">
                   {t("Loading schema fields...")}
                 </p>
               ) : fieldsState.status === "error" ? (
-                <p className="mt-4 text-sm text-rose-600">
+                <p className="mt-4 text-sm text-destructive">
                   {t(fieldsState.error ?? "We couldn't load schema fields.")}
                 </p>
               ) : fieldsState.data.length === 0 ? (
-                <div className="mt-4 space-y-3 text-sm text-stone-600">
+                <div className="mt-4 space-y-3 text-sm text-muted-strong">
                   <p>{t("No schema fields yet.")}</p>
                   <Button size="sm" variant="secondary" asChild>
                     <Link href={`/collections/${collectionId}/settings`}>
@@ -252,7 +212,7 @@ export default function NewItemPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="mt-4 space-y-3 text-sm text-stone-600">
+                <div className="mt-4 space-y-3 text-sm text-muted-strong">
                   <p>
                     {tc(fieldsState.data.length, "{count} field available.", "{count} fields available.")}
                   </p>
@@ -262,16 +222,16 @@ export default function NewItemPage() {
                         key={field.id}
                         className="flex items-center justify-between gap-3"
                       >
-                        <span className="font-medium text-stone-900">
+                        <span className="font-medium text-foreground">
                           {field.name}
                         </span>
-                        <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
+                        <span className="text-xs uppercase tracking-[0.2em] text-muted-subtle">
                           {field.field_type}
                         </span>
                       </div>
                     ))}
                     {fieldsState.data.length > 5 ? (
-                      <p className="text-xs text-stone-400">
+                      <p className="text-xs text-muted-subtle">
                         {tc(fieldsState.data.length - 5, "+{count} more field", "+{count} more fields")}
                       </p>
                     ) : null}
@@ -283,21 +243,21 @@ export default function NewItemPage() {
                   </Button>
                 </div>
               )}
-            </div>
+            </Card>
 
-            <div className="rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+              <Eyebrow tone="subtle">
                 {t("Capture notes")}
-              </p>
-              <h3 className="font-display mt-3 text-2xl text-stone-100">
+              </Eyebrow>
+              <h3 className="font-display mt-3 text-2xl text-panel-foreground">
                 {t("Keep provenance close at hand.")}
               </h3>
-              <p className="mt-3 text-sm text-stone-300">
+              <p className="mt-3 text-sm text-panel-muted-foreground">
                 {t(
                   "Use the notes field to document acquisition details, restoration work, or exhibition history alongside metadata."
                 )}
               </p>
-              <div className="mt-6 flex items-center gap-3 text-xs text-stone-300">
+              <div className="mt-6 flex items-center gap-3 text-xs text-panel-muted-foreground">
                 <ClipboardList className="h-4 w-4 text-amber-300" />
                 {t("Metadata fields are validated before saving.")}
               </div>

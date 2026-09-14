@@ -38,7 +38,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-50 text-sm text-stone-500">
+      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
         {t("Loading your workspace...")}
       </div>
     );

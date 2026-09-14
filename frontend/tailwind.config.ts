@@ -1,6 +1,8 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 
+const withVar = (name: string) => `hsl(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   darkMode: ["class"],
   content: [
@@ -19,44 +21,72 @@ const config: Config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        border: withVar("border"),
+        input: withVar("input"),
+        ring: withVar("ring"),
+        background: withVar("background"),
+        foreground: withVar("foreground"),
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))"
+          DEFAULT: withVar("primary"),
+          foreground: withVar("primary-foreground")
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))"
+          DEFAULT: withVar("secondary"),
+          foreground: withVar("secondary-foreground")
+        },
+        brand: {
+          DEFAULT: withVar("brand"),
+          foreground: withVar("brand-foreground"),
+          strong: withVar("brand-strong"),
+          muted: withVar("brand-muted"),
+          border: withVar("brand-border")
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))"
+          DEFAULT: withVar("destructive"),
+          foreground: withVar("destructive-foreground"),
+          muted: withVar("destructive-muted"),
+          border: withVar("destructive-border")
+        },
+        success: {
+          DEFAULT: withVar("success"),
+          foreground: withVar("success-foreground"),
+          muted: withVar("success-muted"),
+          border: withVar("success-border")
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))"
+          DEFAULT: withVar("muted"),
+          foreground: withVar("muted-foreground"),
+          strong: withVar("muted-strong"),
+          subtle: withVar("muted-subtle")
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))"
+          DEFAULT: withVar("accent"),
+          foreground: withVar("accent-foreground")
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))"
+          DEFAULT: withVar("popover"),
+          foreground: withVar("popover-foreground")
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))"
+          DEFAULT: withVar("card"),
+          foreground: withVar("card-foreground")
+        },
+        panel: {
+          DEFAULT: withVar("panel"),
+          deep: withVar("panel-from"),
+          foreground: withVar("panel-foreground"),
+          "muted-foreground": withVar("panel-muted-foreground"),
+          border: withVar("panel-border")
         }
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)"
+      },
+      letterSpacing: {
+        eyebrow: "0.3em",
+        "eyebrow-wide": "0.4em"
       }
     }
   },

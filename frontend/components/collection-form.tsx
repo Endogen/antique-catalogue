@@ -9,6 +9,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import { Input, Textarea } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 
 const createCollectionSchema = (t: (key: string) => string) =>
   z.object({
@@ -73,50 +75,48 @@ export function CollectionForm({
   return (
     <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
       {formError ? (
-        <div
-          role="alert"
-          className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-        >
+        <Alert
+          role="alert">
           {t(formError)}
-        </div>
+        </Alert>
       ) : null}
 
       <div>
-        <label className="text-sm font-medium text-stone-700" htmlFor="name">
+        <label className="text-sm font-medium text-muted-strong" htmlFor="name">
           {t("Collection name")}
         </label>
-        <input
+        <Input
           id="name"
           type="text"
           autoComplete="off"
-          className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+          className="mt-2"
           aria-invalid={errors.name ? "true" : "false"}
           {...register("name")}
         />
         {errors.name ? (
-          <p className="mt-2 text-xs text-rose-600">{errors.name.message}</p>
+          <p className="mt-2 text-xs text-destructive">{errors.name.message}</p>
         ) : null}
       </div>
 
       <div>
         <label
-          className="text-sm font-medium text-stone-700"
+          className="text-sm font-medium text-muted-strong"
           htmlFor="description"
         >
           {t("Description")}
         </label>
-        <textarea
+        <Textarea
           id="description"
           rows={4}
-          className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+          className="mt-2"
           {...register("description")}
         />
         {errors.description ? (
-          <p className="mt-2 text-xs text-rose-600">
+          <p className="mt-2 text-xs text-destructive">
             {errors.description.message}
           </p>
         ) : null}
-        <p className="mt-2 text-xs text-stone-500">
+        <p className="mt-2 text-xs text-muted-foreground">
           {t("Share the theme, era, or provenance you will capture.")}
         </p>
       </div>
@@ -124,10 +124,10 @@ export function CollectionForm({
       <div>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-stone-700">
+            <p className="text-sm font-medium text-muted-strong">
               {t("Visibility")}
             </p>
-            <p className="mt-1 text-xs text-stone-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               {t("Choose whether this collection appears in the public directory.")}
             </p>
           </div>
@@ -138,16 +138,16 @@ export function CollectionForm({
             className={cn(
               "rounded-2xl border p-4 text-left text-sm transition",
               !isPublic
-                ? "border-amber-200 bg-amber-50/80 text-stone-900"
-                : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                ? "border-brand-border bg-brand-muted/80 text-foreground"
+                : "border-border bg-card text-muted-strong hover:border-muted-subtle"
             )}
             onClick={() => setValue("is_public", false, { shouldDirty: true })}
           >
             <div className="flex items-center gap-2 font-medium">
-              <Lock className="h-4 w-4 text-amber-600" />
+              <Lock className="h-4 w-4 text-brand" />
               {t("Private")}
             </div>
-            <p className="mt-2 text-xs text-stone-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t("Only you can view and edit items.")}
             </p>
           </button>
@@ -156,16 +156,16 @@ export function CollectionForm({
             className={cn(
               "rounded-2xl border p-4 text-left text-sm transition",
               isPublic
-                ? "border-emerald-200 bg-emerald-50/80 text-stone-900"
-                : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                ? "border-success-border bg-success-muted/80 text-foreground"
+                : "border-border bg-card text-muted-strong hover:border-muted-subtle"
             )}
             onClick={() => setValue("is_public", true, { shouldDirty: true })}
           >
             <div className="flex items-center gap-2 font-medium">
-              <Globe2 className="h-4 w-4 text-emerald-600" />
+              <Globe2 className="h-4 w-4 text-success" />
               {t("Public")}
             </div>
-            <p className="mt-2 text-xs text-stone-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t("Share read-only access with the public.")}
             </p>
           </button>

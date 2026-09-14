@@ -35,17 +35,17 @@ export function UploadQueue() {
   }, [user]);
   if (!user || !jobs.length) return null;
   return <aside className="fixed right-3 top-20 z-[70] max-w-[calc(100vw-1.5rem)]" aria-label={t("Uploads")}>
-    <Button variant="outline" className="float-right bg-white shadow" onClick={() => setOpen(!open)} aria-expanded={open}>
+    <Button variant="outline" className="float-right bg-card shadow" onClick={() => setOpen(!open)} aria-expanded={open}>
       {t("Uploads")} ({jobs.filter(job => job.state !== "done").length})
     </Button>
-    {open && <div className="clear-both mt-2 max-h-[65vh] w-80 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-4 shadow-xl">
-      <p className="mb-3 text-sm text-stone-600">{t("Photos resume on this device after reconnecting or reopening the app.")}</p>
-      {error && <p role="alert" className="text-sm text-rose-700">{t(error)}</p>}
+    {open && <div className="clear-both mt-2 max-h-[65vh] w-80 overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-xl">
+      <p className="mb-3 text-sm text-muted-strong">{t("Photos resume on this device after reconnecting or reopening the app.")}</p>
+      {error && <p role="alert" className="text-sm text-destructive">{t(error)}</p>}
       {jobs.map(job => <div key={job.id} className="space-y-2 border-t py-3 text-sm">
         <p className="break-all font-medium">{job.filename}</p>
-        <progress className="w-full accent-amber-700" value={job.received} max={job.size} aria-label={job.filename} />
+        <progress className="w-full accent-brand" value={job.received} max={job.size} aria-label={job.filename} />
         <p>{job.state === "done" ? t("Uploaded") : `${Math.floor(job.received / job.size * 100)}%`}</p>
-        {job.error && <p className="break-words text-xs text-rose-700">{t(job.error)}</p>}
+        {job.error && <p className="break-words text-xs text-destructive">{t(job.error)}</p>}
         <div className="flex gap-2">
           {job.result ? <Button size="sm" asChild><Link href={`/collections/${job.result.collection_id}/items/${job.result.item_id}`}>{t("View item")}</Link></Button>
             : <Button size="sm" disabled={job.state === "uploading"} onClick={() => { setError(null); void resumeUpload(job.id).catch(e => setError(e.message)); }}>{t("Resume upload")}</Button>}

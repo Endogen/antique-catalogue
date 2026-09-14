@@ -28,9 +28,14 @@ import {
   type CollectionResponse,
   type ItemResponse,
 } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { useQuery } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
 import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
+import { SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -74,7 +79,7 @@ function AuthenticatedImage({
 }) {
   const resolvedSrc = useAuthenticatedImageUrl(src);
   if (!resolvedSrc) {
-    return <div aria-hidden="true" className={cn("bg-stone-100", className)} />;
+    return <div aria-hidden="true" className={cn("bg-muted", className)} />;
   }
   return (
     <Image
@@ -111,31 +116,31 @@ function CollectionPicker({
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-muted text-brand">
             <Zap className="h-8 w-8" />
           </div>
-          <h1 className="font-display mt-4 text-2xl text-stone-900">
+          <SectionHeading as="h1" className="mt-4">
             {t("Speed Capture")}
-          </h1>
-          <p className="mt-2 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-2 text-sm text-muted-strong">
             {t("Pick a collection to start capturing. You can add metadata later.")}
           </p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-brand" />
           </div>
         ) : error ? (
-          <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center">
-            <p className="text-sm text-rose-700">{t(error)}</p>
+          <Alert className="p-4 space-y-3 text-center">
+            <p className="text-sm text-destructive">{t(error)}</p>
             <Button size="sm" variant="outline" onClick={onRetry}>
               {t("Try again")}
             </Button>
-          </div>
+          </Alert>
         ) : collections.length === 0 ? (
-          <div className="space-y-3 rounded-2xl border border-stone-200 bg-white p-6 text-center">
-            <p className="text-sm text-stone-600">
+          <div className="space-y-3 rounded-2xl border border-border bg-card p-6 text-center">
+            <p className="text-sm text-muted-strong">
               {t("No collections yet. Create one first.")}
             </p>
             <Button size="sm" variant="secondary" asChild>
@@ -148,23 +153,23 @@ function CollectionPicker({
               <button
                 key={c.id}
                 type="button"
-                className="flex w-full items-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-amber-300 hover:bg-amber-50/50 active:scale-[0.98]"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-sm transition hover:border-brand-border hover:bg-brand-muted/50 active:scale-[0.98]"
                 onClick={() => onSelect(c)}
               >
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-500">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                   <Layers className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-stone-900">
+                  <p className="truncate text-sm font-medium text-foreground">
                     {c.name}
                   </p>
                   {c.description ? (
-                    <p className="truncate text-xs text-stone-500">
+                    <p className="truncate text-xs text-muted-foreground">
                       {c.description}
                     </p>
                   ) : null}
                 </div>
-                <ChevronDown className="h-4 w-4 -rotate-90 text-stone-400" />
+                <ChevronDown className="h-4 w-4 -rotate-90 text-muted-subtle" />
               </button>
             ))}
           </div>
@@ -269,7 +274,7 @@ function CaptureScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-stone-50">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Hidden camera input */}
       <input
         ref={cameraRef}
@@ -284,14 +289,14 @@ function CaptureScreen({
       <div className="flex items-center justify-between px-4 pb-2 pt-[max(env(safe-area-inset-top),0.75rem)]">
         <button
           type="button"
-          className="flex items-center gap-2 text-sm text-stone-600 transition hover:text-stone-900"
+          className="flex items-center gap-2 text-sm text-muted-strong transition hover:text-foreground"
           onClick={onExit}
           disabled={uploading}
         >
           <ArrowLeft className="h-4 w-4" />
           {t("Exit")}
         </button>
-        <p className="truncate text-xs uppercase tracking-[0.2em] text-amber-700">
+        <p className="truncate text-xs uppercase tracking-[0.2em] text-brand">
           {collection.name}
         </p>
       </div>
@@ -299,15 +304,15 @@ function CaptureScreen({
       {/* Stats bar */}
       <div className="flex items-center justify-center gap-6 py-2">
         <div className="text-center">
-          <p className="font-display text-2xl text-stone-900">{stats.items}</p>
-          <p className="text-xs text-stone-500">
+          <p className="font-display text-2xl text-foreground">{stats.items}</p>
+          <p className="text-xs text-muted-foreground">
             {stats.items === 1 ? t("item") : t("items")}
           </p>
         </div>
-        <div className="h-8 w-px bg-stone-200" />
+        <div className="h-8 w-px bg-muted" />
         <div className="text-center">
-          <p className="font-display text-2xl text-stone-900">{stats.images}</p>
-          <p className="text-xs text-stone-500">
+          <p className="font-display text-2xl text-foreground">{stats.images}</p>
+          <p className="text-xs text-muted-foreground">
             {stats.images === 1 ? t("photo") : t("photos")}
           </p>
         </div>
@@ -321,11 +326,11 @@ function CaptureScreen({
       {/* Existing drafts */}
       {existingDraftsLoading ? (
         <div className="flex items-center justify-center px-4 py-2">
-          <Loader2 className="h-4 w-4 animate-spin text-stone-400" />
+          <Loader2 className="h-4 w-4 animate-spin text-muted-subtle" />
         </div>
       ) : existingDrafts.length > 0 ? (
         <div className="px-4 pt-2">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-stone-400">
+          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-muted-subtle">
             {t("Existing drafts")}
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -333,7 +338,7 @@ function CaptureScreen({
               <Link
                 key={draft.id}
                 href={`/collections/${collection.id}/items/${draft.id}`}
-                className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-stone-100 shadow-sm"
+                className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted shadow-sm"
               >
                 {draft.primary_image_id ? (
                   <AuthenticatedImage
@@ -342,10 +347,10 @@ function CaptureScreen({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <Camera className="h-5 w-5 text-stone-400" />
+                  <Camera className="h-5 w-5 text-muted-subtle" />
                 )}
                 {(draft.image_count ?? 0) > 1 ? (
-                  <span className="absolute bottom-0.5 right-0.5 rounded-full bg-stone-900/70 px-1 py-px text-[10px] font-medium text-white">
+                  <span className="absolute bottom-0.5 right-0.5 rounded-full bg-panel/70 px-1 py-px text-[10px] font-medium text-white">
                     {draft.image_count}
                   </span>
                 ) : null}
@@ -361,17 +366,17 @@ function CaptureScreen({
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
         {uploading ? (
           <div className="flex flex-col items-center gap-3">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-50">
-              <Loader2 className="h-10 w-10 animate-spin text-amber-600" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-muted">
+              <Loader2 className="h-10 w-10 animate-spin text-brand" />
             </div>
-            <p className="text-sm text-stone-600">{t("Uploading...")}</p>
+            <p className="text-sm text-muted-strong">{t("Uploading...")}</p>
           </div>
         ) : (
           <>
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-muted-subtle">
               <Camera className="h-10 w-10" />
             </div>
-            <p className="max-w-xs text-center text-sm text-stone-500">
+            <p className="max-w-xs text-center text-sm text-muted-foreground">
               {hasCurrentItem
                 ? t("Add another photo to the current item, or start a new one.")
                 : t("Take a photo to create your first draft item.")}
@@ -380,9 +385,9 @@ function CaptureScreen({
         )}
 
         {uploadError ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+          <Alert className="rounded-xl px-4 py-2">
             {t(uploadError)}
-          </div>
+          </Alert>
         ) : null}
       </div>
 
@@ -450,7 +455,7 @@ function ReviewScreen({
       <div className="flex items-center justify-between">
         <button
           type="button"
-          className="flex items-center gap-2 text-sm text-stone-600 transition hover:text-stone-900"
+          className="flex items-center gap-2 text-sm text-muted-strong transition hover:text-foreground"
           onClick={onBack}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -459,13 +464,13 @@ function ReviewScreen({
       </div>
 
       <div className="text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-success-muted text-success">
           <Check className="h-7 w-7" />
         </div>
-        <h2 className="font-display mt-3 text-2xl text-stone-900">
+        <SectionHeading className="mt-3">
           {t("Capture complete")}
-        </h2>
-        <p className="mt-1 text-sm text-stone-600">
+        </SectionHeading>
+        <p className="mt-1 text-sm text-muted-strong">
           {t("{items} items with {images} photos in {collection}", {
             items: stats.items,
             images: stats.images,
@@ -480,10 +485,10 @@ function ReviewScreen({
           <Link
             key={item.itemId}
             href={`/collections/${collection.id}/items/${item.itemId}`}
-            className="group overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:border-amber-300 hover:shadow-md"
+            className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:border-brand-border hover:shadow-md"
           >
             {item.images[0] ? (
-              <div className="aspect-square overflow-hidden bg-stone-100">
+              <div className="aspect-square overflow-hidden bg-muted">
                 <AuthenticatedImage
                   src={imageApi.url(item.images[0].imageId, "thumb")}
                   alt={item.name}
@@ -491,15 +496,15 @@ function ReviewScreen({
                 />
               </div>
             ) : (
-              <div className="flex aspect-square items-center justify-center bg-stone-100 text-stone-400">
+              <div className="flex aspect-square items-center justify-center bg-muted text-muted-subtle">
                 <Camera className="h-8 w-8" />
               </div>
             )}
             <div className="p-3">
-              <p className="truncate text-sm font-medium text-stone-900">
+              <p className="truncate text-sm font-medium text-foreground">
                 {item.name}
               </p>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-muted-foreground">
                 {item.images.length}{" "}
                 {item.images.length === 1 ? t("photo") : t("photos")}
               </p>
@@ -572,33 +577,32 @@ export default function SpeedCapturePage() {
     return () => window.removeEventListener("photo-uploaded", completed);
   }, []);
 
-  const loadCollections = React.useCallback(async () => {
+  const collectionsQuery = useQuery({
+    queryKey: queryKeys.collections.list(),
+    queryFn: ({ signal }) => collectionApi.list({ signal })
+  });
+
+  const { refetch: refetchCollections } = collectionsQuery;
+  const loadCollections = React.useCallback(() => {
+    void refetchCollections();
+  }, [refetchCollections]);
+
+  // Mirror the shared collections cache into the capture session state.
+  const collectionsData = collectionsQuery.data;
+  const collectionsPending = collectionsQuery.isPending;
+  const collectionsError = collectionsQuery.error;
+  React.useEffect(() => {
     setState((s) => ({
       ...s,
-      collectionsLoading: true,
-      collectionsError: null,
+      collections: collectionsData ?? s.collections,
+      collectionsLoading: collectionsPending,
+      collectionsError: collectionsError
+        ? isApiError(collectionsError)
+          ? collectionsError.detail
+          : "Failed to load collections"
+        : null
     }));
-    try {
-      const data = await collectionApi.list();
-      setState((s) => ({
-        ...s,
-        collections: data,
-        collectionsLoading: false,
-      }));
-    } catch (error) {
-      setState((s) => ({
-        ...s,
-        collectionsLoading: false,
-        collectionsError: isApiError(error)
-          ? error.detail
-          : "Failed to load collections",
-      }));
-    }
-  }, []);
-
-  React.useEffect(() => {
-    void loadCollections();
-  }, [loadCollections]);
+  }, [collectionsData, collectionsPending, collectionsError]);
 
   const handleSelectCollection = async (c: CollectionResponse) => {
     setState((s) => ({

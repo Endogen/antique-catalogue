@@ -10,6 +10,10 @@ import { timestampInput, serializeTimestamp } from "@/lib/metadata-form";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import type { FieldDefinitionResponse, FieldOptions } from "@/lib/api";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { EmptyState } from "@/components/ui/card";
+import { Input, Textarea } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 
 const createItemSchema = (t: (key: string) => string) =>
   z.object({
@@ -430,69 +434,67 @@ export function ItemForm({
     | undefined;
 
   const formErrorNode = formError ? (
-    <div
-      role="alert"
-      className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-    >
+    <Alert
+      role="alert">
       {t(formError)}
-    </div>
+    </Alert>
   ) : null;
 
   const baseFields = (
     <div className="space-y-4">
       <div>
-          <label className="text-sm font-medium text-stone-700" htmlFor="name">
+          <label className="text-sm font-medium text-muted-strong" htmlFor="name">
             {t("Item name")}
           </label>
-        <input
+        <Input
           id="name"
           type="text"
           autoComplete="off"
-          className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+          className="mt-2"
           aria-invalid={errors.name ? "true" : "false"}
           {...register("name")}
         />
         {errors.name ? (
-          <p className="mt-2 text-xs text-rose-600">{errors.name.message}</p>
+          <p className="mt-2 text-xs text-destructive">{errors.name.message}</p>
         ) : null}
       </div>
 
       <div>
-          <label className="text-sm font-medium text-stone-700" htmlFor="notes">
+          <label className="text-sm font-medium text-muted-strong" htmlFor="notes">
             {t("Notes")}
           </label>
-        <textarea
+        <Textarea
           id="notes"
           rows={4}
-          className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+          className="mt-2"
           {...register("notes")}
         />
         {errors.notes ? (
-          <p className="mt-2 text-xs text-rose-600">{errors.notes.message}</p>
+          <p className="mt-2 text-xs text-destructive">{errors.notes.message}</p>
         ) : (
-            <p className="mt-2 text-xs text-stone-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t("Optional context, provenance, or acquisition details.")}
             </p>
         )}
       </div>
 
-      <div className="rounded-2xl border border-amber-200/70 bg-amber-50/40 p-4">
+      <div className="rounded-2xl border border-brand-border/70 bg-brand-muted/40 p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <label
-              className="text-sm font-medium text-stone-800"
+              className="text-sm font-medium text-foreground"
               htmlFor="is_highlight"
             >
               {t("Spotlight item")}
             </label>
-            <p className="mt-1 text-xs text-stone-600">
+            <p className="mt-1 text-xs text-muted-strong">
               {t("Adds a warm glow to featured items across the catalogue.")}
             </p>
           </div>
           <input
             id="is_highlight"
             type="checkbox"
-            className="mt-1 h-5 w-5 rounded border-amber-300 text-amber-600 focus:ring-amber-200"
+            className="mt-1 h-5 w-5 rounded border-brand-border text-brand focus:ring-ring"
             {...register("is_highlight")}
           />
         </div>
@@ -503,23 +505,23 @@ export function ItemForm({
   const metadataFields = (
     <div className="space-y-4">
       <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <Eyebrow>
             {t("Metadata")}
-          </p>
-          <h3 className="font-display mt-3 text-2xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h3" className="mt-3">
             {t("Capture collection-specific fields.")}
-          </h3>
-          <p className="mt-2 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-2 text-sm text-muted-strong">
             {t("Complete the schema-driven attributes for this item.")}
           </p>
       </div>
 
         {sortedFields.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+          <EmptyState size="sm">
             {t(
               "No schema fields yet. Define fields in collection settings to capture metadata."
             )}
-          </div>
+          </EmptyState>
       ) : (
         <div className="grid gap-4">
           {sortedFields.map((field) => {
@@ -534,23 +536,23 @@ export function ItemForm({
               return (
                 <div
                   key={field.id}
-                  className="flex items-start justify-between gap-4 rounded-2xl border border-stone-200 bg-white/80 p-4"
+                  className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-card/80 p-4"
                 >
                   <div>
                     <label
-                      className="text-sm font-medium text-stone-700"
+                      className="text-sm font-medium text-muted-strong"
                       htmlFor={`metadata-${field.id}`}
                     >
                       {field.name}
                     </label>
-                    <p className="mt-1 text-xs text-stone-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {fieldTypeLabels[field.field_type] ?? field.field_type}
                       {field.is_required
                         ? ` · ${t("Required")}`
                         : ` · ${t("Optional")}`}
                     </p>
                     {errorMessage ? (
-                      <p className="mt-2 text-xs text-rose-600">
+                      <p className="mt-2 text-xs text-destructive">
                         {errorMessage}
                       </p>
                     ) : null}
@@ -558,7 +560,7 @@ export function ItemForm({
                   <input
                     id={`metadata-${field.id}`}
                     type="checkbox"
-                    className="mt-1 h-5 w-5 rounded border-stone-300 text-amber-600 focus:ring-amber-200"
+                    className="mt-1 h-5 w-5 rounded border-border text-brand focus:ring-ring"
                     aria-invalid={errorMessage ? "true" : "false"}
                     {...registerMetadataField(fieldId)}
                   />
@@ -569,16 +571,16 @@ export function ItemForm({
             return (
               <div
                 key={field.id}
-                className="flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white/80 p-4"
+                className="flex flex-col gap-2 rounded-2xl border border-border bg-card/80 p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label
-                    className="text-sm font-medium text-stone-700"
+                    className="text-sm font-medium text-muted-strong"
                     htmlFor={`metadata-${field.id}`}
                   >
                     {field.name}
                   </label>
-                  <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
+                  <span className="text-xs uppercase tracking-[0.2em] text-muted-subtle">
                     {fieldTypeLabels[field.field_type] ?? field.field_type}
                     {field.is_required
                       ? ` · ${t("Required")}`
@@ -589,7 +591,7 @@ export function ItemForm({
                 {field.field_type === "select" ? (
                   <select
                     id={`metadata-${field.id}`}
-                    className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 shadow-sm focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    className="h-10 rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                     aria-invalid={errorMessage ? "true" : "false"}
                     {...registerMetadataField(fieldId)}
                     disabled={!options.length}
@@ -614,7 +616,7 @@ export function ItemForm({
                             : "text"
                     }
                     step={field.field_type === "number" || field.field_type === "timestamp" ? "any" : undefined}
-                    className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    className="h-10 rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                     aria-invalid={errorMessage ? "true" : "false"}
                       placeholder={
                         field.field_type === "date"
@@ -636,7 +638,7 @@ export function ItemForm({
                 )}
 
                 {errorMessage ? (
-                  <p className="text-xs text-rose-600">{errorMessage}</p>
+                  <p className="text-xs text-destructive">{errorMessage}</p>
                 ) : null}
               </div>
             );

@@ -4,9 +4,10 @@ import path from "node:path";
 const password = "Test-collector-password-42";
 const photo = path.resolve("tests/fixtures/vase.png");
 let runtimeErrors: string[];
-test.beforeEach(({ page }) => {
+test.beforeEach(async ({ page }) => {
   runtimeErrors = [];
   page.on("pageerror", error => runtimeErrors.push(error.message));
+  expect((await page.request.post("/api/__test__/reset-rate-limits")).ok()).toBeTruthy();
 });
 test.afterEach(() => expect(runtimeErrors).toEqual([]));
 
@@ -183,6 +184,9 @@ test("owner can download a backup, preview it, and restore a private copy", asyn
   const items = await (await page.request.get(`/api/collections/${restoredId}/items`, { headers: await headers(page) })).json();
   expect(items[0].metadata).toEqual({ "Private cost": 123 });
   expect(items[0].image_count).toBe(1);
+  await page.getByRole("link", { name: "Back to collections", exact: true }).click();
+  await expect(page).toHaveURL(/\/collections$/);
+  await expect(page.getByRole("heading", { name: "Restored ceramics", exact: true, level: 3 })).toBeVisible();
 });
 
 test("an interrupted photo resumes after reload without retransmitting accepted chunks", async ({ page }) => {
@@ -215,4 +219,169 @@ test("an interrupted photo resumes after reload without retransmitting accepted 
   const drafts = await (await page.request.get(`/api/collections/${collection.id}/items?drafts_only=true`, { headers: await headers(page) })).json();
   expect(drafts).toHaveLength(1);
   expect(drafts[0].image_count).toBe(1);
+});
+
+test("stored dark theme applies after reload", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("preferred-theme", "dark"));
+  await page.goto("/login");
+  await expect(page.locator("#email")).toBeVisible();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+});
+
+test("new collection is visible on return to list", async ({ page }) => {
+  await account(page, "review-cache@example.com");
+  await page.getByRole("link", { name: "Collections Saved collections", exact: false }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.getByRole("link", { name: "Create collection", exact: true }).first().click();
+  await page.locator("#name").fill("Cache regression collection");
+  await page.getByRole("button", { name: "Create collection", exact: true }).click();
+  await expect(page).toHaveURL(/\/collections\/\d+\/settings$/);
+  await page.getByRole("link", { name: "Collections Saved collections", exact: false }).click();
+  await expect(page).toHaveURL(/\/collections$/);
+  await expect(page.getByRole("heading", { name: "Cache regression collection", exact: true, level: 3 })).toBeVisible();
+});
+
+test("new schema field remains visible after navigation", async ({ page }) => {
+  await account(page, "review-schema@example.com");
+  const collection = await create(page, "/collections", { name: "Schema probe" });
+  await page.goto(`/collections/${collection.id}`);
+  await page.getByRole("link", { name: "Define schema", exact: true }).first().click();
+  await page.locator("#field-name").fill("Manufacturer probe");
+  await page.getByRole("button", { name: "Add field", exact: true }).click();
+  await expect(page.getByText("Field added.", { exact: true })).toBeVisible();
+  await page.goBack();
+  await page.getByRole("link", { name: "Add item", exact: true }).first().click();
+  await expect(page.getByLabel("Manufacturer probe", { exact: true })).toBeVisible();
+});
+
+test("saved language preference survives the upgrade", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("preferred-language", "de"));
+  await page.goto("/login");
+  await expect(page.locator("#email")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  expect((await page.context().cookies()).find(cookie => cookie.name === "preferred-language")?.value).toBe("de");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+});
+
+test("item edits, stars, deletion and collection edits remain current after navigation", async ({ page }) => {
+  await account(page, "cache-crud@example.com");
+  const collection = await create(page, "/collections", { name: "Cache CRUD" });
+  await page.goto("/stars");
+  await page.getByRole("link", { name: "Collections Saved collections", exact: false }).click();
+  await page.getByRole("link", { name: "View collection", exact: true }).click();
+  await page.getByRole("button", { name: "Star", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Starred", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Stars Starred items and collections", exact: false }).click();
+  await expect(page).toHaveURL(/\/stars$/);
+  await expect(page.getByRole("heading", { name: "Cache CRUD", exact: true })).toBeVisible();
+  await page.goBack();
+  await page.getByRole("link", { name: "Add item", exact: true }).first().click();
+  await page.getByLabel("Item name", { exact: true }).fill("Original vase");
+  await page.getByRole("button", { name: "Create item", exact: true }).click();
+  await expect(page).toHaveURL(/\/items\/\d+$/);
+  const itemUrl = page.url();
+  await page.getByRole("link", { name: "Back to collection", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/collections/${collection.id}$`));
+  await expect(page.getByRole("heading", { name: "Original vase", exact: true, level: 3 })).toBeVisible();
+  await page.locator(`a[href="${new URL(itemUrl).pathname}"]`).first().click();
+  await page.getByRole("button", { name: "Edit item", exact: true }).click();
+  await page.getByLabel("Item name", { exact: true }).fill("Updated vase");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Edit item", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Back to collection", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/collections/${collection.id}$`));
+  await expect(page.getByRole("heading", { name: "Updated vase", exact: true, level: 3 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Original vase", exact: true })).toHaveCount(0);
+  await page.locator(`a[href="${new URL(itemUrl).pathname}"]`).first().click();
+  await page.getByRole("button", { name: "Edit item", exact: true }).click();
+  await page.locator("#delete-confirm").fill("DELETE");
+  await page.getByRole("button", { name: "Delete item", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/collections/${collection.id}$`));
+  await expect(page.getByRole("heading", { name: "Updated vase", exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "Back to collections", exact: true }).click();
+  await page.getByRole("link", { name: "Collection settings", exact: true }).click();
+  await page.locator("#name").fill("Renamed collection");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Renamed collection" })).toBeVisible();
+  await page.getByRole("link", { name: "Back to collections", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/collections$/);
+  await expect(page.getByRole("heading", { name: "Renamed collection", exact: true, level: 3 })).toBeVisible();
+  await page.getByRole("link", { name: "Collection settings", exact: true }).click();
+  await page.locator("#delete-collection-confirm").fill("DELETE");
+  await page.getByRole("button", { name: "Delete collection", exact: true }).click();
+  await expect(page).toHaveURL(/\/collections$/);
+  await expect(page.getByRole("heading", { name: "Renamed collection", exact: true })).toHaveCount(0);
+});
+
+test("applying a template refreshes the builder and item form", async ({ page }) => {
+  await account(page, "cache-template@example.com");
+  const collection = await create(page, "/collections", { name: "Template target" });
+  await create(page, "/schema-templates", { name: "Ceramic schema", fields: [{ name: "Origin", field_type: "text" }] });
+  await page.goto(`/collections/${collection.id}`);
+  await page.getByRole("link", { name: "Define schema", exact: true }).first().click();
+  await page.getByRole("button", { name: "Ceramic schema 1 field", exact: true }).click();
+  await page.getByRole("button", { name: "Apply template", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Drag to reorder Origin", exact: true })).toBeVisible();
+  await page.goBack();
+  await page.getByRole("link", { name: "Add item", exact: true }).first().click();
+  await expect(page.getByLabel("Origin", { exact: true })).toBeVisible();
+});
+
+test("schema template edits, ordering and deletion survive return navigation", async ({ page }) => {
+  await account(page, "cache-schema-edits@example.com");
+  const template = await create(page, "/schema-templates", { name: "Editable schema", fields: [{ name: "Maker", field_type: "text" }] });
+  await page.goto(`/schema-templates/${template.id}`);
+  await page.locator("#field-name").fill("Origin");
+  await page.getByRole("button", { name: "Add field", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Drag to reorder Origin", exact: true })).toBeVisible();
+  const row = (name: string) => page.locator("div.rounded-2xl").filter({ has: page.getByRole("button", { name: `Drag to reorder ${name}`, exact: true }) }).last();
+  await row("Origin").getByRole("button", { name: "Move up", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Drag to reorder/ }).first()).toHaveAttribute("aria-label", "Drag to reorder Origin");
+  await row("Maker").getByRole("button", { name: "Edit", exact: true }).click();
+  await page.locator("#field-name").fill("Manufacturer");
+  await page.getByRole("button", { name: "Update field", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Drag to reorder Manufacturer", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Schema templates Reusable metadata schemas", exact: false }).click();
+  await expect(page).toHaveURL(/\/schema-templates$/);
+  await page.locator(`a[href="/schema-templates/${template.id}"]`).first().click();
+  await expect(page.getByRole("button", { name: /^Drag to reorder/ })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: /^Drag to reorder/ }).first()).toHaveAttribute("aria-label", "Drag to reorder Origin");
+  await row("Manufacturer").getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Drag to reorder Manufacturer", exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "Schema templates Reusable metadata schemas", exact: false }).click();
+  await expect(page).toHaveURL(/\/schema-templates$/);
+  await page.locator(`a[href="/schema-templates/${template.id}"]`).first().click();
+  await expect(page.getByRole("button", { name: /^Drag to reorder/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Drag to reorder Origin", exact: true })).toBeVisible();
+});
+
+test("reopening a public photo checks access after its owner makes it private", async ({ page, browser }) => {
+  await account(page, "cache-photo-access@example.com");
+  const collection = await create(page, "/collections", { name: "Photo access", is_public: true });
+  const item = await create(page, `/collections/${collection.id}/items`, { name: "Public vase" });
+  const uploaded = await page.request.post(`/api/items/${item.id}/images`, {
+    headers: await headers(page), multipart: { file: { name: "vase.png", mimeType: "image/png", buffer: await (await import("node:fs/promises")).readFile(photo) } }
+  });
+  expect(uploaded.ok()).toBeTruthy();
+  const image = await uploaded.json();
+  const anonymous = await browser.newContext();
+  try {
+    const visitor = await anonymous.newPage();
+    visitor.on("pageerror", error => runtimeErrors.push(error.message));
+    await visitor.goto(`http://127.0.0.1:3410/explore/${collection.id}`);
+    await expect(visitor.locator('img[src^="blob:"]')).toBeVisible();
+    await visitor.locator(`a[href="/explore/${collection.id}/items/${item.id}"]`).first().click();
+    await expect(visitor).toHaveURL(new RegExp(`/items/${item.id}$`));
+    await expect(visitor.getByRole("img", { name: "Public vase", exact: true }).first()).toBeVisible();
+    expect((await page.request.patch(`/api/collections/${collection.id}`, { headers: await headers(page), data: { is_public: false } })).ok()).toBeTruthy();
+    const accessCheck = visitor.waitForResponse(response => response.url().endsWith(`/api/images/${image.id}/medium.jpg`) && response.status() === 404);
+    await visitor.goBack();
+    await accessCheck;
+    await expect(visitor).toHaveURL(new RegExp(`/explore/${collection.id}$`));
+    await expect(visitor.locator('img[src^="blob:"]')).toHaveCount(0);
+  } finally {
+    await anonymous.close();
+  }
 });

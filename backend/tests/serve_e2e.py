@@ -47,12 +47,20 @@ def main():
 
         import uvicorn
 
+        from app.core.rate_limit import reset_rate_limiters
         from app.core.security import create_access_token, decode_token
         from app.main import app
 
         @app.get("/__test__/mailbox", include_in_schema=False)
         def mailbox():
             return inbox
+
+        @app.post("/__test__/reset-rate-limits", include_in_schema=False)
+        def reset_limits():
+            # Each browser scenario gets independent counters. Limits remain
+            # enforced within a scenario and in the backend rate-limit tests.
+            reset_rate_limiters()
+            return {"ok": True}
 
         @app.post("/__test__/expire-access", include_in_schema=False)
         def expire_access(payload: dict):

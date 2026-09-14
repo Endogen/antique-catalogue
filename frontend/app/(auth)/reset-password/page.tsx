@@ -12,6 +12,10 @@ import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { authApi, isApiError } from "@/lib/api";
+import { Card } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 
 const createResetSchema = (t: (key: string) => string) =>
   z
@@ -107,7 +111,7 @@ function ResetPasswordContent() {
 
   if (status === "authenticated") {
     return (
-      <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+      <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
         {t("Redirecting to your workspace...")}
       </div>
     );
@@ -131,12 +135,12 @@ function ResetPasswordContent() {
               <p className="font-display text-lg tracking-tight">
                 {t("Antique Catalogue")}
               </p>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+              <Eyebrow className="tracking-[0.35em]">
                 {t("Studio Archive")}
-              </p>
+              </Eyebrow>
             </div>
           </Link>
-          <div className="flex items-center gap-3 text-sm text-stone-600">
+          <div className="flex items-center gap-3 text-sm text-muted-strong">
             <span className="hidden sm:inline">{t("Need a reset token?")}</span>
             <Button variant="outline" size="sm" asChild>
               <Link href="/forgot-password">{t("Request one")}</Link>
@@ -144,77 +148,75 @@ function ResetPasswordContent() {
           </div>
         </header>
 
-        <section className="mt-10 rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+        <section className="mt-10 rounded-3xl border border-border bg-card/90 p-8 shadow-sm">
+          <Eyebrow tone="brand" spacing="wide">
             {t("Set new password")}
-          </p>
-          <h1 className="font-display mt-4 text-3xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h1" size="xl" className="mt-4">
             {t("Update your credentials.")}
-          </h1>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t(
               "Paste the reset token from your email and choose a new password to regain access to your archive."
             )}
           </p>
 
           {formError ? (
-            <div
+            <Alert
               role="alert"
-              className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-            >
+              className="mt-6">
               {t(formError)}
-            </div>
+            </Alert>
           ) : null}
 
           {successMessage ? (
-            <div
+            <Alert tone="success"
               role="status"
-              className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-            >
+              className="mt-6">
               <p className="font-medium">{t(successMessage)}</p>
-              <p className="mt-2 text-xs text-emerald-700">
+              <p className="mt-2 text-xs text-success">
                 {t("You can now sign in with your updated password.")}
               </p>
-            </div>
+            </Alert>
           ) : null}
 
           <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
-              <label className="text-sm font-medium text-stone-700" htmlFor="token">
+              <label className="text-sm font-medium text-muted-strong" htmlFor="token">
                 {t("Reset token")}
               </label>
-              <input
+              <Input
                 id="token"
                 type="text"
                 autoComplete="one-time-code"
                 disabled={isReset}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                className="mt-2"
                 aria-invalid={errors.token ? "true" : "false"}
                 placeholder={t("Paste your reset token")}
                 {...register("token")}
               />
               {errors.token ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.token.message}
                 </p>
               ) : null}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-stone-700" htmlFor="password">
+              <label className="text-sm font-medium text-muted-strong" htmlFor="password">
                 {t("New password")}
               </label>
-              <input
+              <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
                 disabled={isReset}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                className="mt-2"
                 aria-invalid={errors.password ? "true" : "false"}
                 {...register("password")}
               />
               {errors.password ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.password.message}
                 </p>
               ) : null}
@@ -222,22 +224,22 @@ function ResetPasswordContent() {
 
             <div>
               <label
-                className="text-sm font-medium text-stone-700"
+                className="text-sm font-medium text-muted-strong"
                 htmlFor="confirmPassword"
               >
                 {t("Confirm password")}
               </label>
-              <input
+              <Input
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
                 disabled={isReset}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                className="mt-2"
                 aria-invalid={errors.confirmPassword ? "true" : "false"}
                 {...register("confirmPassword")}
               />
               {errors.confirmPassword ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.confirmPassword.message}
                 </p>
               ) : null}
@@ -257,11 +259,11 @@ function ResetPasswordContent() {
             </Button>
           </form>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
             <span>{t("Ready to return?")}</span>
             <Link
               href="/login"
-              className="font-medium text-amber-700 hover:text-amber-800"
+              className="font-medium text-brand hover:text-brand-strong"
             >
               {t("Sign in")}
             </Link>
@@ -270,34 +272,34 @@ function ResetPasswordContent() {
       </div>
 
       <aside className="order-first lg:order-none">
-        <div className="rounded-3xl border border-stone-200 bg-white/85 p-8 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.4em] text-stone-500">
+        <Card tone="subtle" padding="lg">
+          <Eyebrow spacing="wide">
             {t("Reset tips")}
-          </p>
-          <h2 className="font-display mt-4 text-3xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading size="xl" className="mt-4">
             {t("Keep your archive secure.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t("Password resets protect your catalogue and keep your private notes secure.")}
           </p>
           <div className="mt-6 space-y-4">
             {tips.map((item) => (
               <div
                 key={item.title}
-                className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4"
+                className="rounded-2xl border border-border bg-background/80 p-4"
               >
-                <p className="text-sm font-medium text-stone-900">{t(item.title)}</p>
-                <p className="mt-1 text-xs text-stone-500">{t(item.detail)}</p>
+                <p className="text-sm font-medium text-foreground">{t(item.title)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t(item.detail)}</p>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
-        <div className="mt-6 rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+        <div className="mt-6 rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+          <Eyebrow tone="subtle">
             {t("Studio reminder")}
-          </p>
-          <p className="mt-3 text-sm text-stone-300">
+          </Eyebrow>
+          <p className="mt-3 text-sm text-panel-muted-foreground">
             {t(
               "Reset tokens are single-use and expire quickly. Request another token anytime you need."
             )}
@@ -314,7 +316,7 @@ export default function ResetPasswordPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+        <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
           {t("Loading...")}
         </div>
       }

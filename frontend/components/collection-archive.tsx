@@ -67,17 +67,17 @@ export function CollectionArchive({ collectionId }: { collectionId?: string | nu
           if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { event.preventDefault(); last?.focus(); }
           else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
         }
-      }} role="dialog" aria-modal="true" aria-labelledby="archive-title" className="max-h-[85vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
+      }} role="dialog" aria-modal="true" aria-labelledby="archive-title" className="max-h-[85vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-3xl bg-card p-6 shadow-xl">
         <h2 id="archive-title" className="font-display text-2xl">{t(collectionId ? "Export collection" : "Restore collection")}</h2>
         {collectionId ? <>
-          <p className="text-sm text-stone-600">{t("This owner backup includes all photos, drafts, private fields, and preserved values. Keep it somewhere safe.")}</p>
+          <p className="text-sm text-muted-strong">{t("This owner backup includes all photos, drafts, private fields, and preserved values. Keep it somewhere safe.")}</p>
           <Button disabled={busy} onClick={() => void exportArchive()}>{t(busy ? "Preparing backup..." : "Download backup ZIP")}</Button>
         </> : <>
-          <p className="text-sm text-stone-600">{t("Choose an Antique Catalogue backup ZIP, up to 250MB. Restore creates a new private collection and keeps existing collections unchanged.")}</p>
+          <p className="text-sm text-muted-strong">{t("Choose an Antique Catalogue backup ZIP, up to 250MB. Restore creates a new private collection and keeps existing collections unchanged.")}</p>
           <label className="block text-sm" htmlFor="archive-file">{t("Backup ZIP")}</label>
           <input id="archive-file" type="file" accept=".zip,application/zip" disabled={busy} className="w-full text-sm" onChange={event => { const chosen = event.target.files?.[0]; if (chosen) void inspect(chosen); }} />
           {busy && <p role="status">{t("Processing archive...")}</p>}
-          {preview && <div className="space-y-3 rounded-xl bg-stone-50 p-4 text-sm">
+          {preview && <div className="space-y-3 rounded-xl bg-background p-4 text-sm">
             <p>{t("Items")}: {preview.items} · {t("Photos")}: {preview.photos} · {t("Drafts")}: {preview.drafts}</p>
             <p>{t("Private fields")}: {preview.private_fields}</p>
             <p className="break-words">{t("Fields")}: {preview.fields.map(field => field.name).join(", ") || "—"}</p>
@@ -86,7 +86,7 @@ export function CollectionArchive({ collectionId }: { collectionId?: string | nu
             <Button disabled={busy || !name.trim()} onClick={() => void restore()}>{t("Restore as private collection")}</Button>
           </div>}
         </>}
-        {error && <p role="alert" className="break-words text-sm text-rose-700">{t(error)}</p>}
+        {error && <p role="alert" className="break-words text-sm text-destructive">{t(error)}</p>}
         <Button variant="ghost" disabled={busy} onClick={() => setOpen(false)}>{t("Close")}</Button>
       </section>
     </div>}

@@ -5,6 +5,7 @@ import * as React from "react";
 import {
   AVAILABLE_LOCALES,
   DEFAULT_LOCALE,
+  LOCALE_COOKIE,
   type Locale,
   resolveLocale,
   translate,
@@ -26,19 +27,48 @@ type I18nContextValue = {
 
 const I18nContext = React.createContext<I18nContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "preferred-language";
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = React.useState<Locale>(DEFAULT_LOCALE);
+const persistLocale = (locale: Locale) => {
+  if (typeof document === "undefined") {
+    return;
+  }
+  // A cookie (not localStorage) so the server can render the right language
+  // and `<html lang>` on the very first response.
+  document.cookie = `${LOCALE_COOKIE}=${locale};path=/;max-age=${ONE_YEAR_SECONDS};samesite=lax`;
+};
+
+export function I18nProvider({
+  children,
+  initialLocale = DEFAULT_LOCALE
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+}) {
+  // Seeded from the server-resolved locale, so there is no English flash and
+  // no hydration mismatch.
+  const [locale, setLocaleState] = React.useState<Locale>(initialLocale);
 
   React.useEffect(() => {
-    const stored = typeof window !== "undefined"
-      ? window.localStorage.getItem(STORAGE_KEY)
-      : null;
-    const browser = typeof window !== "undefined" ? window.navigator.language : null;
-    const resolved = resolveLocale(stored ?? browser);
-    setLocaleState(resolved);
-  }, []);
+    // Preserve choices made before locale persistence moved to a cookie.
+    // An explicit cookie always wins over legacy browser storage.
+    const cookie = document.cookie.split(";").find((part) => part.trim().startsWith(`${LOCALE_COOKIE}=`));
+    if (cookie) {
+      setLocaleState(resolveLocale(cookie.split("=").slice(1).join("=")));
+      return;
+    }
+    try {
+      const legacy = window.localStorage.getItem(LOCALE_COOKIE);
+      if (legacy && AVAILABLE_LOCALES.includes(legacy as Locale)) {
+        const migrated = resolveLocale(legacy);
+        persistLocale(migrated);
+        window.localStorage.removeItem(LOCALE_COOKIE);
+        setLocaleState(migrated);
+        return;
+      }
+    } catch { /* Storage can be disabled; keep the server's locale. */ }
+    setLocaleState(initialLocale);
+  }, [initialLocale]);
 
   React.useEffect(() => {
     if (typeof document !== "undefined") {
@@ -49,9 +79,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const setLocale = React.useCallback((next: Locale) => {
     const resolved = resolveLocale(next);
     setLocaleState(resolved);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, resolved);
-    }
+    persistLocale(resolved);
   }, []);
 
   const t = React.useCallback(

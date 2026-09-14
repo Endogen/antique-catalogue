@@ -11,16 +11,23 @@ import {
   Trash2
 } from "lucide-react";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Lightbox } from "@/components/lightbox";
 import {
   imageApi,
   isApiError,
   type ItemImageResponse
 } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 
 const sortImages = (items: ItemImageResponse[]) =>
   [...items].sort((a, b) => a.position - b.position || a.id - b.id);
@@ -59,7 +66,7 @@ function GalleryPreviewImage({
     return (
       <div
         aria-hidden="true"
-        className="block h-36 w-full bg-gradient-to-br from-stone-100 to-stone-200"
+        className="block h-36 w-full bg-gradient-to-br from-muted to-muted"
       />
     );
   }
@@ -90,11 +97,40 @@ export function ImageGallery({
   refreshToken
 }: ImageGalleryProps) {
   const { t, locale } = useI18n();
-  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
-    "loading"
-  );
+  const confirm = useConfirm();
+  const numericItemId = Number(itemId);
+  const hasItemId = Boolean(itemId) && Number.isFinite(numericItemId);
+
+  const imagesQuery = useQuery({
+    queryKey: queryKeys.items.images(numericItemId),
+    queryFn: ({ signal }) => imageApi.list(numericItemId, { signal }),
+    enabled: hasItemId
+  });
+
+  // Local copy so drag-reordering can update optimistically; it is re-synced
+  // from the query whenever the server result changes.
   const [images, setImages] = React.useState<ItemImageResponse[]>([]);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (imagesQuery.data) {
+      setImages(sortImages(imagesQuery.data));
+    }
+  }, [imagesQuery.data]);
+
+  const status: "loading" | "ready" | "error" = !hasItemId
+    ? "error"
+    : imagesQuery.isError
+      ? "error"
+      : imagesQuery.isPending
+        ? "loading"
+        : "ready";
+  const loadError = !hasItemId
+    ? t("Item ID is missing.")
+    : imagesQuery.isError
+      ? isApiError(imagesQuery.error)
+        ? t(imagesQuery.error.detail)
+        : t("We couldn't load item images.")
+      : null;
   const [reorderError, setReorderError] = React.useState<string | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [isReordering, setIsReordering] = React.useState(false);
@@ -103,7 +139,6 @@ export function ImageGallery({
   );
   const [draggingId, setDraggingId] = React.useState<number | null>(null);
   const [dragOverId, setDragOverId] = React.useState<number | null>(null);
-  const hasLoadedRef = React.useRef(false);
   const [lightboxImage, setLightboxImage] = React.useState<{
     src: string;
     alt: string;
@@ -114,51 +149,23 @@ export function ImageGallery({
   const canEdit = canInteract && editable;
   const isBusy = isReordering || deletePendingId !== null;
 
-  const loadImages = React.useCallback(
-    async (options?: { silent?: boolean }) => {
-      if (!itemId) {
-        setStatus("error");
-        setLoadError(t("Item ID is missing."));
-        return;
-      }
-      if (!options?.silent) {
-        setStatus("loading");
-      }
-      setLoadError(null);
-      setDeleteError(null);
-      try {
-        const data = await imageApi.list(itemId);
-        setImages(sortImages(data));
-        setStatus("ready");
-        hasLoadedRef.current = true;
-      } catch (error) {
-        setStatus("error");
-        setLoadError(
-          isApiError(error)
-            ? t(error.detail)
-            : t("We couldn't load item images.")
-        );
-      }
-    },
-    [itemId, t]
-  );
+  const { refetch: refetchImages } = imagesQuery;
+  const loadImages = React.useCallback(async () => {
+    await refetchImages();
+  }, [refetchImages]);
 
+  // The parent bumps `refreshToken` after an upload completes. Only react to
+  // actual changes — on mount the query has already fetched.
+  const lastRefreshToken = React.useRef(refreshToken);
   React.useEffect(() => {
-    hasLoadedRef.current = false;
-    if (!itemId) {
-      setStatus("error");
-      setLoadError(t("Item ID is missing."));
+    if (lastRefreshToken.current === refreshToken) {
       return;
     }
-    void loadImages();
-  }, [itemId, loadImages, t]);
-
-  React.useEffect(() => {
-    if (!itemId || !hasLoadedRef.current) {
-      return;
+    lastRefreshToken.current = refreshToken;
+    if (hasItemId) {
+      void refetchImages();
     }
-    void loadImages({ silent: true });
-  }, [refreshToken, itemId, loadImages]);
+  }, [refreshToken, hasItemId, refetchImages]);
 
   const commitReorder = React.useCallback(
     async (
@@ -173,7 +180,7 @@ export function ImageGallery({
       setReorderError(null);
       try {
         await imageApi.update(itemId, image.id, { position });
-        await loadImages({ silent: true });
+        await loadImages();
       } catch (error) {
         setImages(previous);
         setReorderError(
@@ -271,11 +278,13 @@ export function ImageGallery({
       if (!itemId || deletePendingId) {
         return;
       }
-    const confirmed = window.confirm(
-      t('Delete "{filename}"? This cannot be undone.', {
-        filename: image.filename || t("this image")
-      })
-    );
+      const confirmed = await confirm({
+        title: t('Delete "{filename}"? This cannot be undone.', {
+          filename: image.filename || t("this image")
+        }),
+        confirmLabel: t("Delete"),
+        tone: "destructive"
+      });
       if (!confirmed) {
         return;
       }
@@ -285,7 +294,7 @@ export function ImageGallery({
       try {
         await imageApi.delete(itemId, image.id);
         setImages((prev) => prev.filter((item) => item.id !== image.id));
-        await loadImages({ silent: true });
+        await loadImages();
       } catch (error) {
         setDeleteError(
           isApiError(error)
@@ -296,20 +305,20 @@ export function ImageGallery({
         setDeletePendingId(null);
       }
     },
-    [deletePendingId, itemId, loadImages, t]
+    [confirm, deletePendingId, itemId, loadImages, t]
   );
 
   return (
-    <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+    <Card>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <Eyebrow>
             {t("Image gallery")}
-          </p>
-          <h3 className="font-display mt-3 text-2xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h3" className="mt-3">
             {t("Arrange item imagery")}
-          </h3>
-          <p className="mt-3 max-w-xl text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 max-w-xl text-sm text-muted-strong">
             {t(
               "Drag images to reorder them or use the move controls to fine-tune the sequence."
             )}
@@ -324,7 +333,7 @@ export function ImageGallery({
             <RefreshCcw className="h-4 w-4" />
             {t("Refresh")}
           </Button>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-muted text-brand">
             <ImageIcon className="h-6 w-6" />
           </div>
         </div>
@@ -332,48 +341,46 @@ export function ImageGallery({
 
       <div className="mt-6 space-y-4">
         {reorderError ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs text-rose-700">
+          <Alert className="text-xs">
             {t(reorderError)}
-          </div>
+          </Alert>
         ) : null}
 
         {deleteError ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs text-rose-700">
+          <Alert className="text-xs">
             {t(deleteError)}
-          </div>
+          </Alert>
         ) : null}
 
         {!canInteract ? (
-          <div className="text-xs text-stone-500">
+          <div className="text-xs text-muted-foreground">
             {t("Finish loading the item to manage image order.")}
           </div>
         ) : null}
 
         {isReordering ? (
-          <div className="text-xs text-amber-700">
+          <div className="text-xs text-brand">
             {t("Saving image order...")}
           </div>
         ) : null}
 
         {deletePendingId !== null ? (
-          <div className="text-xs text-amber-700">
+          <div className="text-xs text-brand">
             {t("Deleting image...")}
           </div>
         ) : null}
 
         {status === "loading" ? (
-          <div
-            className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500"
-            aria-busy="true"
-          >
+          <EmptyState size="sm"
+            aria-busy="true">
             {t("Loading images...")}
-          </div>
+          </EmptyState>
         ) : status === "error" ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-6">
-            <p className="text-sm font-medium text-rose-700">
+          <Alert className="p-6">
+            <p className="text-sm font-medium text-destructive">
               {t("We couldn't load the image gallery.")}
             </p>
-            <p className="mt-2 text-sm text-rose-600">
+            <p className="mt-2 text-sm text-destructive">
               {loadError ?? t("Please try again.")}
             </p>
             <div className="mt-4">
@@ -381,11 +388,11 @@ export function ImageGallery({
                 {t("Try again")}
               </Button>
             </div>
-          </div>
+          </Alert>
         ) : images.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-stone-200 bg-white/70 p-6 text-sm text-stone-500">
+          <EmptyState size="sm">
             {t("No images yet. Upload imagery to start building this gallery.")}
-          </div>
+          </EmptyState>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {images.map((image, index) => {
@@ -396,10 +403,10 @@ export function ImageGallery({
                 <div
                   key={image.id}
                   className={cn(
-                    "rounded-2xl border bg-white/80 p-4 shadow-sm transition",
+                    "rounded-2xl border bg-card/80 p-4 shadow-sm transition",
                     dragOverId === image.id
-                      ? "border-amber-300 bg-amber-50/70"
-                      : "border-stone-200"
+                      ? "border-brand-border bg-brand-muted/70"
+                      : "border-border"
                   )}
                   onDragOver={(event) => handleDragOver(event, image.id)}
                   onDrop={(event) => handleDrop(event, image.id)}
@@ -408,10 +415,10 @@ export function ImageGallery({
                     <button
                       type="button"
                       className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-xl border text-stone-500 transition",
+                        "flex h-9 w-9 items-center justify-center rounded-xl border text-muted-foreground transition",
                         draggingId === image.id
-                          ? "border-amber-300 bg-amber-50 text-amber-700"
-                          : "border-stone-200 bg-stone-50 hover:border-stone-300",
+                          ? "border-brand-border bg-brand-muted text-brand"
+                          : "border-border bg-background hover:border-muted-subtle",
                         canInteract && !isBusy
                           ? "cursor-ew-resize"
                           : "cursor-default"
@@ -427,12 +434,12 @@ export function ImageGallery({
                     >
                       <GripVertical className="h-4 w-4" />
                     </button>
-                    <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">
+                    <span className="rounded-full border border-border bg-background px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                       {index + 1}
                     </span>
                   </div>
 
-                  <div className="mt-3 overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
+                  <div className="mt-3 overflow-hidden rounded-xl border border-border bg-background">
                     <button
                       type="button"
                       className="block w-full p-0"
@@ -452,17 +459,17 @@ export function ImageGallery({
                   </div>
 
                   <div className="mt-3">
-                    <p className="truncate text-sm font-medium text-stone-900">
+                    <p className="truncate text-sm font-medium text-foreground">
                       {image.filename || t("Untitled image")}
                     </p>
-                    <p className="mt-1 text-xs text-stone-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {t("Added {date}", {
                         date: formatDate(image.created_at, locale)
                       })}
                     </p>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-stone-500">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <Button
                       size="sm"
                       variant="ghost"
@@ -485,7 +492,7 @@ export function ImageGallery({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                        className="text-destructive hover:bg-destructive-muted hover:text-destructive"
                         onClick={() => handleDelete(image)}
                         disabled={!canEdit || isBusy}
                       >
@@ -514,6 +521,6 @@ export function ImageGallery({
         aria-hidden="true"
         className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
       />
-    </div>
+    </Card>
   );
 }

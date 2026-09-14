@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { ItemForm } from "@/components/item-form";
 import { VerificationResend } from "@/components/verification-resend";
 import { apiFetch, authApi, setAccessToken } from "@/lib/api";
-import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
+import { clearAuthenticatedImageCache, useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { serializeTimestamp, timestampInput } from "@/lib/metadata-form";
 import type { FieldDefinitionResponse } from "@/lib/api";
 
@@ -18,6 +18,7 @@ const expired = `x.${btoa(JSON.stringify({ exp: 1 }))}.x`;
 beforeEach(() => {
   window.localStorage.clear();
   setAccessToken(null);
+  clearAuthenticatedImageCache();
   vi.stubGlobal("fetch", vi.fn());
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -74,8 +75,30 @@ describe("authenticated images", () => {
     expect(fetcher.mock.calls[0][0]).toBe("/api/auth/refresh");
     expect(fetcher.mock.calls[1][0]).toBe("/api/images/1/thumb.jpg");
     expect(new Headers(fetcher.mock.calls[1][1]?.headers).get("Authorization")).toBe("Bearer fresh-token");
+    // Reopening the image must check server access again.
     unmount();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo");
+  });
+
+  it("shares concurrent image requests but revalidates after the last consumer leaves", async () => {
+    setAccessToken("token");
+    vi.stubGlobal("URL", class extends URL { static createObjectURL = vi.fn(() => "blob:photo"); static revokeObjectURL = vi.fn(); });
+    const fetcher = vi.mocked(fetch).mockImplementation(async () => new Response(new Blob(["photo"], { type: "image/jpeg" })));
+    const url = "/api/images/7/medium.jpg";
+
+    const first = renderHook(() => useAuthenticatedImageUrl(url));
+    const second = renderHook(() => useAuthenticatedImageUrl(url));
+    await waitFor(() => expect(first.result.current).toBe("blob:photo"));
+    await waitFor(() => expect(second.result.current).toBe("blob:photo"));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    first.unmount();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    second.unmount();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo");
+    const remounted = renderHook(() => useAuthenticatedImageUrl(url));
+    await waitFor(() => expect(remounted.result.current).toBe("blob:photo"));
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it("deduplicates concurrent refreshes for image and JSON requests", async () => {

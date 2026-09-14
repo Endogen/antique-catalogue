@@ -12,6 +12,10 @@ import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { authApi, isApiError } from "@/lib/api";
+import { Card } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 
 const createRegisterSchema = (t: (key: string) => string) =>
   z
@@ -103,7 +107,7 @@ export default function RegisterPage() {
 
   if (status === "authenticated") {
     return (
-      <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-stone-500">
+      <div className="col-span-full flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
         {t("Redirecting to your workspace...")}
       </div>
     );
@@ -127,12 +131,12 @@ export default function RegisterPage() {
               <p className="font-display text-lg tracking-tight">
                 {t("Antique Catalogue")}
               </p>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">
+              <Eyebrow className="tracking-[0.35em]">
                 {t("Studio Archive")}
-              </p>
+              </Eyebrow>
             </div>
           </Link>
-          <div className="flex items-center gap-3 text-sm text-stone-600">
+          <div className="flex items-center gap-3 text-sm text-muted-strong">
             <span className="hidden sm:inline">{t("Already have an account?")}</span>
             <Button variant="outline" size="sm" asChild>
               <Link href="/login">{t("Sign in")}</Link>
@@ -140,34 +144,32 @@ export default function RegisterPage() {
           </div>
         </header>
 
-        <section className="mt-10 rounded-3xl border border-stone-200 bg-white/90 p-8 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+        <section className="mt-10 rounded-3xl border border-border bg-card/90 p-8 shadow-sm">
+          <Eyebrow tone="brand" spacing="wide">
             {t("Create your studio")}
-          </p>
-          <h1 className="font-display mt-4 text-3xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h1" size="xl" className="mt-4">
             {t("Start cataloguing in minutes.")}
-          </h1>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t("Build a secure, searchable archive for every piece you collect.")}
           </p>
 
           {formError ? (
-            <div
+            <Alert
               role="alert"
-              className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-            >
+              className="mt-6">
               {t(formError)}
-            </div>
+            </Alert>
           ) : null}
 
           {successMessage ? (
-            <div
+            <Alert tone="success"
               role="status"
-              className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-            >
+              className="mt-6">
               <p className="font-medium">{t(successMessage)}</p>
               {submittedEmail && requiresVerification ? (
-                <p className="mt-2 text-xs text-emerald-700">
+                <p className="mt-2 text-xs text-success">
                   {t(
                     "We sent a verification token to {email}. Enter it on the verification page to activate your account.",
                     { email: submittedEmail }
@@ -175,49 +177,49 @@ export default function RegisterPage() {
                 </p>
               ) : null}
               {submittedEmail && !requiresVerification ? (
-                <p className="mt-2 text-xs text-emerald-700">
+                <p className="mt-2 text-xs text-success">
                   {t("You can sign in now with the email and password you just created.")}
                 </p>
               ) : null}
-            </div>
+            </Alert>
           ) : null}
 
           <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
-              <label className="text-sm font-medium text-stone-700" htmlFor="email">
+              <label className="text-sm font-medium text-muted-strong" htmlFor="email">
                 {t("Email address")}
               </label>
-              <input
+              <Input
                 id="email"
                 type="email"
                 autoComplete="email"
                 disabled={isLocked}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                className="mt-2"
                 aria-invalid={errors.email ? "true" : "false"}
                 {...formRegister("email")}
               />
               {errors.email ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.email.message}
                 </p>
               ) : null}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-stone-700" htmlFor="password">
+              <label className="text-sm font-medium text-muted-strong" htmlFor="password">
                 {t("Password")}
               </label>
-              <input
+              <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
                 disabled={isLocked}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                className="mt-2"
                 aria-invalid={errors.password ? "true" : "false"}
                 {...formRegister("password")}
               />
               {errors.password ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.password.message}
                 </p>
               ) : null}
@@ -225,22 +227,22 @@ export default function RegisterPage() {
 
             <div>
               <label
-                className="text-sm font-medium text-stone-700"
+                className="text-sm font-medium text-muted-strong"
                 htmlFor="confirmPassword"
               >
                 {t("Confirm password")}
               </label>
-              <input
+              <Input
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
                 disabled={isLocked}
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:cursor-not-allowed disabled:bg-stone-100"
+                className="mt-2"
                 aria-invalid={errors.confirmPassword ? "true" : "false"}
                 {...formRegister("confirmPassword")}
               />
               {errors.confirmPassword ? (
-                <p className="mt-2 text-xs text-rose-600">
+                <p className="mt-2 text-xs text-destructive">
                   {errors.confirmPassword.message}
                 </p>
               ) : null}
@@ -270,17 +272,17 @@ export default function RegisterPage() {
             </div>
           ) : null}
 
-          <p className="mt-6 text-xs text-stone-500">
+          <p className="mt-6 text-xs text-muted-foreground">
             {t(
               "By creating an account you agree to receive verification emails from Antique Catalogue."
             )}
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
             <span>{t("Already verified?")}</span>
             <Link
               href="/verify"
-              className="font-medium text-amber-700 hover:text-amber-800"
+              className="font-medium text-brand hover:text-brand-strong"
             >
               {t("Enter verification token")}
             </Link>
@@ -289,14 +291,14 @@ export default function RegisterPage() {
       </div>
 
       <aside className="order-first lg:order-none">
-        <div className="rounded-3xl border border-stone-200 bg-white/80 p-8 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.4em] text-stone-500">
+        <Card tone="subtle" padding="lg">
+          <Eyebrow spacing="wide">
             {t("How it works")}
-          </p>
-          <h2 className="font-display mt-4 text-3xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading size="xl" className="mt-4">
             {t("Your collection studio, built for detail.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t(
               "Antique Catalogue blends structured metadata with imagery so every object is documented with context."
             )}
@@ -305,27 +307,27 @@ export default function RegisterPage() {
             {steps.map((step, index) => (
               <div
                 key={step.title}
-                className="flex items-start gap-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4"
+                className="flex items-start gap-4 rounded-2xl border border-border bg-background/80 p-4"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-800">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-muted text-sm font-semibold text-brand-strong">
                   0{index + 1}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-stone-900">
+                  <p className="text-sm font-medium text-foreground">
                     {t(step.title)}
                   </p>
-                  <p className="mt-1 text-xs text-stone-500">{t(step.detail)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{t(step.detail)}</p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
-        <div className="mt-6 rounded-3xl border border-stone-900/90 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+        <div className="mt-6 rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+          <Eyebrow tone="subtle">
             {t("Studio note")}
-          </p>
-          <p className="mt-3 text-sm text-stone-300">
+          </Eyebrow>
+          <p className="mt-3 text-sm text-panel-muted-foreground">
             {t(
               "Mobile camera capture is built in. Photograph artifacts wherever you catalogue, then let the platform handle the rest."
             )}

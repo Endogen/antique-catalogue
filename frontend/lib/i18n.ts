@@ -11,6 +11,9 @@ export const DEFAULT_LOCALE: Locale = "en";
 
 export const AVAILABLE_LOCALES: Locale[] = ["en", "de"];
 
+/** Shared with the server so `<html lang>` matches what the client renders. */
+export const LOCALE_COOKIE = "preferred-language";
+
 export const resolveLocale = (value?: string | null): Locale => {
   if (!value) {
     return DEFAULT_LOCALE;

@@ -16,8 +16,13 @@ import {
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
+import { useTheme, type ThemePreference } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { authApi, isApiError } from "@/lib/api";
+import { Card } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Input, Select } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 
 const DELETE_TOKEN = "DELETE";
 
@@ -25,6 +30,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { user, logout, refresh } = useAuth();
   const { t, locale, availableLocales, setLocale } = useI18n();
+  const { preference, setPreference } = useTheme();
   const [resetEmail, setResetEmail] = React.useState("");
   const [resetState, setResetState] = React.useState<{
     status: "idle" | "sending" | "sent" | "error";
@@ -109,13 +115,13 @@ export default function SettingsPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+          <Eyebrow tone="brand" spacing="wide">
             {t("Settings")}
-          </p>
-          <h1 className="font-display mt-4 text-3xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h1" size="xl" className="mt-4">
             {t("Profile and security controls.")}
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 max-w-2xl text-sm text-muted-strong">
             {t(
               "Review account details, manage password access, and stay in control of your archive session."
             )}
@@ -130,21 +136,21 @@ export default function SettingsPage() {
       </header>
 
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
+        <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+              <Eyebrow>
                 {t("Account overview")}
-              </p>
-              <h2 className="font-display mt-3 text-2xl text-stone-900">
+              </Eyebrow>
+              <SectionHeading className="mt-3">
                 {t("Keep your archive identity current.")}
-              </h2>
+              </SectionHeading>
             </div>
             <span
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
                 user?.is_verified
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-amber-200 bg-amber-50 text-amber-700"
+                  ? "border-success-border bg-success-muted text-success"
+                  : "border-brand-border bg-brand-muted text-brand"
               }`}
             >
               <BadgeCheck className="h-3.5 w-3.5" />
@@ -153,73 +159,73 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-stone-500">
-                <Mail className="h-4 w-4 text-amber-700" />
+            <div className="rounded-2xl border border-border bg-background/80 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                <Mail className="h-4 w-4 text-brand" />
                 {t("Email address")}
               </div>
-              <p className="mt-3 text-sm font-medium text-stone-900">
+              <p className="mt-3 text-sm font-medium text-foreground">
                 {user?.email ?? "—"}
               </p>
-              <p className="mt-2 text-xs text-stone-500">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {t("Use this email to log in and receive notices.")}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-stone-500">
-                <CalendarDays className="h-4 w-4 text-amber-700" />
+            <div className="rounded-2xl border border-border bg-background/80 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                <CalendarDays className="h-4 w-4 text-brand" />
                 {t("Member since")}
               </div>
-              <p className="mt-3 text-sm font-medium text-stone-900">
+              <p className="mt-3 text-sm font-medium text-foreground">
                 {formatDate(user?.created_at)}
               </p>
-              <p className="mt-2 text-xs text-stone-500">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {t("Account created in your studio archive.")}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-stone-500">
-                <ShieldCheck className="h-4 w-4 text-amber-700" />
+            <div className="rounded-2xl border border-border bg-background/80 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                <ShieldCheck className="h-4 w-4 text-brand" />
                 {t("Status")}
               </div>
-              <p className="mt-3 text-sm font-medium text-stone-900">
+              <p className="mt-3 text-sm font-medium text-foreground">
                 {user?.is_active ? t("Active") : t("Inactive")}
               </p>
-              <p className="mt-2 text-xs text-stone-500">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {t("Contact support if your account is inactive.")}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-stone-500">
-                <KeyRound className="h-4 w-4 text-amber-700" />
+            <div className="rounded-2xl border border-border bg-background/80 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                <KeyRound className="h-4 w-4 text-brand" />
                 {t("Account ID")}
               </div>
-              <p className="mt-3 text-sm font-medium text-stone-900">
+              <p className="mt-3 text-sm font-medium text-foreground">
                 {user ? `#${user.id}` : "—"}
               </p>
-              <p className="mt-2 text-xs text-stone-500">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {t("Keep this handy for support requests.")}
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-3xl border border-stone-200 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-6 text-stone-100 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+        <div className="rounded-3xl border border-border surface-panel p-6 text-panel-foreground shadow-sm">
+          <Eyebrow tone="subtle">
             {t("Security snapshot")}
-          </p>
-          <h3 className="font-display mt-4 text-2xl">
+          </Eyebrow>
+          <SectionHeading as="h3" className="mt-4">
             {t("Stay protected across every session.")}
-          </h3>
-          <p className="mt-3 text-sm text-stone-300">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-panel-muted-foreground">
             {t(
               "Rotate passwords regularly and verify your email to keep access under your control."
             )}
           </p>
-          <div className="mt-6 space-y-3 text-sm text-stone-200">
+          <div className="mt-6 space-y-3 text-sm text-panel-muted-foreground">
             <div className="flex items-start gap-3">
               <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
               {t("Password reset links expire quickly for safety.")}
@@ -237,14 +243,14 @@ export default function SettingsPage() {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+        <Card>
+          <Eyebrow>
             {t("Language preferences")}
-          </p>
-          <h2 className="font-display mt-3 text-2xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading className="mt-3">
             {t("Choose your display language.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t(
               "We default to your browser language. Choose another to override it."
             )}
@@ -252,14 +258,14 @@ export default function SettingsPage() {
 
           <div className="mt-6">
             <label
-              className="text-sm font-medium text-stone-700"
+              className="text-sm font-medium text-muted-strong"
               htmlFor="language-select"
             >
               {t("Display language")}
             </label>
-            <select
+            <Select
               id="language-select"
-              className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              className="mt-2"
               value={locale}
               onChange={(event) => setLocale(event.target.value as typeof locale)}
             >
@@ -268,54 +274,74 @@ export default function SettingsPage() {
                   {language === "de" ? t("German") : t("English")}
                 </option>
               ))}
-            </select>
-            <p className="mt-2 text-xs text-stone-500">
+            </Select>
+            <p className="mt-2 text-xs text-muted-foreground">
               {t("Changes apply immediately and stay on this device.")}
             </p>
           </div>
-        </div>
 
-        <div className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+          <div className="mt-6">
+            <label
+              className="text-sm font-medium text-muted-strong"
+              htmlFor="theme-select"
+            >
+              {t("Appearance")}
+            </label>
+            <Select
+              id="theme-select"
+              className="mt-2"
+              value={preference}
+              onChange={(event) =>
+                setPreference(event.target.value as ThemePreference)
+              }
+            >
+              <option value="system">{t("Match system")}</option>
+              <option value="light">{t("Light")}</option>
+              <option value="dark">{t("Dark")}</option>
+            </Select>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("Changes apply immediately and stay on this device.")}
+            </p>
+          </div>
+        </Card>
+
+        <Card>
+          <Eyebrow>
             {t("Password access")}
-          </p>
-          <h2 className="font-display mt-3 text-2xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading className="mt-3">
             {t("Send a reset link.")}
-          </h2>
-          <p className="mt-3 text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 text-sm text-muted-strong">
             {t("We will email a secure reset link to the address below.")}
           </p>
 
           <form className="mt-6 space-y-4" onSubmit={handlePasswordReset}>
             <div>
-              <label className="text-sm font-medium text-stone-700" htmlFor="reset-email">
+              <label className="text-sm font-medium text-muted-strong" htmlFor="reset-email">
                 {t("Email address")}
               </label>
-              <input
+              <Input
                 id="reset-email"
                 type="email"
                 autoComplete="email"
-                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                className="mt-2"
                 value={resetEmail}
                 onChange={(event) => setResetEmail(event.target.value)}
               />
             </div>
 
             {resetState.status === "error" && resetState.message ? (
-              <div
-                role="alert"
-                className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-              >
+              <Alert
+                role="alert">
                 {t(resetState.message)}
-              </div>
+              </Alert>
             ) : null}
             {resetState.status === "sent" && resetState.message ? (
-              <div
-                role="status"
-                className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-              >
+              <Alert tone="success"
+                role="status">
                 {t(resetState.message)}
-              </div>
+              </Alert>
             ) : null}
 
             <Button type="submit" disabled={resetState.status === "sending"}>
@@ -324,40 +350,40 @@ export default function SettingsPage() {
                 : t("Send reset link")}
             </Button>
           </form>
-        </div>
+        </Card>
 
       </section>
 
-      <section className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
+      <section className="rounded-3xl border border-destructive-border bg-destructive-muted/60 p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-rose-600">
+            <Eyebrow className="text-destructive">
               {t("Danger zone")}
-            </p>
-            <h2 className="font-display mt-3 text-2xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading className="mt-3">
               {t("Permanently delete this account.")}
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm text-rose-700">
+            </SectionHeading>
+            <p className="mt-3 max-w-2xl text-sm text-destructive">
               {t(
                 "This removes all collections, items, and images tied to your account. Type {token} to confirm.",
                 { token: DELETE_TOKEN }
               )}
             </p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive-muted text-destructive">
             <ShieldAlert className="h-6 w-6" />
           </div>
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
           <div>
-            <label className="text-sm font-medium text-rose-700" htmlFor="delete-confirm">
+            <label className="text-sm font-medium text-destructive" htmlFor="delete-confirm">
               {t("Confirmation phrase")}
             </label>
             <input
               id="delete-confirm"
               type="text"
-              className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+              className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-sm transition focus:border-destructive-border focus:outline-none focus:ring-2 focus:ring-destructive-border"
               value={deletePhrase}
               onChange={(event) => setDeletePhrase(event.target.value)}
               placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}
@@ -367,7 +393,7 @@ export default function SettingsPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full border-rose-200 text-rose-700 hover:bg-rose-100"
+              className="w-full border-destructive-border text-destructive hover:bg-destructive-muted"
               disabled={!confirmPhraseMatches || deleteState.status === "working"}
               onClick={handleDeleteAccount}
             >
@@ -380,12 +406,11 @@ export default function SettingsPage() {
         </div>
 
         {deleteState.status === "error" && deleteState.message ? (
-          <div
+          <Alert
             role="alert"
-            className="mt-4 rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700"
-          >
+            className="mt-4 bg-card/80">
             {t(deleteState.message)}
-          </div>
+          </Alert>
         ) : null}
       </section>
     </div>

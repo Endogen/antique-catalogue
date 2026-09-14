@@ -15,19 +15,16 @@ import {
   Sparkles
 } from "lucide-react";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
-import {
-  collectionApi,
-  isApiError,
-  type CollectionResponse
-} from "@/lib/api";
-
-type LoadState = {
-  status: "loading" | "ready" | "error";
-  data: CollectionResponse[];
-  error?: string;
-};
+import { collectionApi, type CollectionResponse } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import { toLoadState } from "@/lib/query-state";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Alert } from "@/components/ui/alert";
 
 const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) {
@@ -46,37 +43,20 @@ const formatDate = (value: string | null | undefined, locale: string) => {
 
 export default function CollectionsPage() {
   const { t, tc, locale } = useI18n();
-  const [state, setState] = React.useState<LoadState>({
-    status: "loading",
-    data: []
+  const query = useQuery({
+    queryKey: queryKeys.collections.list(),
+    queryFn: ({ signal }) => collectionApi.list({ signal })
   });
 
-  const loadCollections = React.useCallback(async () => {
-    setState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: undefined
-    }));
-    try {
-      const data = await collectionApi.list();
-      setState({
-        status: "ready",
-        data
-      });
-    } catch (error) {
-      setState((prev) => ({
-        status: "error",
-        data: prev.data,
-        error: isApiError(error)
-          ? error.detail
-          : "We couldn't load your collections."
-      }));
-    }
-  }, []);
-
-  React.useEffect(() => {
-    void loadCollections();
-  }, [loadCollections]);
+  const state = toLoadState<CollectionResponse[]>(
+    query,
+    "We couldn't load your collections.",
+    []
+  );
+  const { refetch } = query;
+  const loadCollections = React.useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   const totalCount = state.data.length;
   const publicCount = state.data.filter((collection) => collection.is_public)
@@ -92,13 +72,13 @@ export default function CollectionsPage() {
       return {
         label: t("Public"),
         Icon: Globe2,
-        className: "border-emerald-200 bg-emerald-50 text-emerald-700"
+        className: "border-success-border bg-success-muted text-success"
       };
     }
     return {
       label: t("Private"),
       Icon: Lock,
-      className: "border-amber-200 bg-amber-50 text-amber-700"
+      className: "border-brand-border bg-brand-muted text-brand"
     };
   };
 
@@ -106,13 +86,13 @@ export default function CollectionsPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-amber-700">
+          <Eyebrow tone="brand" spacing="wide">
             {t("Collections")}
-          </p>
-          <h1 className="font-display mt-4 text-3xl text-stone-900">
+          </Eyebrow>
+          <SectionHeading as="h1" size="xl" className="mt-4">
             {t("Curate and organize your archive.")}
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm text-stone-600">
+          </SectionHeading>
+          <p className="mt-3 max-w-2xl text-sm text-muted-strong">
             {t(
               "Build collections for every category of antique, then capture metadata, imagery, and provenance in one focused workspace."
             )}
@@ -134,47 +114,47 @@ export default function CollectionsPage() {
       </header>
 
       <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+        <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+          <Eyebrow tone="subtle">
             {t("Total items")}
-          </p>
-          <p className="mt-4 text-3xl font-semibold text-stone-900">
+          </Eyebrow>
+          <p className="mt-4 text-3xl font-semibold text-foreground">
             {totalItems}
           </p>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             {t("Catalogued across your collections.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+        <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+          <Eyebrow tone="subtle">
             {t("Total collections")}
-          </p>
-          <p className="mt-4 text-3xl font-semibold text-stone-900">
+          </Eyebrow>
+          <p className="mt-4 text-3xl font-semibold text-foreground">
             {totalCount}
           </p>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             {t("All archives in your studio.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+        <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+          <Eyebrow tone="subtle">
             {t("Public collections")}
-          </p>
-          <p className="mt-4 text-3xl font-semibold text-stone-900">
+          </Eyebrow>
+          <p className="mt-4 text-3xl font-semibold text-foreground">
             {publicCount}
           </p>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             {t("Visible in the public directory.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-stone-400">
+        <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+          <Eyebrow tone="subtle">
             {t("Private collections")}
-          </p>
-          <p className="mt-4 text-3xl font-semibold text-stone-900">
+          </Eyebrow>
+          <p className="mt-4 text-3xl font-semibold text-foreground">
             {privateCount}
           </p>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             {t("Internal research and drafts.")}
           </p>
         </div>
@@ -183,12 +163,12 @@ export default function CollectionsPage() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+            <Eyebrow>
               {t("Your archive")}
-            </p>
-            <h2 className="font-display mt-3 text-2xl text-stone-900">
+            </Eyebrow>
+            <SectionHeading className="mt-3">
               {t("Active collections")}
-            </h2>
+            </SectionHeading>
           </div>
           <Button variant="ghost" asChild>
             <Link href="/explore">
@@ -199,18 +179,16 @@ export default function CollectionsPage() {
         </div>
 
         {state.status === "loading" ? (
-          <div
-            className="rounded-3xl border border-dashed border-stone-200 bg-white/80 p-8 text-sm text-stone-500"
-            aria-busy="true"
-          >
+          <EmptyState
+            aria-busy="true">
             {t("Loading your collections...")}
-          </div>
+          </EmptyState>
         ) : state.status === "error" ? (
-          <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6">
-            <p className="text-sm font-medium text-rose-700">
+          <Alert className="rounded-3xl p-6">
+            <p className="text-sm font-medium text-destructive">
               {t("We hit a snag loading collections.")}
             </p>
-            <p className="mt-2 text-sm text-rose-600">
+            <p className="mt-2 text-sm text-destructive">
               {t(state.error ?? "Please try again.")}
             </p>
             <div className="mt-4">
@@ -218,18 +196,18 @@ export default function CollectionsPage() {
                 {t("Try again")}
               </Button>
             </div>
-          </div>
+          </Alert>
         ) : state.data.length === 0 ? (
-          <div className="rounded-3xl border border-stone-200 bg-white/80 p-8 shadow-sm">
+          <Card tone="subtle" padding="lg">
             <div className="flex flex-wrap items-start justify-between gap-6">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
+                <Eyebrow>
                   {t("No collections yet")}
-                </p>
-                <h3 className="font-display mt-3 text-2xl text-stone-900">
+                </Eyebrow>
+                <SectionHeading as="h3" className="mt-3">
                   {t("Start by defining your first collection.")}
-                </h3>
-                <p className="mt-3 max-w-xl text-sm text-stone-600">
+                </SectionHeading>
+                <p className="mt-3 max-w-xl text-sm text-muted-strong">
                   {t(
                     "Create a collection to set up metadata fields, then begin documenting items and images from any device."
                   )}
@@ -248,11 +226,11 @@ export default function CollectionsPage() {
                   </Button>
                 </div>
               </div>
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-muted text-brand">
                 <Folder className="h-8 w-8" />
               </div>
             </div>
-          </div>
+          </Card>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {state.data.map((collection) => {
@@ -260,10 +238,9 @@ export default function CollectionsPage() {
               const itemCount = collection.item_count ?? 0;
               const itemLabel = itemCount === 1 ? t("item") : t("items");
               return (
-                <div
+                <Card
                   key={collection.id}
-                  className="rounded-3xl border border-stone-200 bg-white/90 p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
+                  className="transition hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span
                       className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${meta.className}`}
@@ -271,35 +248,35 @@ export default function CollectionsPage() {
                       <meta.Icon className="h-3.5 w-3.5" />
                       {meta.label}
                     </span>
-                    <span className="text-xs text-stone-500">
+                    <span className="text-xs text-muted-foreground">
                       {t("Updated {date}", {
                         date: formatDate(collection.updated_at, locale)
                       })}
                     </span>
                   </div>
-                  <h3 className="mt-4 text-xl font-semibold text-stone-900">
+                  <h3 className="mt-4 text-xl font-semibold text-foreground">
                     {collection.name}
                   </h3>
-                  <p className="mt-2 text-sm text-stone-600">
+                  <p className="mt-2 text-sm text-muted-strong">
                     {collection.description ??
                       t(
                         "Add a description to capture the story behind this collection."
                       )}
                   </p>
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-stone-500">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                       <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-amber-600" />
+                        <CalendarDays className="h-4 w-4 text-brand" />
                         {t("Created {date}", {
                           date: formatDate(collection.created_at, locale)
                         })}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Folder className="h-4 w-4 text-amber-600" />
+                        <Folder className="h-4 w-4 text-brand" />
                         {itemCount} {itemLabel}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-amber-600" />
+                        <Star className="h-4 w-4 text-brand" />
                         {tc(collection.star_count ?? 0, "{count} star", "{count} stars")}
                       </div>
                     </div>
@@ -316,7 +293,7 @@ export default function CollectionsPage() {
                       </Button>
                     </div>
                   </div>
-                </div>
+                </Card>
               );
             })}
           </div>
