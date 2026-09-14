@@ -116,8 +116,8 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 
 4. Access the application:
    - Frontend: `http://localhost:3010`
-   - Backend API: `http://localhost:8000`
-   - Health check: `http://localhost:8000/health`
+   - Backend API: `http://localhost:8050`
+   - Health check: `http://localhost:8050/health`
 
 ### Nginx Reverse Proxy
 
@@ -143,7 +143,7 @@ server {
 
     # Optional: route API calls directly to the backend
     location /api/ {
-        proxy_pass http://127.0.0.1:8000/;
+        proxy_pass http://127.0.0.1:8050/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -184,8 +184,10 @@ npm run dev
 
 Keep the default client API URL (`/api`) so authentication cookies use the same origin.
 Configure SMTP and `PUBLIC_APP_URL` for verification/reset links, or set
-`AUTO_VERIFY_EMAIL=true` for local development. Failed SMTP delivery returns a
-retryable error; the verification page can resend mail for an existing account.
+`AUTO_VERIFY_EMAIL=true` for local development. Failed registration delivery rolls
+back the account and returns a retryable error. The verification page can resend
+mail for an existing account. Password-reset requests keep a generic response to
+avoid revealing account existence; failed delivery rolls back the reset token.
 
 ### Updating an existing installation
 

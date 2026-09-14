@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class EmailDeliveryError(RuntimeError):
-    pass
+    """Raised when an email cannot be accepted for delivery."""
 
 
 def send_email(to_email: str, subject: str, body: str) -> None:

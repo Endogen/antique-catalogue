@@ -101,16 +101,29 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)) -> Message
         )
         db.add(email_token)
 
+    if settings.auto_verify_email:
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
+            )
+        return MessageResponse(message="Account created")
+
     try:
+        send_verification_email(request.email, token or "")
         db.commit()
+    except EmailDeliveryError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Verification email could not be sent. Please try again later.",
+        )
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
-    if settings.auto_verify_email:
-        return MessageResponse(message="Account created")
-
-    _deliver_email(send_verification_email, request.email, token or "")
     return MessageResponse(message="Verification email sent")
 
 
@@ -336,9 +349,13 @@ def forgot_password(
         expires_at=expires_at,
     )
     db.add(email_token)
-    db.commit()
+    try:
+        send_password_reset_email(user.email, token)
+        db.commit()
+    except EmailDeliveryError:
+        db.rollback()
+        return MessageResponse(message="If the account exists, a reset email has been sent")
 
-    _deliver_email(send_password_reset_email, user.email, token)
     return MessageResponse(message="If the account exists, a reset email has been sent")
 
 

@@ -51,6 +51,7 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "0 items catalogued": "0 Objekte katalogisiert",
   "Access": "Zugriff",
   "Account created in your studio archive.": "Konto in deinem Studio-Archiv erstellt.",
+  "You can sign in now with the email and password you just created.": "Du kannst dich jetzt mit der gerade erstellten E-Mail-Adresse und dem Passwort anmelden.",
   "Account locked": "Konto gesperrt",
   "Account deletion failed. Please try again.": "Kontolöschung fehlgeschlagen. Bitte erneut versuchen.",
   "Account ID": "Konto-ID",

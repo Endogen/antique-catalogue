@@ -6,6 +6,7 @@ from importlib.util import find_spec
 from io import BytesIO
 
 import httpx
+import pytest
 from sqlalchemy import select
 
 from app.core.settings import settings
@@ -21,6 +22,14 @@ else:
     PIL_AVAILABLE = True
 
 MULTIPART_AVAILABLE = find_spec("multipart") is not None
+
+
+@pytest.fixture(autouse=True)
+def _stub_email_delivery(monkeypatch):
+    from app.api import auth as auth_api
+
+    monkeypatch.setattr(auth_api, "send_verification_email", lambda to_email, token: None)
+    monkeypatch.setattr(auth_api, "send_password_reset_email", lambda to_email, token: None)
 
 
 def _get_token(session_factory, *, email: str, token_type: str) -> str:

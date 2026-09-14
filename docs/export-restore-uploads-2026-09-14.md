@@ -44,7 +44,7 @@ this photo queue.
 
 ## Local validation
 
-- Full backend suite: **96 passed**, including ten transfer tests.
+- Full backend suite after integrating the remote authentication updates: **98 passed**, including ten transfer tests.
 - Frontend regression suite: **8 passed**.
 - Production Chromium workflows: **5 passed**, including download/preview/restore
   and a simulated network loss after 1MB followed by reload/resume from that offset.

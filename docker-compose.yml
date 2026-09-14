@@ -4,7 +4,7 @@ services:
       context: ./backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8050:8000"
     environment:
       APP_ENV: "${APP_ENV:-production}"
       DATABASE_URL: "sqlite:////app/data/antique_catalogue.db"
@@ -38,7 +38,7 @@ services:
       context: ./frontend
     restart: unless-stopped
     ports:
-      - "3010:3000"
+      - "127.0.0.1:3010:3000"
     environment:
       # Uses /api by default (relative URL, works on any domain)
       # Set NEXT_PUBLIC_API_URL for local dev: http://localhost:8000

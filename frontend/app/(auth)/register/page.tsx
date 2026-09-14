@@ -55,6 +55,7 @@ export default function RegisterPage() {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [submittedEmail, setSubmittedEmail] = React.useState<string | null>(null);
+  const [requiresVerification, setRequiresVerification] = React.useState(false);
 
   const registerSchema = React.useMemo(() => createRegisterSchema(t), [t]);
 
@@ -80,12 +81,14 @@ export default function RegisterPage() {
   const onSubmit = async (values: RegisterFormValues) => {
     setFormError(null);
     setSuccessMessage(null);
+    setRequiresVerification(false);
     try {
       const response = await authApi.register({
         email: values.email,
         password: values.password
       });
       setSubmittedEmail(values.email);
+      setRequiresVerification(response.message === "Verification email sent");
       setSuccessMessage(
         response.message || "Check your inbox for the verification link."
       );
@@ -163,12 +166,17 @@ export default function RegisterPage() {
               className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
             >
               <p className="font-medium">{t(successMessage)}</p>
-              {submittedEmail ? (
+              {submittedEmail && requiresVerification ? (
                 <p className="mt-2 text-xs text-emerald-700">
                   {t(
                     "We sent a verification token to {email}. Enter it on the verification page to activate your account.",
                     { email: submittedEmail }
                   )}
+                </p>
+              ) : null}
+              {submittedEmail && !requiresVerification ? (
+                <p className="mt-2 text-xs text-emerald-700">
+                  {t("You can sign in now with the email and password you just created.")}
                 </p>
               ) : null}
             </div>
@@ -244,13 +252,23 @@ export default function RegisterPage() {
               className="w-full"
               disabled={isSubmitting || isLocked}
             >
-              {isLocked
+              {isLocked && requiresVerification
                 ? t("Check your email")
+                : isLocked
+                ? t("Account created")
                 : isSubmitting
                 ? t("Creating account...")
                 : t("Create account")}
             </Button>
           </form>
+
+          {submittedEmail && !requiresVerification ? (
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/login">{t("Sign in")}</Link>
+              </Button>
+            </div>
+          ) : null}
 
           <p className="mt-6 text-xs text-stone-500">
             {t(

@@ -301,6 +301,16 @@ def test_delivery_failure_is_visible_and_resend_can_recover(app_with_db, db_sess
                     "/auth/register", json={"email": "mail@example.com", "password": "strongpass"}
                 )
             assert r.status_code == 503
+            # Registration now rolls back failed delivery, so retry can create the account.
+            r = await c.post(
+                "/auth/register", json={"email": "mail@example.com", "password": "strongpass"}
+            )
+            assert r.status_code == 201
+            with patch("app.services.email.send_email", side_effect=EmailDeliveryError("offline")):
+                failed_resend = await c.post(
+                    "/auth/resend-verification", json={"email": "mail@example.com"}
+                )
+            assert failed_resend.status_code == 503
             r = await c.post("/auth/resend-verification", json={"email": "mail@example.com"})
             assert r.status_code == 200
             with db_session_factory() as db:
