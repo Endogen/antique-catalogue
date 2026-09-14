@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+from contextlib import contextmanager
 from pathlib import Path
 
 from app.core.settings import settings
@@ -60,26 +61,31 @@ def delete_user_uploads(user_id: int) -> None:
     _remove_tree(avatar_upload_dir(user_id))
 
 
+@contextmanager
 def move_item_uploads(
     owner_id: int,
     source_collection_id: int,
     target_collection_id: int,
     item_id: int,
-) -> None:
-    """Relocate an item's image directory when the item changes collection."""
+):
+    """Stage a copy, commit the database inside the context, then remove the source.
+
+    A copy/commit failure leaves the source intact and removes only this attempt's
+    staged directory. The caller must roll back its database transaction.
+    """
     source = item_upload_dir(owner_id, source_collection_id, item_id)
     if not source.exists():
+        yield
         return
     target = item_upload_dir(owner_id, target_collection_id, item_id)
-    if target.exists():
-        logger.warning(
-            "Upload move target %s already exists; leaving files at %s", target, source
-        )
-        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # Reserve the destination atomically so we never remove another move's files.
+    target.mkdir()
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(source), str(target))
-    except OSError:
-        logger.warning(
-            "Failed to move upload directory %s -> %s", source, target, exc_info=True
-        )
+        shutil.copytree(source, target, dirs_exist_ok=True)
+        yield
+    except BaseException:
+        _remove_tree(target)
+        raise
+    else:
+        _remove_tree(source)

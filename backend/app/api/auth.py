@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ from app.core.security import (
 )
 from app.core.settings import settings
 from app.db.session import get_db
+from app.models.auth_session import AuthSession
 from app.models.email_token import EmailToken
 from app.models.user import User
 from app.schemas.auth import (
@@ -32,7 +33,11 @@ from app.schemas.auth import (
     VerifyRequest,
 )
 from app.schemas.responses import MessageResponse
-from app.services.email import send_password_reset_email, send_verification_email
+from app.services.email import (
+    EmailDeliveryError,
+    send_password_reset_email,
+    send_verification_email,
+)
 from app.services.uploads import delete_user_uploads
 
 VERIFY_TOKEN_EXPIRE_HOURS = 24
@@ -105,7 +110,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)) -> Message
     if settings.auto_verify_email:
         return MessageResponse(message="Account created")
 
-    send_verification_email(request.email, token or "")
+    _deliver_email(send_verification_email, request.email, token or "")
     return MessageResponse(message="Verification email sent")
 
 
@@ -191,10 +196,21 @@ def login(
     if not user.is_verified:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email not verified")
 
-    access_token = create_access_token(str(user.id))
+    db.execute(delete(AuthSession).where(AuthSession.expires_at <= datetime.now(timezone.utc)))
+    session = AuthSession(
+        id=secrets.token_hex(32),
+        user_id=user.id,
+        refresh_id=secrets.token_hex(32),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+    )
+    db.add(session)
+    db.commit()
+    claims = {"ver": user.session_version, "sid": session.id}
+    access_token = create_access_token(str(user.id), additional_claims=claims)
     refresh_token = create_refresh_token(
         str(user.id),
         expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        additional_claims={**claims, "jti": session.refresh_id},
     )
     _set_refresh_cookie(response, refresh_token)
 
@@ -241,7 +257,7 @@ def refresh_access_token(
         )
 
     user = db.get(User, user_id)
-    if not user or not user.is_active:
+    if not user or not user.is_active or payload.get("ver", 0) != user.session_version:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
@@ -250,10 +266,31 @@ def refresh_access_token(
     if not user.is_verified:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email not verified")
 
-    access_token = create_access_token(str(user.id))
+    session_id = payload.get("sid")
+    refresh_id = secrets.token_hex(32)
+    rotated = db.execute(
+        update(AuthSession)
+        .where(
+            AuthSession.id == session_id,
+            AuthSession.user_id == user.id,
+            AuthSession.refresh_id == payload.get("jti"),
+            AuthSession.expires_at > datetime.now(timezone.utc),
+        )
+        .values(
+            refresh_id=refresh_id,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        )
+    )
+    if rotated.rowcount != 1:
+        db.rollback()
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    db.commit()
+    claims = {"ver": user.session_version, "sid": session_id}
+    access_token = create_access_token(str(user.id), additional_claims=claims)
     new_refresh_token = create_refresh_token(
         str(user.id),
         expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        additional_claims={**claims, "jti": refresh_id},
     )
     _set_refresh_cookie(response, new_refresh_token)
 
@@ -265,7 +302,19 @@ def refresh_access_token(
 
 
 @router.post("/logout", response_model=MessageResponse)
-def logout(response: Response) -> MessageResponse:
+def logout(
+    response: Response,
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_TOKEN_COOKIE),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    if refresh_token:
+        try:
+            payload = decode_token(refresh_token)
+            if payload.get("type") == "refresh":
+                db.execute(delete(AuthSession).where(AuthSession.id == payload.get("sid")))
+                db.commit()
+        except TokenError:
+            pass
     _clear_refresh_cookie(response)
     return MessageResponse(message="Logged out")
 
@@ -289,7 +338,7 @@ def forgot_password(
     db.add(email_token)
     db.commit()
 
-    send_password_reset_email(user.email, token)
+    _deliver_email(send_password_reset_email, user.email, token)
     return MessageResponse(message="If the account exists, a reset email has been sent")
 
 
@@ -322,6 +371,13 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reset token expired")
 
     user.password_hash = hash_password(request.password)
+    user.session_version += 1
+    db.execute(delete(AuthSession).where(AuthSession.user_id == user.id))
+    db.execute(
+        update(EmailToken)
+        .where(EmailToken.user_id == user.id, EmailToken.used_at.is_(None))
+        .values(used_at=now)
+    )
     email_token.used_at = now
     db.add(user)
     db.add(email_token)
@@ -347,3 +403,49 @@ def delete_me(
     delete_user_uploads(user_id)
     _clear_refresh_cookie(response)
     return MessageResponse(message="Account deleted")
+
+
+def _deliver_email(sender, email: str, token: str) -> None:
+    try:
+        sender(email, token)
+    except EmailDeliveryError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Email delivery is temporarily unavailable. Please request a new email.",
+        ) from exc
+
+
+@router.post(
+    "/resend-verification",
+    response_model=MessageResponse,
+    dependencies=[Depends(rate_limit("resend-verification", limit=5, window_seconds=60))],
+)
+def resend_verification(
+    request: ForgotPasswordRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
+    user = db.execute(select(User).where(User.email == request.email)).scalar_one_or_none()
+    message = "If the account needs verification, a new email has been sent."
+    if not user or not user.is_active or user.is_verified:
+        return MessageResponse(message=message)
+    now = datetime.now(timezone.utc)
+    db.execute(
+        update(EmailToken)
+        .where(
+            EmailToken.user_id == user.id,
+            EmailToken.token_type == "verify",
+            EmailToken.used_at.is_(None),
+        )
+        .values(used_at=now)
+    )
+    token = _generate_unique_token(db, "verification")
+    db.add(
+        EmailToken(
+            user_id=user.id,
+            token=token,
+            token_type="verify",
+            expires_at=now + timedelta(hours=VERIFY_TOKEN_EXPIRE_HOURS),
+        )
+    )
+    db.commit()
+    _deliver_email(send_verification_email, user.email, token)
+    return MessageResponse(message=message)

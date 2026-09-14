@@ -3,7 +3,7 @@
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Globe2, Lock } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export function CollectionForm({
     formState: { errors, isSubmitting },
     reset,
     setValue,
-    watch
+    control
   } = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: defaults
@@ -68,7 +68,7 @@ export function CollectionForm({
     reset(defaults);
   }, [defaults, reset]);
 
-  const isPublic = watch("is_public");
+  const isPublic = useWatch({ control, name: "is_public" });
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>

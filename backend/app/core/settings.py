@@ -103,6 +103,7 @@ class Settings:
     smtp_from: str | None
     smtp_use_tls: bool
     uploads_path: str
+    public_app_url: str = "http://localhost:3010"
 
     @property
     def uploads_dir(self) -> Path:
@@ -129,6 +130,7 @@ def get_settings() -> Settings:
 
     return Settings(
         app_env=app_env,
+        public_app_url=os.environ.get("PUBLIC_APP_URL", "http://localhost:3010"),
         database_url=database_url,
         jwt_secret=jwt_secret,
         jwt_algorithm=os.environ.get("JWT_ALGORITHM", "HS256"),

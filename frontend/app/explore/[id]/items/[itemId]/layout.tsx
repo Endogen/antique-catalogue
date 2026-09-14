@@ -15,10 +15,11 @@ type Props = {
 export async function generateMetadata({
   params
 }: {
-  params: { id: string; itemId: string };
+  params: Promise<{ id: string; itemId: string }>;
 }): Promise<Metadata> {
-  const encodedCollectionId = encodeURIComponent(params.id);
-  const encodedItemId = encodeURIComponent(params.itemId);
+  const resolvedParams = await params;
+  const encodedCollectionId = encodeURIComponent(resolvedParams.id);
+  const encodedItemId = encodeURIComponent(resolvedParams.itemId);
 
   const [collection, item] = await Promise.all([
     fetchApiJson<CollectionResponse>(`/public/collections/${encodedCollectionId}`),
@@ -33,13 +34,13 @@ export async function generateMetadata({
   const description =
     item?.notes?.trim() || `View this public item from ${collectionName} on Antique Catalogue.`;
 
-  const pageUrl = buildSiteUrl(
+  const pageUrl = await buildSiteUrl(
     `/explore/${encodedCollectionId}/items/${encodedItemId}`
   );
   const primaryImageId = item?.primary_image_id ?? null;
   const imageUrl =
-    (primaryImageId ? buildApiAssetUrl(`/images/${primaryImageId}/medium.jpg`) : null) ??
-    buildSiteUrl("/logo.png") ??
+    (primaryImageId ? await buildApiAssetUrl(`/images/${primaryImageId}/medium.jpg`) : null) ??
+    await buildSiteUrl("/logo.png") ??
     undefined;
 
   return {

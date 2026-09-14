@@ -15,25 +15,26 @@ type Props = {
 export async function generateMetadata({
   params
 }: {
-  params: { username: string };
+  params: Promise<{ username: string }>;
 }): Promise<Metadata> {
-  const encodedUsername = encodeURIComponent(params.username);
+  const resolvedParams = await params;
+  const encodedUsername = encodeURIComponent(resolvedParams.username);
   const profile = await fetchApiJson<PublicProfileResponse>(
     `/profiles/${encodedUsername}`
   );
 
-  const username = profile?.username ?? params.username;
+  const username = profile?.username ?? resolvedParams.username;
   const title = `@${username} | Antique Catalogue`;
   const description = profile
     ? `View @${username}'s public archive with ${profile.public_collection_count} collections and ${profile.public_item_count} items.`
     : `View @${username}'s public archive on Antique Catalogue.`;
 
-  const pageUrl = buildSiteUrl(`/profile/${encodeURIComponent(username)}`);
+  const pageUrl = await buildSiteUrl(`/profile/${encodeURIComponent(username)}`);
   const avatarUrl =
     profile?.has_avatar && profile.id
-      ? buildApiAssetUrl(`/avatars/${profile.id}/medium.jpg`)
+      ? await buildApiAssetUrl(`/avatars/${profile.id}/medium.jpg`)
       : null;
-  const imageUrl = avatarUrl ?? buildSiteUrl("/logo.png") ?? undefined;
+  const imageUrl = avatarUrl ?? await buildSiteUrl("/logo.png") ?? undefined;
 
   return {
     title,

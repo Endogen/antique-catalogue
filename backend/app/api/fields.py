@@ -9,6 +9,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.collection import Collection
 from app.models.field_definition import FieldDefinition
+from app.models.item import Item
 from app.models.user import User
 from app.schemas.fields import (
     FieldDefinitionCreateRequest,
@@ -17,6 +18,8 @@ from app.schemas.fields import (
     FieldDefinitionUpdateRequest,
 )
 from app.schemas.responses import MessageResponse
+from app.services.metadata import MetadataValidationError, validate_metadata
+from app.services.metadata_preservation import preserve_values
 
 router = APIRouter(prefix="/collections/{collection_id}/fields", tags=["fields"])
 
@@ -211,7 +214,32 @@ def update_field(
             )
         new_options = None
 
-    if "name" in data:
+    items = db.scalars(select(Item).where(Item.collection_id == collection_id)).all()
+    if new_field_type != field.field_type or new_options != field.options:
+        candidate = FieldDefinition(
+            name=field.name, field_type=new_field_type, is_required=False, options=new_options
+        )
+        for item in items:
+            if field.name not in (item.metadata_ or {}):
+                continue
+            try:
+                validate_metadata([candidate], {field.name: item.metadata_[field.name]})
+            except MetadataValidationError as exc:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "Existing item values are incompatible with this field change. "
+                        "Update those values first."
+                    ),
+                ) from exc
+    if "name" in data and data["name"] != field.name:
+        for item in items:
+            values = dict(item.metadata_ or {})
+            if field.name in values:
+                if data["name"] in values:
+                    preserve_values(item, {data["name"]: values[data["name"]]}, "Field rename")
+                values[data["name"]] = values.pop(field.name)
+                item.metadata_ = values
         field.name = data["name"]
     if "field_type" in data:
         field.field_type = data["field_type"]
@@ -242,6 +270,11 @@ def delete_field(
     db: Session = Depends(get_db),
 ) -> MessageResponse:
     field = _get_field_or_404(db, collection_id, field_id, current_user.id)
+    for item in db.scalars(select(Item).where(Item.collection_id == collection_id)).all():
+        values = dict(item.metadata_ or {})
+        if field.name in values:
+            preserve_values(item, {field.name: values.pop(field.name)}, "Deleted field")
+            item.metadata_ = values
     db.delete(field)
     db.commit()
     return MessageResponse(message="Field deleted")

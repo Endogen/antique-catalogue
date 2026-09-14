@@ -11,6 +11,7 @@ import { z } from "zod";
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { VerificationResend } from "@/components/verification-resend";
 import { authApi, isApiError } from "@/lib/api";
 
 const createVerifySchema = (t: (key: string) => string) =>
@@ -203,12 +204,12 @@ function VerifyContent() {
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
             <span>{t("Need a fresh token?")}</span>
-            <Link
-              href="/register"
+            <a
+              href="#resend-verification"
               className="font-medium text-amber-700 hover:text-amber-800"
             >
-              {t("Create a new account")}
-            </Link>
+              {t("Resend verification email")}
+            </a>
           </div>
         </section>
       </div>
@@ -243,15 +244,11 @@ function VerifyContent() {
           </ul>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-stone-200 bg-white/85 p-6 shadow-sm">
+        <div id="resend-verification" className="mt-6 rounded-3xl border border-stone-200 bg-white/85 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-stone-500">
             {t("Helpful tip")}
           </p>
-          <p className="mt-3 text-sm text-stone-700">
-            {t(
-              "Verification tokens are time-sensitive. If yours has expired, request a new one by registering again."
-            )}
-          </p>
+          <VerificationResend />
         </div>
       </aside>
     </>

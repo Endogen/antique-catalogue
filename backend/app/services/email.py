@@ -3,60 +3,63 @@ from __future__ import annotations
 import logging
 import smtplib
 import ssl
+import time
 from email.message import EmailMessage
+from urllib.parse import urlencode
 
 from app.core.settings import settings
 
 logger = logging.getLogger(__name__)
 
 
-def _smtp_login(smtp: smtplib.SMTP) -> None:
-    if settings.smtp_user and settings.smtp_password:
-        smtp.login(settings.smtp_user, settings.smtp_password)
+class EmailDeliveryError(RuntimeError):
+    pass
 
 
 def send_email(to_email: str, subject: str, body: str) -> None:
     if not settings.smtp_host or not settings.smtp_from:
-        logger.warning("SMTP not configured; skipping email to %s", to_email)
-        return
-
-    logger.info("Sending email to %s via %s", to_email, settings.smtp_host)
-
+        raise EmailDeliveryError("SMTP is not configured")
     message = EmailMessage()
-    message["Subject"] = subject
-    message["From"] = settings.smtp_from
-    message["To"] = to_email
+    message["Subject"], message["From"], message["To"] = subject, settings.smtp_from, to_email
     message.set_content(body)
+    for attempt in range(3):
+        try:
+            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
+                if settings.smtp_use_tls:
+                    smtp.starttls(context=ssl.create_default_context())
+                if settings.smtp_user and settings.smtp_password:
+                    smtp.login(settings.smtp_user, settings.smtp_password)
+                smtp.send_message(message)
+            return
+        except (OSError, smtplib.SMTPException) as exc:
+            if attempt == 2:
+                logger.error("Email delivery failed after three attempts")
+                raise EmailDeliveryError("Email delivery failed") from exc
+            time.sleep(0.2 * (attempt + 1))
 
-    try:
-        if settings.smtp_use_tls:
-            context = ssl.create_default_context()
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as smtp:
-                smtp.starttls(context=context)
-                _smtp_login(smtp)
-                smtp.send_message(message)
-        else:
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as smtp:
-                _smtp_login(smtp)
-                smtp.send_message(message)
-        logger.info("Email sent successfully to %s", to_email)
-    except Exception as e:
-        logger.error("Failed to send email to %s: %s", to_email, str(e))
+
+def _link(path: str, token: str) -> str:
+    return f"{settings.public_app_url.rstrip('/')}{path}?{urlencode({'token': token})}"
 
 
 def send_verification_email(to_email: str, token: str) -> None:
-    subject = "Verify your Antique Catalogue account"
-    body = (
-        "Thanks for registering. Use the verification token below to activate your account.\n\n"
-        f"Verification token: {token}\n"
+    send_email(
+        to_email,
+        "Verify your Antique Catalogue account",
+        (
+            "Activate your account using this link (valid for 24 hours):\n\n"
+            f"{_link('/verify', token)}\n\nVerification token: {token}\n"
+            "If the link expires, request another email on the verification page.\n"
+        ),
     )
-    send_email(to_email, subject, body)
 
 
 def send_password_reset_email(to_email: str, token: str) -> None:
-    subject = "Reset your Antique Catalogue password"
-    body = (
-        "Use the password reset token below to set a new password.\n\n"
-        f"Password reset token: {token}\n"
+    send_email(
+        to_email,
+        "Reset your Antique Catalogue password",
+        (
+            "Set a new password using this link (valid for 2 hours):\n\n"
+            f"{_link('/reset-password', token)}\n\nPassword reset token: {token}\n"
+        ),
     )
-    send_email(to_email, subject, body)

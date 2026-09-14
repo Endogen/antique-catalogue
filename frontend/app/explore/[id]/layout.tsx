@@ -12,8 +12,9 @@ type Props = {
   children: ReactNode;
 };
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const encodedCollectionId = encodeURIComponent(params.id);
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const resolvedParams = await params;
+  const encodedCollectionId = encodeURIComponent(resolvedParams.id);
   const [collection, firstItem] = await Promise.all([
     fetchApiJson<CollectionResponse>(`/public/collections/${encodedCollectionId}`),
     fetchApiJson<ItemResponse[]>(`/public/collections/${encodedCollectionId}/items?limit=1`)
@@ -25,11 +26,11 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const description =
     collection?.description?.trim() || "Explore this public collection on Antique Catalogue.";
 
-  const pageUrl = buildSiteUrl(`/explore/${encodedCollectionId}`);
+  const pageUrl = await buildSiteUrl(`/explore/${encodedCollectionId}`);
   const primaryImageId = firstItem?.[0]?.primary_image_id ?? null;
   const imageUrl =
-    (primaryImageId ? buildApiAssetUrl(`/images/${primaryImageId}/medium.jpg`) : null) ??
-    buildSiteUrl("/logo.png") ??
+    (primaryImageId ? await buildApiAssetUrl(`/images/${primaryImageId}/medium.jpg`) : null) ??
+    await buildSiteUrl("/logo.png") ??
     undefined;
 
   return {

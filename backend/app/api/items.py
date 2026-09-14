@@ -14,10 +14,11 @@ from app.models.item import Item
 from app.models.item_image import ItemImage
 from app.models.item_star import ItemStar
 from app.models.user import User
-from app.schemas.items import ItemCreateRequest, ItemResponse, ItemUpdateRequest
+from app.schemas.items import ItemCreateRequest, ItemResponse, ItemUpdateRequest, OwnerItemResponse
 from app.schemas.responses import MessageResponse
 from app.services.activity import log_activity
 from app.services.metadata import MetadataValidationError, validate_metadata
+from app.services.metadata_preservation import plan_metadata_move, preserve_values
 from app.services.uploads import delete_item_uploads, move_item_uploads
 
 router = APIRouter(prefix="/collections/{collection_id}/items", tags=["items"])
@@ -327,8 +328,8 @@ def _filter_public_metadata(
     return filtered or None
 
 
-@router.get("", response_model=list[ItemResponse])
-@router.get("/", response_model=list[ItemResponse], include_in_schema=False)
+@router.get("", response_model=list[OwnerItemResponse])
+@router.get("/", response_model=list[OwnerItemResponse], include_in_schema=False)
 def list_items(
     collection_id: int,
     search: str | None = Query(
@@ -350,6 +351,7 @@ def list_items(
         False,
         description="Include draft items created via speed capture",
     ),
+    drafts_only: bool = Query(False, description="Return only draft items"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
     current_user: User = Depends(get_current_user),
@@ -370,7 +372,9 @@ def list_items(
     query = select(Item, primary_image_id, image_count, star_count).where(
         Item.collection_id == collection_id
     )
-    if not include_drafts:
+    if drafts_only:
+        query = query.where(Item.is_draft.is_(True))
+    elif not include_drafts:
         query = query.where(Item.is_draft.is_(False))
     if search_term:
         pattern = f"%{search_term}%"
@@ -392,10 +396,10 @@ def list_items(
     return items
 
 
-@router.post("", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=OwnerItemResponse, status_code=status.HTTP_201_CREATED)
 @router.post(
     "/",
-    response_model=ItemResponse,
+    response_model=OwnerItemResponse,
     status_code=status.HTTP_201_CREATED,
     include_in_schema=False,
 )
@@ -436,7 +440,7 @@ def create_item(
     return item
 
 
-@router.get("/{item_id}", response_model=ItemResponse)
+@router.get("/{item_id}", response_model=OwnerItemResponse)
 def get_item(
     collection_id: int,
     item_id: int,
@@ -461,7 +465,7 @@ def get_item(
     return item
 
 
-@router.patch("/{item_id}", response_model=ItemResponse)
+@router.patch("/{item_id}", response_model=OwnerItemResponse)
 def update_item(
     collection_id: int,
     item_id: int,
@@ -476,14 +480,19 @@ def update_item(
     moved_between_collections = False
 
     destination_collection_id = data.get("collection_id")
-    if (
-        destination_collection_id is not None
-        and destination_collection_id != item.collection_id
-    ):
-        target_collection = _get_collection_or_404(
-            db, destination_collection_id, current_user.id
+    if destination_collection_id is not None and destination_collection_id != item.collection_id:
+        target_collection = _get_collection_or_404(db, destination_collection_id, current_user.id)
+        plan = plan_metadata_move(
+            item,
+            _get_field_definitions(db, source_collection.id),
+            _get_field_definitions(db, target_collection.id),
         )
+        preserve_values(item, plan["preserved"], "Collection move")
+        item.metadata_ = plan["metadata"]
         item.collection_id = target_collection.id
+        item.is_featured = False
+        # Moving into a public collection requires a separate review/save before publication.
+        item.is_draft = item.is_draft or bool(plan["missing_fields"]) or target_collection.is_public
         moved_between_collections = True
 
     if "name" in data:
@@ -492,12 +501,20 @@ def update_item(
         item.notes = data["notes"]
     if "metadata" in data:
         field_definitions = _get_field_definitions(db, target_collection.id)
+        names = {field.name for field in field_definitions}
+        preserve_values(
+            item,
+            {k: v for k, v in (item.metadata_ or {}).items() if k not in names},
+            "Unassigned field",
+        )
         metadata = _validate_metadata_or_422(field_definitions, data["metadata"])
         item.metadata_ = metadata
     if "is_highlight" in data:
         item.is_highlight = data["is_highlight"]
 
-    if item.is_draft and ("name" in data or "metadata" in data):
+    if item.is_draft and not moved_between_collections and ("name" in data or "metadata" in data):
+        # All required values must be present before a draft becomes publicly visible.
+        _validate_metadata_or_422(_get_field_definitions(db, item.collection_id), item.metadata_)
         item.is_draft = False
 
     db.add(item)
@@ -527,14 +544,20 @@ def update_item(
             summary=summary,
             context=context,
         )
-    db.commit()
-    if moved_between_collections:
-        move_item_uploads(
-            current_user.id,
-            source_collection.id,
-            target_collection.id,
-            item_id,
-        )
+    try:
+        if moved_between_collections:
+            with move_item_uploads(
+                current_user.id, source_collection.id, target_collection.id, item_id
+            ):
+                db.commit()
+        else:
+            db.commit()
+    except OSError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Could not move item photos. The item has not been moved. Please retry.",
+        ) from exc
     db.refresh(item)
     image_id = db.execute(
         select(ItemImage.id)
@@ -671,3 +694,25 @@ def get_public_item(
     setattr(item, "owner_username", owner_username)
     item.metadata_ = _filter_public_metadata(item.metadata_, public_fields)
     return item
+
+
+@router.get("/{item_id}/move-preview")
+def preview_item_move(
+    collection_id: int,
+    item_id: int,
+    destination_collection_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    item = _get_item_or_404(db, collection_id, item_id, current_user.id)
+    target = _get_collection_or_404(db, destination_collection_id, current_user.id)
+    plan = plan_metadata_move(
+        item, _get_field_definitions(db, collection_id), _get_field_definitions(db, target.id)
+    )
+    return {
+        "transferred_fields": list(plan["metadata"]),
+        "preserved_fields": list(plan["preserved"]),
+        "missing_fields": plan["missing_fields"],
+        "destination_public": target.is_public,
+        "will_be_draft": item.is_draft or bool(plan["missing_fields"]) or target.is_public,
+    }

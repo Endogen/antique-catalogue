@@ -1,6 +1,6 @@
 import * as React from "react";
 
-const ACCESS_TOKEN_STORAGE_KEY = "antique_access_token";
+import { apiFetch } from "@/lib/api";
 
 /**
  * Fetches an image URL with the current Bearer token
@@ -20,23 +20,13 @@ export function useAuthenticatedImageUrl(url: string | null): string | null {
       return;
     }
 
+    setBlobUrl(null);
     let objectUrl: string | null = null;
     const controller = new AbortController();
 
     const fetchImage = async () => {
       try {
-        const token =
-          typeof window !== "undefined"
-            ? window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)
-            : null;
-
-        const headers: Record<string, string> = {};
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
-        const response = await fetch(url, {
-          headers,
+        const response = await apiFetch(url, {
           cache: "no-store",
           signal: controller.signal
         });
@@ -46,6 +36,7 @@ export function useAuthenticatedImageUrl(url: string | null): string | null {
         }
 
         const blob = await response.blob();
+        if (controller.signal.aborted) return;
         objectUrl = URL.createObjectURL(blob);
         setBlobUrl((previous) => {
           if (previous) {

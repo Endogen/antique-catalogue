@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String, false, func, true
+from sqlalchemy import Boolean, DateTime, Integer, String, false, func, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -28,6 +28,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     username: Mapped[str] = mapped_column(
         String(12), unique=True, nullable=False, default=_temporary_username
+    )
+    session_version: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
     )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     avatar_filename: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)

@@ -23,6 +23,9 @@ class Item(Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     metadata_: Mapped[dict[str, object] | None] = mapped_column("metadata", JSON, nullable=True)
+    preserved_metadata: Mapped[list[dict[str, object]]] = mapped_column(
+        JSON, default=list, server_default="[]", nullable=False
+    )
     notes: Mapped[str | None] = mapped_column(Text)
     is_featured: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=false(), nullable=False

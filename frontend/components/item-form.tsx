@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { timestampInput, serializeTimestamp } from "@/lib/metadata-form";
+
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import type { FieldDefinitionResponse, FieldOptions } from "@/lib/api";
@@ -41,6 +43,7 @@ type ItemFormProps = {
   submitPendingLabel?: string;
   secondaryAction?: React.ReactNode;
   formError?: string | null;
+  skipMetadataValidation?: boolean;
   render?: (sections: {
     formError: React.ReactNode | null;
     baseFields: React.ReactNode;
@@ -107,17 +110,8 @@ const normalizeDateInput = (value: string) => {
   return match ? match[1] : trimmed;
 };
 
-const normalizeDateTimeInput = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-  const normalized = trimmed.replace(" ", "T");
-  const match = normalized.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
-  return match ? match[1] : normalized;
-};
 
-const buildMetadataDefaults = (
+export const buildMetadataDefaults = (
   fields: FieldDefinitionResponse[],
   metadata?: Record<string, unknown> | null
 ) => {
@@ -164,7 +158,7 @@ const buildMetadataDefaults = (
     }
 
     if (field.field_type === "timestamp" && typeof raw === "string") {
-      defaults[key] = normalizeDateTimeInput(raw);
+      defaults[key] = timestampInput(raw);
       return;
     }
 
@@ -179,7 +173,7 @@ const buildMetadataDefaults = (
   return defaults;
 };
 
-const validateMetadata = (
+export const validateMetadata = (
   fields: FieldDefinitionResponse[],
   metadataValues: Record<string, unknown> | undefined,
   t: (key: string, params?: Record<string, string | number>) => string
@@ -343,6 +337,7 @@ export function ItemForm({
   submitPendingLabel,
   secondaryAction,
   formError,
+  skipMetadataValidation = false,
   render
 }: ItemFormProps) {
   const { t } = useI18n();
@@ -401,11 +396,9 @@ export function ItemForm({
     const normalizedName = values.name.trim();
     const normalizedNotes = values.notes?.trim() ? values.notes.trim() : null;
 
-    const { payload, errors: metadataErrors } = validateMetadata(
-      sortedFields,
-      values.metadata,
-      t
-    );
+    const { payload, errors: metadataErrors } = skipMetadataValidation
+      ? { payload: null, errors: [] }
+      : validateMetadata(sortedFields, values.metadata, t);
 
     if (metadataErrors.length) {
       metadataErrors.forEach((error) => {
@@ -417,6 +410,13 @@ export function ItemForm({
       return;
     }
 
+    if (payload) {
+      sortedFields.forEach((field) => {
+        if (field.field_type === "timestamp" && typeof payload[field.name] === "string") {
+          payload[field.name] = serializeTimestamp(payload[field.name] as string, initialValues?.metadata?.[field.name]);
+        }
+      });
+    }
     await onSubmit({
       name: normalizedName,
       notes: normalizedNotes,
@@ -613,7 +613,7 @@ export function ItemForm({
                             ? "datetime-local"
                             : "text"
                     }
-                    step={field.field_type === "number" ? "any" : undefined}
+                    step={field.field_type === "number" || field.field_type === "timestamp" ? "any" : undefined}
                     className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 shadow-sm transition focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-200"
                     aria-invalid={errorMessage ? "true" : "false"}
                       placeholder={

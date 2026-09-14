@@ -30,6 +30,7 @@ import {
   type CollectionResponse,
   type FieldDefinitionResponse,
   type ItemUpdatePayload,
+  type MovePreview,
   type ItemResponse
 } from "@/lib/api";
 import { formatMetadataNumber } from "@/lib/format";
@@ -169,6 +170,8 @@ export default function ItemDetailPage() {
     data: []
   });
   const [isEditing, setIsEditing] = React.useState(false);
+  const [movePreview, setMovePreview] = React.useState<MovePreview | null>(null);
+  const [movePreviewError, setMovePreviewError] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
   const [imageRefreshToken, setImageRefreshToken] = React.useState(0);
@@ -221,6 +224,18 @@ export default function ItemDetailPage() {
     Number.isInteger(currentCollectionIdNumber) &&
     isDestinationCollectionValid &&
     destinationCollectionIdNumber !== currentCollectionIdNumber;
+
+  React.useEffect(() => {
+    setMovePreview(null);
+    setMovePreviewError(null);
+    if (!isMovingToAnotherCollection || !collectionId || !itemId) return;
+    let active = true;
+    itemApi.previewMove(collectionId, itemId, destinationCollectionIdNumber).then(
+      preview => { if (active) setMovePreview(preview); },
+      error => { if (active) setMovePreviewError(isApiError(error) ? error.detail : "Could not preview this move. Please retry."); }
+    );
+    return () => { active = false; };
+  }, [isMovingToAnotherCollection, collectionId, itemId, destinationCollectionIdNumber]);
 
   const canEdit = itemState.status === "ready" && fieldsState.status !== "error";
   const confirmDeleteMatches = deletePhrase.trim().toUpperCase() === DELETE_TOKEN;
@@ -437,6 +452,10 @@ export default function ItemDetailPage() {
       return;
     }
 
+    if (isMovingToAnotherCollection && !movePreview) {
+      setFormError(movePreviewError ?? "Please wait for the move preview.");
+      return;
+    }
     const payload: ItemUpdatePayload = {
       name: values.name,
       notes: values.notes,
@@ -500,6 +519,7 @@ export default function ItemDetailPage() {
 
   return (
     <div className="space-y-8">
+      {itemState.data?.is_draft && <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{t("This item is a private draft. Complete its fields and save to publish it in this collection.")}</p>}
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-3">
           <Button variant="ghost" size="sm" asChild>
@@ -590,7 +610,8 @@ export default function ItemDetailPage() {
                 is_highlight: itemState.data?.is_highlight ?? false
               }}
               onSubmit={handleSubmit}
-              submitLabel={t("Save changes")}
+              skipMetadataValidation={isMovingToAnotherCollection}
+              submitLabel={t(itemState.data?.is_draft && collectionState.data?.is_public && !isMovingToAnotherCollection ? "Save and publish" : "Save changes")}
               submitPendingLabel={t("Saving changes...")}
               secondaryAction={
                 <Button
@@ -729,8 +750,14 @@ export default function ItemDetailPage() {
                         </div>
                       ) : isMovingToAnotherCollection ? (
                         <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-800">
-                          {t(
-                            "Move this item first, then edit metadata using the destination collection schema."
+                          <p>{t("Move preview")}</p>
+                          {movePreviewError ? <p role="alert">{t(movePreviewError)}</p> : !movePreview ? <p>{t("Loading...")}</p> : (
+                            <div className="mt-2 space-y-2">
+                              <p>{t("Fields transferred")}: {movePreview.transferred_fields.join(", ") || "—"}</p>
+                              <p>{t("Values preserved privately")}: {movePreview.preserved_fields.join(", ") || "—"}</p>
+                              {movePreview.missing_fields.length > 0 && <p>{t("Required fields to complete")}: {movePreview.missing_fields.join(", ")}</p>}
+                              {movePreview.will_be_draft && <p>{t("The moved item will be a private draft until you review and save it.")}</p>}
+                            </div>
                           )}
                         </div>
                       ) : (
@@ -998,6 +1025,17 @@ export default function ItemDetailPage() {
                     )}
                   </div>
 
+                  {(itemState.data?.preserved_metadata?.length ?? 0) > 0 && (
+                    <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                      <h3 className="font-medium">{t("Values preserved privately")}</h3>
+                      <p className="mt-2 text-sm">{t("These values are visible only to you. Copy a value into a current field when you want to use it again.")}</p>
+                      <dl className="mt-3 space-y-2">
+                        {itemState.data?.preserved_metadata?.map((entry, index) => (
+                          <div key={index}><dt className="text-sm font-medium">{entry.name}</dt><dd className="break-words text-sm">{formatFieldValue(entry.value)}</dd></div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
                   {additionalMetadata.length > 0 ? (
                     <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
                       <p className="text-xs uppercase tracking-[0.3em] text-stone-500">

@@ -13,7 +13,7 @@ const getConfiguredApiBase = () =>
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "/api";
 
-const resolveApiFetchCandidates = (path: string): string[] => {
+const resolveApiFetchCandidates = async (path: string): Promise<string[]> => {
   const normalized = normalizePath(path);
   const configured = getConfiguredApiBase();
   const internalConfigured =
@@ -35,7 +35,7 @@ const resolveApiFetchCandidates = (path: string): string[] => {
     return [...new Set(urls)];
   }
 
-  const requestHeaders = headers();
+  const requestHeaders = await headers();
   const protocol =
     parseForwardedValue(requestHeaders.get("x-forwarded-proto")) || "http";
   const host =
@@ -56,8 +56,8 @@ const resolveApiFetchCandidates = (path: string): string[] => {
   return [...new Set(urls)];
 };
 
-export const getSiteOrigin = (): string | null => {
-  const requestHeaders = headers();
+export const getSiteOrigin = async (): Promise<string | null> => {
+  const requestHeaders = await headers();
   const protocol =
     parseForwardedValue(requestHeaders.get("x-forwarded-proto")) || "http";
   const host =
@@ -69,15 +69,15 @@ export const getSiteOrigin = (): string | null => {
   return `${protocol}://${host}`;
 };
 
-export const buildSiteUrl = (path: string): string | null => {
-  const origin = getSiteOrigin();
+export const buildSiteUrl = async (path: string): Promise<string | null> => {
+  const origin = await getSiteOrigin();
   if (!origin) {
     return null;
   }
   return `${origin}${normalizePath(path)}`;
 };
 
-export const buildApiAssetUrl = (path: string): string | null => {
+export const buildApiAssetUrl = async (path: string): Promise<string | null> => {
   const normalized = normalizePath(path);
   const configured = getConfiguredApiBase();
 
@@ -85,7 +85,7 @@ export const buildApiAssetUrl = (path: string): string | null => {
     return `${stripTrailingSlash(configured)}${normalized}`;
   }
 
-  const origin = getSiteOrigin();
+  const origin = await getSiteOrigin();
   if (!origin) {
     return null;
   }
@@ -96,7 +96,7 @@ export const buildApiAssetUrl = (path: string): string | null => {
 };
 
 export async function fetchApiJson<T>(path: string): Promise<T | null> {
-  const candidates = resolveApiFetchCandidates(path);
+  const candidates = await resolveApiFetchCandidates(path);
   for (const url of candidates) {
     try {
       const response = await fetch(url, { cache: "no-store" });

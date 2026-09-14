@@ -167,7 +167,7 @@ def test_refresh_logout_and_reset(app_with_db, db_session_factory) -> None:
                 "/auth/me",
                 headers={"Authorization": f"Bearer {access_token}"},
             )
-            assert me.status_code == 200
+            assert me.status_code == 401
 
     asyncio.run(_flow())
 

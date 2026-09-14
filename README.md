@@ -8,11 +8,13 @@ A responsive web platform for cataloguing antique items with custom metadata sch
 
 ### Core
 - **Custom Metadata Schemas** — Define per-collection fields (text, number, date, select, checkbox, timestamp) with validation, ordering, and privacy controls
+- **Backup & Restore** — Export complete owner ZIP backups and restore new private collections with validation
+- **Resumable Uploads** — Persistent photo queue with chunk recovery, retries, and duplicate prevention
 - **Image Management** — Upload, resize (original/medium/thumb), and drag-to-reorder item photos; full-screen lightbox viewer
 - **Camera Capture** — Take photos directly from your browser on mobile devices
 - **Public Collections** — Share curated collections publicly while keeping others private
 - **User Authentication** — Email verification, password reset, JWT-based sessions with refresh tokens
-- **Search & Filter** — Full-text search with metadata filtering and multi-field sorting
+- **Search & Filter** — Text search with metadata filtering and one selected sort field/direction
 - **Stars** — Star collections and items; leaderboard ranking by earned stars
 - **Activity Log** — Track item/collection creation, updates, and deletions
 - **Schema Templates** — Create reusable metadata schemas, copy between collections
@@ -24,7 +26,8 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 - Two-tap flow: **New Item** creates a draft, **Same Item** adds another photo
 - Live stats counter (items + photos captured)
 - Existing drafts shown as scrollable thumbnails when re-entering a collection
-- Drafts auto-graduate to regular items when you add a name or metadata
+- Drafts remain private, including their photos; saving a name or metadata publishes them only after required fields validate
+- Draft-only pagination keeps older captures accessible
 - Draft toggle on collection pages with count indicator
 
 ### Profiles & Public Pages
@@ -67,13 +70,13 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 ### Backend
 - **FastAPI** — Modern Python web framework
 - **SQLAlchemy** — ORM with type-annotated models
-- **Alembic** — Database migrations (14 migrations)
+- **Alembic** — Database migrations (17 migrations)
 - **Pillow** — Image processing (resize, EXIF transpose, JPEG optimization)
 - **SQLite** — Database (easily swappable to PostgreSQL)
 - **Pydantic v2** — Request/response validation
 
 ### Frontend
-- **Next.js 14** — React framework with App Router
+- **Next.js 16 / React 19** — React framework with App Router
 - **Tailwind CSS** — Utility-first styling
 - **Lucide React** — Icon library
 - **TypeScript** — Full type safety across the frontend
@@ -82,7 +85,7 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 
 ### Prerequisites
 - Docker & Docker Compose
-- (Optional) Node.js 20+ and Python 3.12+ for local development
+- (Optional) Node.js 22.12+ and Python 3.12+ for local development
 
 ### Production Deployment
 
@@ -101,6 +104,8 @@ A mobile-optimized capture-first workflow for fast cataloguing:
    SMTP_USER=noreply@example.com
    SMTP_PASSWORD=your-smtp-password
    SMTP_FROM=noreply@example.com
+   PUBLIC_APP_URL=https://antique.example.com
+   REFRESH_TOKEN_COOKIE_SECURE=true
    EOF
    ```
 
@@ -124,6 +129,8 @@ server {
     server_name antique.example.com;
 
     location / {
+        client_max_body_size 260M;
+        proxy_read_timeout 300s;
         proxy_pass http://127.0.0.1:3010;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -142,7 +149,8 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        client_max_body_size 50M;
+        client_max_body_size 260M;
+        proxy_read_timeout 300s;
     }
 }
 ```
@@ -170,9 +178,24 @@ uvicorn app.main:app --reload --port 8000
 ```bash
 cd frontend
 npm install
-export NEXT_PUBLIC_API_URL=http://localhost:8000
+export INTERNAL_API_URL=http://localhost:8000
 npm run dev
 ```
+
+Keep the default client API URL (`/api`) so authentication cookies use the same origin.
+Configure SMTP and `PUBLIC_APP_URL` for verification/reset links, or set
+`AUTO_VERIFY_EMAIL=true` for local development. Failed SMTP delivery returns a
+retryable error; the verification page can resend mail for an existing account.
+
+### Updating an existing installation
+
+Run `alembic upgrade head` before starting the updated backend (the Docker Compose
+startup command does this automatically). Migration 0016 preserves historical metadata
+without matching schema fields in an owner-only archive and adds revocable sessions.
+Existing sessions must sign in again after this update. Password reset revokes all
+sessions and outstanding recovery links; logout revokes the current session and
+refresh cookies rotate on use. Set `PUBLIC_APP_URL` to the externally reachable app
+origin so emailed links open the correct site.
 
 ## API Endpoints
 
@@ -181,10 +204,12 @@ npm run dev
 |--------|------|-------------|
 | POST | `/auth/register` | Create account |
 | POST | `/auth/verify` | Verify email |
+| POST | `/auth/resend-verification` | Resend verification for an unverified account (rate limited) |
 | POST | `/auth/login` | Get access token |
 | POST | `/auth/refresh` | Refresh token |
-| POST | `/auth/forgot-password` | Request password reset |
-| POST | `/auth/reset-password` | Reset password |
+| POST | `/auth/logout` | Revoke current session and clear refresh cookie |
+| POST | `/auth/forgot` | Request password reset |
+| POST | `/auth/reset` | Reset password and revoke all sessions |
 | GET | `/auth/me` | Get current user |
 | DELETE | `/auth/me` | Delete account |
 
@@ -202,10 +227,11 @@ npm run dev
 ### Items
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/collections/{id}/items` | List items (search/filter/sort, `?include_drafts=true`) |
+| GET | `/collections/{id}/items` | List items (search/filter/sort, `?include_drafts=true` or `?drafts_only=true`, `limit`/`offset`) |
 | POST | `/collections/{id}/items` | Create item |
 | GET | `/collections/{id}/items/{item_id}` | Get item |
-| PATCH | `/collections/{id}/items/{item_id}` | Update item (clears draft flag) |
+| PATCH | `/collections/{id}/items/{item_id}` | Update item; validated name/metadata edits publish drafts |
+| GET | `/collections/{id}/items/{item_id}/move-preview` | Preview destination field transfer/privacy with `destination_collection_id` |
 | DELETE | `/collections/{id}/items/{item_id}` | Delete item |
 
 ### Speed Capture
@@ -222,7 +248,15 @@ npm run dev
 | GET | `/items/{item_id}/images` | List images |
 | PATCH | `/items/{item_id}/images/{image_id}` | Reorder image |
 | DELETE | `/items/{item_id}/images/{image_id}` | Delete image |
-| GET | `/images/{image_id}/{variant}.jpg` | Serve image (`?token=` for private) |
+| GET | `/images/{image_id}/{variant}.jpg` | Serve image; private/draft images require owner Bearer authorization |
+
+Field renames migrate stored values. Deleted or unmapped values are retained in
+`preserved_metadata` on owner item responses and are excluded from public responses.
+Incompatible type/option changes return 409 until existing values are corrected.
+Moves transfer compatible fields, preserve unsafe values privately, and keep items
+moved into public collections as drafts until reviewed and saved. Photo copies are
+staged before committing a move; failures keep the item at its source for retry.
+Image responses require revalidation so newly fetched photos follow current visibility.
 
 ### Profiles
 | Method | Path | Description |
@@ -301,6 +335,7 @@ npm run dev
 | `SMTP_PASSWORD` | — | SMTP password |
 | `SMTP_FROM` | — | From address for emails |
 | `SMTP_USE_TLS` | `true` | Use STARTTLS |
+| `PUBLIC_APP_URL` | `http://localhost:3010` | Public frontend origin used in verification and reset emails |
 | `NEXT_PUBLIC_API_URL` | `/api` | Client-side API base URL |
 | `INTERNAL_API_URL` | `http://backend:8000` | Server-side API URL (Docker internal) |
 
@@ -319,6 +354,27 @@ pytest --cov=app --cov-report=term-missing
 # Run specific test file
 pytest tests/test_items.py -v
 ```
+
+Frontend regression tests, static checks, and production build:
+
+```bash
+cd frontend
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm audit
+INTERNAL_API_URL=http://127.0.0.1:8410 npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+Browser tests start the production frontend on port 3410 and an isolated real API
+on port 8410, using a migrated temporary SQLite database, temporary image storage,
+and a local SMTP sink on port 8411. Install backend development dependencies first
+and leave these ports free. Test mail and accounts never reach an external service.
+The test-only mailbox/token-expiry endpoints exist only in `tests/serve_e2e.py`.
+Rebuild with your normal `INTERNAL_API_URL` before running outside these tests.
 
 ## Project Structure
 
@@ -357,3 +413,64 @@ MIT
 ## Credits
 
 Built with [Codex](https://github.com/openai/codex) and [Claude](https://claude.ai) using the [Ralph Loop](https://github.com/Endogen/ralph-loop) pattern.
+
+## Collection backup and restore
+
+Open an owned collection and choose **Export collection → Download backup ZIP**.
+The ZIP contains a versioned `manifest.json` with the collection schema, item
+metadata, preserved values, timestamps, draft/highlight states, and ordered original
+photos with SHA-256 checksums. This is an owner backup: it includes private fields,
+notes, and drafts. It is not a public sharing export.
+
+On **Collections**, choose **Restore collection**, select the ZIP, review the item,
+photo, draft, and private-field counts, and choose a name. Restore always creates a
+**new private collection**. Existing collections are not overwritten, IDs are newly
+assigned, and stars/admin featuring are not copied. Private field flags and stored
+original photo bytes are preserved; display thumbnails are rebuilt. Unassigned
+metadata is retained in the owner-only preserved-values section. Retrying the same
+restore attempt returns the same collection.
+
+Archives are limited to 250MB (compressed and expanded), 10MB of manifest data,
+10,000 items, 500 fields, and 20,000 photos. Restore accepts this application's
+version-1 ZIP format. It checks checksums, image decoding, schema structure,
+duplicate entries, and allowed paths before creating data. General CSV import and
+mapping into existing collections are not part of this restore flow.
+
+## Resumable photo uploads
+
+Item photo uploads and Speed Capture save selected photos in this browser's
+IndexedDB and transfer them in 1MB chunks. **Uploads** shows progress and offers
+**Resume upload**, **Discard upload**, and links to completed items. Uploads resume
+when the connection returns or the authenticated app is reopened on the same
+browser/device. Incomplete transfers retain their server offset; repeating a chunk
+or completion request does not create duplicate photos or drafts. Capture counters
+and the open item's gallery update after queued uploads finish.
+
+The existing 10MB photo limit applies, with at most 20 pending uploads per account
+on the server and 20 pending photos per browser queue. Incomplete server transfers
+expire after seven days and are cleaned up when a new transfer starts. A retained
+local photo can restart after expiry. Completion receipts remain until account
+removal to make lost-response retries safe. Uploaded bytes live temporarily in
+SQLite; include the database in operational backups and allow space for pending
+transfers. Completed transfers release their binary payload.
+
+The queue belongs to the signed-in account. Clearing browser storage or browser
+storage eviction can remove unsent local photos. Closing the app pauses transfers;
+this is resume-on-reopen, not an upload service that runs while the browser is shut.
+Avatar uploads and ZIP restore uploads are separate from the photo queue.
+
+Apply migration **0017_collection_transfers** before starting the updated backend.
+Docker Compose applies migrations automatically. If a reverse proxy handles API
+requests directly, allow a 260MB request body and sufficient processing time for
+archive validation; the Next.js proxy is configured for this limit.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/collections/{id}/export` | Download an owner backup ZIP |
+| POST | `/archives/preview` | Validate a ZIP and return counts and its digest |
+| POST | `/archives/restore` | Restore the previewed ZIP with `digest`, `request_id`, and `name` |
+| POST | `/uploads` | Start/resume a photo upload using a client UUID |
+| GET | `/uploads/{id}` | Read accepted offset and completion receipt |
+| PUT | `/uploads/{id}?offset=N` | Send the next binary chunk |
+| POST | `/uploads/{id}/complete` | Finalize once and return the saved result |
+| DELETE | `/uploads/{id}` | Discard an incomplete transfer |

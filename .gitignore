@@ -39,3 +39,9 @@ PROMPT.md
 IMPLEMENTATION_PLAN.md
 ralph.sh
 specs/
+
+# Local verification artifacts
+playwright-report/
+test-results/
+*.tsbuildinfo
+graphify-out/

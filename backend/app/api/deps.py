@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.security import TokenError, decode_token
 from app.db.session import get_db
+from app.models.auth_session import AuthSession
 from app.models.user import User
 
 
@@ -40,8 +43,18 @@ def _authenticate_user(authorization: str, db: Session) -> User:
         raise _invalid_token()
 
     user = db.get(User, user_id)
-    if not user:
+    if not user or payload.get("ver", 0) != user.session_version:
         raise _invalid_token()
+    if not (session_id := payload.get("sid")):
+        raise _invalid_token()
+    if session_id:
+        session = db.get(AuthSession, session_id)
+        if (
+            not session
+            or session.user_id != user.id
+            or session.expires_at.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc)
+        ):
+            raise _invalid_token()
 
     if not user.is_active:
         raise HTTPException(
@@ -76,4 +89,7 @@ def get_optional_user(
 ) -> User | None:
     if not authorization:
         return None
-    return _authenticate_user(authorization, db)
+    try:
+        return _authenticate_user(authorization, db)
+    except HTTPException:
+        return None

@@ -1,3 +1,5 @@
+import { uploadPhoto } from "@/lib/upload-queue";
+
 export type MessageResponse = {
   message: string;
 };
@@ -131,6 +133,7 @@ export type ItemResponse = {
   image_count?: number | null;
   star_count?: number | null;
   is_highlight: boolean;
+  preserved_metadata?: { name: string; value: unknown; reason: string }[];
   is_draft: boolean;
   created_at: string;
   updated_at: string;
@@ -213,6 +216,7 @@ export type ItemListOptions = {
   offset?: number;
   filters?: string[];
   includeDrafts?: boolean;
+  draftsOnly?: boolean;
 };
 
 export type ItemSearchResponse = {
@@ -459,6 +463,9 @@ export const buildApiUrl = (path: string) => {
     return path;
   }
   const normalized = path.startsWith("/") ? path : `/${path}`;
+  if (normalized === API_BASE_URL || normalized.startsWith(`${API_BASE_URL}/`)) {
+    return normalized;
+  }
   return `${API_BASE_URL}${normalized}`;
 };
 
@@ -538,6 +545,9 @@ const buildItemListQuery = (options?: ItemListOptions) => {
       .map((filter) => filter.trim())
       .filter(Boolean)
       .forEach((filter) => params.append("filter", filter));
+  }
+  if (options.draftsOnly) {
+    params.set("drafts_only", "true");
   }
   if (options.includeDrafts) {
     params.set("include_drafts", "true");
@@ -655,35 +665,43 @@ export const apiRequest = async <T>(
     }
   }
 
-  if (!skipAuth) {
-    const token = getAccessToken();
-    if (token && !requestHeaders.has("Authorization")) {
-      requestHeaders.set("Authorization", `Bearer ${token}`);
-    }
-  }
+  return parseResponse<T>(await apiFetch(path, {
+    ...init, headers: requestHeaders, body: resolvedBody,
+    credentials, skipAuth, skipRefresh
+  }));
+};
 
-  const response = await fetch(buildApiUrl(path), {
-    ...init,
-    headers: requestHeaders,
-    body: resolvedBody,
-    credentials: credentials ?? "include"
+// JSON and images share token renewal, request deduplication, and memory fallback.
+export const apiFetch = async (
+  path: string,
+  options: RequestInit & { skipAuth?: boolean; skipRefresh?: boolean } = {}
+): Promise<Response> => {
+  const { skipAuth = false, skipRefresh = false, ...init } = options;
+  const headers = new Headers(init.headers);
+  if (!skipAuth && !headers.has("Authorization")) {
+    let token = getAccessToken();
+    if (token && !skipRefresh) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+        if (typeof payload.exp === "number" && payload.exp * 1000 <= Date.now()) {
+          token = await refreshAccessToken();
+        }
+      } catch { /* The server validates malformed tokens. */ }
+    }
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }
+  const request = () => fetch(buildApiUrl(path), {
+    ...init, headers, credentials: init.credentials ?? "include"
   });
-
+  let response = await request();
   if (response.status === 401 && !skipAuth && !skipRefresh) {
-    const refreshedToken = await refreshAccessToken();
-    if (refreshedToken) {
-      requestHeaders.set("Authorization", `Bearer ${refreshedToken}`);
-      const retryResponse = await fetch(buildApiUrl(path), {
-        ...init,
-        headers: requestHeaders,
-        body: resolvedBody,
-        credentials: credentials ?? "include"
-      });
-      return parseResponse<T>(retryResponse);
+    const token = await refreshAccessToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+      response = await request();
     }
   }
-
-  return parseResponse<T>(response);
+  return response;
 };
 
 const adminRequest = async <T>(
@@ -705,6 +723,9 @@ const adminRequest = async <T>(
 };
 
 export const authApi = {
+  resendVerification: (email: string) => apiRequest<MessageResponse>("/auth/resend-verification", {
+    method: "POST", body: { email }, skipAuth: true, skipRefresh: true
+  }),
   register: (payload: { email: string; password: string }) =>
     apiRequest<MessageResponse>("/auth/register", {
       method: "POST",
@@ -739,11 +760,11 @@ export const authApi = {
     return data;
   },
   logout: async () => {
-    await apiRequest<MessageResponse>("/auth/logout", {
-      method: "POST",
-      skipRefresh: true
-    });
-    setAccessToken(null);
+    try {
+      await apiRequest<MessageResponse>("/auth/logout", { method: "POST", skipRefresh: true });
+    } finally {
+      setAccessToken(null);
+    }
   },
   forgotPassword: (payload: { email: string }) =>
     apiRequest<MessageResponse>("/auth/forgot", {
@@ -1125,7 +1146,17 @@ export const publicItemApi = {
     )
 };
 
+export type MovePreview = {
+  transferred_fields: string[];
+  preserved_fields: string[];
+  missing_fields: string[];
+  destination_public: boolean;
+  will_be_draft: boolean;
+};
+
 export const itemApi = {
+  previewMove: (collectionId: number | string, itemId: number | string, destination: number) =>
+    apiRequest<MovePreview>(`/collections/${collectionId}/items/${itemId}/move-preview?destination_collection_id=${destination}`),
   list: (collectionId: number | string, options?: ItemListOptions) =>
     apiRequest<ItemResponse[]>(
       `/collections/${collectionId}/items${buildItemListQuery(options)}`
@@ -1198,14 +1229,7 @@ export const fieldApi = {
 };
 
 export const imageApi = {
-  upload: (itemId: number | string, file: File) => {
-    const payload = new FormData();
-    payload.append("file", file);
-    return apiRequest<ItemImageResponse>(`/items/${itemId}/images`, {
-      method: "POST",
-      body: payload
-    });
-  },
+  upload: (itemId: number | string, file: File) => uploadPhoto({ mode: "item", item_id: Number(itemId) }, file),
   list: (itemId: number | string) =>
     apiRequest<ItemImageResponse[]>(`/items/${itemId}/images`),
   update: (
@@ -1226,22 +1250,8 @@ export const imageApi = {
 };
 
 export const speedCaptureApi = {
-  newItem: (collectionId: number | string, file: File) => {
-    const payload = new FormData();
-    payload.append("file", file);
-    return apiRequest<SpeedCaptureNewResponse>(
-      `/speed-capture/${collectionId}/new`,
-      { method: "POST", body: payload }
-    );
-  },
-  addImage: (collectionId: number | string, itemId: number | string, file: File) => {
-    const payload = new FormData();
-    payload.append("file", file);
-    return apiRequest<SpeedCaptureAddResponse>(
-      `/speed-capture/${collectionId}/items/${itemId}/add`,
-      { method: "POST", body: payload }
-    );
-  },
+  newItem: (collectionId: number | string, file: File) => uploadPhoto({ mode: "capture-new", collection_id: Number(collectionId) }, file),
+  addImage: (collectionId: number | string, itemId: number | string, file: File) => uploadPhoto({ mode: "capture-add", collection_id: Number(collectionId), item_id: Number(itemId) }, file),
   session: (collectionId: number | string) =>
     apiRequest<SpeedCaptureSessionResponse>(
       `/speed-capture/${collectionId}/session`

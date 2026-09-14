@@ -1,5 +1,7 @@
 "use client";
 
+import type { UploadResult } from "@/lib/upload-queue";
+
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -58,6 +60,7 @@ type CaptureState = {
   stats: { items: number; images: number };
   existingDrafts: ItemResponse[];
   existingDraftsLoading: boolean;
+  existingDraftsHasMore: boolean;
 };
 
 function AuthenticatedImage({
@@ -228,6 +231,8 @@ function CaptureScreen({
   existingDrafts,
   existingDraftsLoading,
   onCapture,
+  onLoadMoreDrafts,
+  existingDraftsHasMore,
   onExit,
   onReview,
 }: {
@@ -239,6 +244,8 @@ function CaptureScreen({
   stats: { items: number; images: number };
   existingDrafts: ItemResponse[];
   existingDraftsLoading: boolean;
+  existingDraftsHasMore: boolean;
+  onLoadMoreDrafts: () => void;
   onCapture: (file: File, mode: "new" | "same") => void;
   onExit: () => void;
   onReview: () => void;
@@ -279,6 +286,7 @@ function CaptureScreen({
           type="button"
           className="flex items-center gap-2 text-sm text-stone-600 transition hover:text-stone-900"
           onClick={onExit}
+          disabled={uploading}
         >
           <ArrowLeft className="h-4 w-4" />
           {t("Exit")}
@@ -347,6 +355,8 @@ function CaptureScreen({
         </div>
       ) : null}
 
+      {existingDraftsHasMore && <Button className="mx-4" variant="outline" disabled={existingDraftsLoading} onClick={onLoadMoreDrafts}>{t("Load more drafts")}</Button>}
+
       {/* Spacer / center area */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
         {uploading ? (
@@ -371,7 +381,7 @@ function CaptureScreen({
 
         {uploadError ? (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
-            {uploadError}
+            {t(uploadError)}
           </div>
         ) : null}
       </div>
@@ -539,7 +549,28 @@ export default function SpeedCapturePage() {
     stats: { items: 0, images: 0 },
     existingDrafts: [],
     existingDraftsLoading: false,
+    existingDraftsHasMore: false,
   });
+
+  React.useEffect(() => {
+    const completed = (event: Event) => {
+      const result = (event as CustomEvent<UploadResult>).detail;
+      setState(current => {
+        if (current.uploading || result.mode === "item" || current.selectedCollection?.id !== result.collection_id) return current;
+        if (current.items.some(item => item.images.some(image => image.imageId === result.image_id))) return current;
+        const exists = current.items.some(item => item.itemId === result.item_id);
+        const image = { id: String(result.image_id), imageId: result.image_id };
+        const items = exists
+          ? current.items.map(item => item.itemId === result.item_id ? { ...item, images: [...item.images, image] } : item)
+          : [...current.items, { itemId: result.item_id, name: result.item_name, images: [image] }];
+        return { ...current, items, currentItemId: result.item_id, uploadError: null,
+          existingDrafts: current.existingDrafts.filter(item => item.id !== result.item_id),
+          stats: { items: items.length, images: current.stats.images + 1 } };
+      });
+    };
+    window.addEventListener("photo-uploaded", completed);
+    return () => window.removeEventListener("photo-uploaded", completed);
+  }, []);
 
   const loadCollections = React.useCallback(async () => {
     setState((s) => ({
@@ -580,21 +611,35 @@ export default function SpeedCapturePage() {
       stats: { items: 0, images: 0 },
       existingDrafts: [],
       existingDraftsLoading: true,
+      existingDraftsHasMore: false,
     }));
     try {
       const drafts = await itemApi.list(c.id, {
-        includeDrafts: true,
+        draftsOnly: true,
         limit: 100,
         sort: "-created_at",
       });
-      const draftItems = drafts.filter((item) => item.is_draft);
-      setState((s) => ({
-        ...s,
-        existingDrafts: draftItems,
-        existingDraftsLoading: false,
+      const draftItems = drafts;
+      setState((s) => s.selectedCollection?.id !== c.id ? s : ({
+        ...s, existingDrafts: draftItems,
+        existingDraftsLoading: false, existingDraftsHasMore: drafts.length === 100,
       }));
     } catch {
       setState((s) => ({ ...s, existingDraftsLoading: false }));
+    }
+  };
+
+  const loadMoreDrafts = async () => {
+    const collection = state.selectedCollection;
+    if (!collection || state.existingDraftsLoading) return;
+    setState(s => ({ ...s, existingDraftsLoading: true }));
+    try {
+      const drafts = await itemApi.list(collection.id, { draftsOnly: true, limit: 100, offset: state.existingDrafts.length, sort: "-created_at" });
+      setState(s => s.selectedCollection?.id !== collection.id ? s : ({ ...s,
+        existingDrafts: [...s.existingDrafts, ...drafts], existingDraftsLoading: false,
+        existingDraftsHasMore: drafts.length === 100 }));
+    } catch {
+      setState(s => ({ ...s, existingDraftsLoading: false, uploadError: "Could not load drafts. Please retry." }));
     }
   };
 
@@ -670,7 +715,7 @@ export default function SpeedCapturePage() {
         uploading: false,
         uploadError: isApiError(error)
           ? error.detail
-          : "Failed to upload image",
+          : error instanceof Error ? error.message : "Failed to upload image",
       }));
     }
   };
@@ -746,6 +791,8 @@ export default function SpeedCapturePage() {
         stats={state.stats}
         existingDrafts={state.existingDrafts}
         existingDraftsLoading={state.existingDraftsLoading}
+        existingDraftsHasMore={state.existingDraftsHasMore}
+        onLoadMoreDrafts={() => void loadMoreDrafts()}
         onCapture={handleCapture}
         onExit={handleExit}
         onReview={handleReview}

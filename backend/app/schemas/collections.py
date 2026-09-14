@@ -56,7 +56,7 @@ class CollectionUpdateRequest(BaseModel):
     @classmethod
     def validate_name(cls, value: str | None) -> str | None:
         if value is None:
-            return None
+            raise ValueError("Name cannot be null")
         return _normalize_name(value)
 
     @field_validator("description")

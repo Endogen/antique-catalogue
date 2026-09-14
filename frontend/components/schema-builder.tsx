@@ -12,7 +12,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -157,13 +157,13 @@ export function SchemaBuilder({ collectionId, api }: SchemaBuilderProps) {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-    watch
+    control
   } = useForm<FieldFormValues>({
     resolver: zodResolver(fieldSchema),
     defaultValues
   });
 
-  const fieldType = watch("field_type");
+  const fieldType = useWatch({ control, name: "field_type" });
   const schemaApi = React.useMemo<SchemaBuilderApi | null>(() => {
     if (api) {
       return api;

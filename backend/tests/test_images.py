@@ -247,7 +247,7 @@ def test_image_serving_public_access(app_with_db, db_session_factory, tmp_path) 
             public_serve = await client.get(f"/images/{image_id}/thumb.jpg")
             assert public_serve.status_code == 200
             assert public_serve.headers["cache-control"] == (
-                "public, max-age=31536000, immutable"
+                "private, no-cache, must-revalidate, max-age=0"
             )
 
             other_serve = await client.get(

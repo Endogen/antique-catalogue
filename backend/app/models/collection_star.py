@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 class CollectionStar(Base):
     __tablename__ = "collection_stars"
     __table_args__ = (
+        Index("ix_collection_stars_user_created", "user_id", "created_at"),
         UniqueConstraint(
             "user_id",
             "collection_id",

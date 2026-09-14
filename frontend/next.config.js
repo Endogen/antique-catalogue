@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: { proxyClientMaxBodySize: "260mb", proxyTimeout: 300000 },
   output: "standalone",
   async rewrites() {
     const backend =

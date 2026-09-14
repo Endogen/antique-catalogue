@@ -12,6 +12,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.api.archives import router as archives_router
+from app.api.resumable import router as resumable_router
 from app.api.activity import router as activity_router
 from app.api.admin import router as admin_router
 from app.api.auth import router as auth_router
@@ -99,6 +101,8 @@ def app_with_db(db_session_factory, monkeypatch):
     app.state.settings = settings
     register_exception_handlers(app)
     app.include_router(auth_router)
+    app.include_router(archives_router)
+    app.include_router(resumable_router)
     app.include_router(admin_router)
     app.include_router(activity_router)
     app.include_router(collections_router)
@@ -125,3 +129,8 @@ def app_with_db(db_session_factory, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     yield app
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _no_external_email(monkeypatch):
+    monkeypatch.setattr("app.services.email.send_email", lambda *args: None)

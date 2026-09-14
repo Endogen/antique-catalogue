@@ -1,5 +1,7 @@
 "use client";
 
+import { CollectionArchive } from "@/components/collection-archive";
+
 import * as React from "react";
 import Link from "next/link";
 import {
@@ -117,6 +119,7 @@ export default function CollectionsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <CollectionArchive />
           <Button variant="outline" onClick={() => loadCollections()}>
             <RefreshCcw className="h-4 w-4" />
             {t("Refresh")}

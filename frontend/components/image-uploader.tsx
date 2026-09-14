@@ -75,6 +75,15 @@ export function ImageUploader({
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
   const dragCounter = React.useRef(0);
 
+  React.useEffect(() => {
+    const completed = (event: Event) => {
+      const image = (event as CustomEvent<ItemImageResponse>).detail;
+      if (image.item_id === Number(itemId)) onUploaded?.(image);
+    };
+    window.addEventListener("photo-uploaded", completed);
+    return () => window.removeEventListener("photo-uploaded", completed);
+  }, [itemId, onUploaded]);
+
   const isReady = Boolean(itemId) && !disabled;
 
   const updateUpload = React.useCallback((id: string, patch: Partial<UploadEntry>) => {
@@ -93,20 +102,19 @@ export function ImageUploader({
       for (const entry of entries) {
         updateUpload(entry.id, { status: "uploading", error: undefined });
         try {
-          const image = await imageApi.upload(itemId, entry.file);
+          await imageApi.upload(itemId, entry.file);
           updateUpload(entry.id, { status: "success" });
-          onUploaded?.(image);
         } catch (error) {
           updateUpload(entry.id, {
             status: "error",
             error: isApiError(error)
               ? t(error.detail)
-              : t("We couldn't upload this image.")
+              : t(error instanceof Error ? error.message : "We couldn't upload this image.")
           });
         }
       }
     },
-    [itemId, onUploaded, t, updateUpload]
+    [itemId, t, updateUpload]
   );
 
   const handleFiles = React.useCallback(

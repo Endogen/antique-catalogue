@@ -7,7 +7,7 @@ const stripTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 const parseForwardedValue = (value: string | null) => value?.split(",")[0]?.trim() ?? "";
 const DEFAULT_INTERNAL_API_URL = "http://backend:8000";
 
-const resolveApiUrls = (path: string): string[] => {
+const resolveApiUrls = async (path: string): Promise<string[]> => {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   const configured =
     process.env.NEXT_PUBLIC_API_URL ??
@@ -32,7 +32,7 @@ const resolveApiUrls = (path: string): string[] => {
     return [...new Set(urls)];
   }
 
-  const requestHeaders = headers();
+  const requestHeaders = await headers();
   const protocol = parseForwardedValue(requestHeaders.get("x-forwarded-proto")) || "http";
   const host =
     parseForwardedValue(requestHeaders.get("x-forwarded-host")) ||
@@ -53,7 +53,7 @@ const resolveApiUrls = (path: string): string[] => {
 };
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const candidates = resolveApiUrls(path);
+  const candidates = await resolveApiUrls(path);
   let lastError: Error | null = null;
 
   for (const url of candidates) {

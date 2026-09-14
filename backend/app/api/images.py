@@ -35,7 +35,7 @@ NO_CACHE_HEADERS = {
     "Expires": "0",
 }
 PUBLIC_CACHE_HEADERS = {
-    "Cache-Control": "public, max-age=31536000, immutable",
+    "Cache-Control": "private, no-cache, must-revalidate, max-age=0",
 }
 
 
@@ -66,8 +66,8 @@ def _get_item_with_collection(db: Session, item_id: int) -> tuple[Item, Collecti
     return item, collection
 
 
-def _require_item_access(collection: Collection, user: User | None) -> None:
-    if collection.is_public:
+def _require_item_access(item: Item, collection: Collection, user: User | None) -> None:
+    if collection.is_public and not item.is_draft:
         return
     if user is None or collection.owner_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
@@ -231,7 +231,7 @@ def list_images(
     db: Session = Depends(get_db),
 ) -> list[ItemImageResponse]:
     item, collection = _get_item_with_collection(db, item_id)
-    _require_item_access(collection, current_user)
+    _require_item_access(item, collection, current_user)
     images = (
         db.execute(
             select(ItemImage)
@@ -309,7 +309,7 @@ def serve_image(
     db: Session = Depends(get_db),
 ) -> FileResponse:
     image, item, collection = _get_image_with_context(db, image_id)
-    _require_item_access(collection, current_user)
+    _require_item_access(item, collection, current_user)
 
     try:
         filename = build_variant_filename(image.id, variant)
@@ -323,7 +323,9 @@ def serve_image(
     path = output_dir / filename
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
-    headers = PUBLIC_CACHE_HEADERS if collection.is_public else NO_CACHE_HEADERS
+    headers = (
+        PUBLIC_CACHE_HEADERS if collection.is_public and not item.is_draft else NO_CACHE_HEADERS
+    )
     return FileResponse(
         path,
         media_type="image/jpeg",

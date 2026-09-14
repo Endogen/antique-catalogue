@@ -1,5 +1,7 @@
 "use client";
 
+import { CollectionArchive } from "@/components/collection-archive";
+
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
@@ -553,6 +555,7 @@ export default function CollectionDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
+          <CollectionArchive collectionId={collectionId} />
           <Button
             variant={collectionStarred ? "secondary" : "outline"}
             onClick={handleToggleCollectionStar}
