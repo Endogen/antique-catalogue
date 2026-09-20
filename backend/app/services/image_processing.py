@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Mapping
 
 from app.core.settings import get_settings
@@ -101,6 +102,15 @@ def generate_image_variants(data: bytes) -> ProcessedImageVariants:
     return ProcessedImageVariants(variants)
 
 
+def generate_image_variant(data: bytes, variant: str) -> bytes:
+    build_variant_filename(0, variant)  # Validate before decoding.
+    image = _open_image(data)
+    max_size = variant_max_sizes()[variant]
+    if max_size is not None and max(image.size) > max_size:
+        image = _resize_image(image, max_size)
+    return _encode_jpeg(image)
+
+
 def save_image_variants(
     variants: Mapping[str, bytes],
     output_dir: Path,
@@ -111,6 +121,15 @@ def save_image_variants(
     for variant, payload in variants.items():
         filename = build_variant_filename(image_id, variant)
         path = output_dir / filename
-        path.write_bytes(payload)
+        # Readers must never see a partly written variant, including when two
+        # requests generate a missing legacy preview at the same time.
+        with NamedTemporaryFile(dir=output_dir, delete=False) as temporary:
+            temporary_path = Path(temporary.name)
+            try:
+                temporary.write(payload)
+                temporary.close()
+                temporary_path.replace(path)
+            finally:
+                temporary_path.unlink(missing_ok=True)
         saved_paths[variant] = path
     return saved_paths

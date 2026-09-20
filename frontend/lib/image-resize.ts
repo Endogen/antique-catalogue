@@ -9,9 +9,8 @@
  * server's byte limit instead of failing outright, and leaves fewer megabytes
  * parked in IndexedDB while the queue drains.
  *
- * Nothing is lost that the server kept anyway: it re-encodes every upload to
- * JPEG without an `exif=` argument, so capture metadata is already discarded
- * there. Orientation is the exception — it must be baked in here, because the
+ * Resizing trades some image detail for smaller transfers. The server already
+ * discards EXIF metadata. Orientation must be baked in here, because the
  * pixels we send no longer carry the EXIF tag the server would have applied.
  */
 
@@ -85,6 +84,24 @@ const decode = async (file: Blob, timeoutMs: number): Promise<Drawable> => {
   return loadImageElement(file, timeoutMs);
 };
 
+const decodeWithTimeout = (file: Blob, timeoutMs: number): Promise<Drawable> =>
+  new Promise((resolve, reject) => {
+    let expired = false;
+    const timer = window.setTimeout(() => {
+      expired = true;
+      reject(new Error("Timed out decoding the image."));
+    }, timeoutMs);
+    void decode(file, timeoutMs).then(source => {
+      window.clearTimeout(timer);
+      if (expired) {
+        if ("close" in source) source.close();
+      } else resolve(source);
+    }, error => {
+      window.clearTimeout(timer);
+      reject(error);
+    });
+  });
+
 const encode = async (
   canvas: OffscreenCanvas | HTMLCanvasElement,
   quality: number
@@ -121,7 +138,7 @@ export async function prepareImageForUpload(
 
   let source: Drawable | null = null;
   try {
-    source = await decode(file, decodeTimeoutMs);
+    source = await decodeWithTimeout(file, decodeTimeoutMs);
     const { width, height } = dimensionsOf(source);
     if (!width || !height) {
       return file;

@@ -11,6 +11,8 @@ const stubBrowserImaging = (
   encodedBytes: number
 ) => {
   const close = vi.fn();
+  const drawImage = vi.fn();
+  const encode = vi.fn(async () => new Blob([new Uint8Array(encodedBytes)], { type: "image/jpeg" }));
   vi.stubGlobal(
     "createImageBitmap",
     vi.fn(async () => ({ ...source, close }))
@@ -21,21 +23,19 @@ const stubBrowserImaging = (
       public height: number
     ) {}
     getContext() {
-      return { drawImage: vi.fn() };
+      return { drawImage };
     }
-    async convertToBlob() {
-      return new Blob([new Uint8Array(encodedBytes)], { type: "image/jpeg" });
-    }
+    convertToBlob = encode;
   }
   vi.stubGlobal("OffscreenCanvas", FakeOffscreenCanvas);
-  return { close };
+  return { close, drawImage, encode };
 };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("prepareImageForUpload", () => {
   it("shrinks an oversized photo to the configured long edge and re-encodes as JPEG", async () => {
-    stubBrowserImaging({ width: 4032, height: 3024 }, 500_000);
+    const { drawImage, encode } = stubBrowserImaging({ width: 4032, height: 3024 }, 500_000);
     const original = file(6_000_000);
 
     const prepared = await prepareImageForUpload(original, {
@@ -49,10 +49,9 @@ describe("prepareImageForUpload", () => {
     // The extension has to follow the re-encode, not the camera's original.
     expect(prepared.name).toBe("IMG_0001.jpg");
 
-    const canvas = new (globalThis as unknown as {
-      OffscreenCanvas: new (w: number, h: number) => { width: number; height: number };
-    }).OffscreenCanvas(0, 0);
-    expect(canvas).toBeDefined();
+    expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 2560, 1920);
+    expect(encode).toHaveBeenCalledWith({ type: "image/jpeg", quality: 0.82 });
+    expect(createImageBitmap).toHaveBeenCalledWith(original, { imageOrientation: "from-image" });
   });
 
   it("brings a photo that the server would reject under the limit", async () => {
@@ -95,4 +94,21 @@ describe("prepareImageForUpload", () => {
     expect(await prepareImageForUpload(pdf)).toBe(pdf);
     expect(await prepareImageForUpload(huge)).toBe(huge);
   });
+});
+
+
+it("times out a stalled bitmap decoder and closes a bitmap that arrives late", async () => {
+  vi.useFakeTimers();
+  let finish!: (bitmap: ImageBitmap) => void;
+  const close = vi.fn();
+  vi.stubGlobal("createImageBitmap", vi.fn(() => new Promise(resolve => { finish = resolve; })));
+  const original = file(1000);
+  const settled = vi.fn();
+  const prepared = prepareImageForUpload(original, { decodeTimeoutMs: 50 }).then(settled);
+  await vi.advanceTimersByTimeAsync(100);
+  expect(settled).toHaveBeenCalledWith(original);
+  finish({ width: 10, height: 10, close } as unknown as ImageBitmap);
+  await prepared;
+  await vi.advanceTimersByTimeAsync(0);
+  expect(close).toHaveBeenCalledOnce();
 });

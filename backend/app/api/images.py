@@ -20,6 +20,7 @@ from app.schemas.responses import MessageResponse
 from app.services.image_processing import (
     ImageProcessingError,
     build_variant_filename,
+    generate_image_variant,
     generate_image_variants,
     save_image_variants,
 )
@@ -322,6 +323,13 @@ def serve_image(
 
     output_dir = item_upload_dir(collection.owner_id, collection.id, item.id)
     path = output_dir / filename
+    if variant == "large" and not path.exists():
+        # Pre-existing photos have only original/medium/thumb. Generate the
+        # lightbox preview on first authorized access without altering originals.
+        original = output_dir / build_variant_filename(image.id, "original")
+        if original.exists():
+            payload = generate_image_variant(original.read_bytes(), "large")
+            save_image_variants({"large": payload}, output_dir, image.id)
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
     headers = (

@@ -269,3 +269,43 @@ def test_image_serving_public_access(app_with_db, db_session_factory, tmp_path) 
 
     with _temp_uploads_dir(tmp_path):
         asyncio.run(_flow())
+
+
+def test_legacy_photo_large_variant_is_generated_after_authorization(
+    app_with_db, db_session_factory, tmp_path
+):
+    email = "legacy-photo@example.com"
+    user_id = _create_user(db_session_factory, email=email, password="strongpass")
+
+    async def _flow():
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            token = await _login(client, email=email, password="strongpass")
+            headers = {"Authorization": f"Bearer {token}"}
+            collection_id = await _create_collection(client, headers)
+            item_id = await _create_item(client, headers, collection_id)
+            buffer = BytesIO()
+            Image.new("RGB", (2400, 1800), "red").save(buffer, format="JPEG")
+            response = await client.post(
+                f"/items/{item_id}/images", headers=headers,
+                files={"file": ("old.jpg", buffer.getvalue(), "image/jpeg")},
+            )
+            assert response.status_code == 201
+            image_id = response.json()["id"]
+            directory = settings.uploads_dir / str(user_id) / str(collection_id) / str(item_id)
+            large = directory / f"{image_id}_large.jpg"
+            original = directory / f"{image_id}_original.jpg"
+            original_bytes = original.read_bytes()
+            large.unlink()  # Photos uploaded before the large variant existed.
+            url = f"/images/{image_id}/large.jpg"
+            assert (await client.get(url)).status_code == 404
+            assert not large.exists()
+            response = await client.get(url, headers=headers)
+            assert response.status_code == 200
+            assert Image.open(BytesIO(response.content)).size == (1600, 1200)
+            assert large.exists()
+            assert original.read_bytes() == original_bytes
+            assert (await client.get(url, headers=headers)).content == response.content
+
+    with _temp_uploads_dir(tmp_path):
+        asyncio.run(_flow())

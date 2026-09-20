@@ -1,6 +1,6 @@
 "use client";
 
-import type { UploadResult } from "@/lib/upload-queue";
+import { enqueuePhoto, resumeUpload, type UploadResult } from "@/lib/upload-queue";
 
 import * as React from "react";
 import Image from "next/image";
@@ -24,7 +24,6 @@ import {
   imageApi,
   isApiError,
   itemApi,
-  speedCaptureApi,
   type CollectionResponse,
   type ItemResponse,
 } from "@/lib/api";
@@ -71,8 +70,10 @@ type CaptureState = {
   selectedCollection: CollectionResponse | null;
   items: CapturedItem[];
   currentItemId: number | null;
+  currentUploadId: string | null;
   pendingShots: PendingShot[];
   uploadError: string | null;
+  uploadErrorId: string | null;
   stats: { items: number; images: number };
   existingDrafts: ItemResponse[];
   existingDraftsLoading: boolean;
@@ -260,6 +261,7 @@ function CaptureScreen({
   collection,
   items,
   currentItemId,
+  currentUploadId,
   pendingShots,
   uploadError,
   stats,
@@ -274,6 +276,7 @@ function CaptureScreen({
   collection: CollectionResponse;
   items: CapturedItem[];
   currentItemId: number | null;
+  currentUploadId: string | null;
   pendingShots: PendingShot[];
   uploadError: string | null;
   stats: { items: number; images: number };
@@ -290,7 +293,7 @@ function CaptureScreen({
   const pendingModeRef = React.useRef<"new" | "same">("new");
   // A shot still in flight already counts: "Same Item" queues behind it.
   const hasCurrentItem =
-    currentItemId !== null || pendingShots.some((shot) => shot.mode === "new");
+    currentItemId !== null || currentUploadId !== null;
   const uploading = pendingShots.length > 0;
 
   const triggerCapture = (mode: "new" | "same") => {
@@ -579,8 +582,10 @@ export default function SpeedCapturePage() {
     selectedCollection: null,
     items: [],
     currentItemId: null,
+    currentUploadId: null,
     pendingShots: [],
     uploadError: null,
+    uploadErrorId: null,
     stats: { items: 0, images: 0 },
     existingDrafts: [],
     existingDraftsLoading: false,
@@ -590,11 +595,20 @@ export default function SpeedCapturePage() {
   // Photos upload one after another so the capture screen never has to wait,
   // and so each shot knows which item the previous one created.
   const uploadChainRef = React.useRef<Promise<unknown>>(Promise.resolve());
-  const captureItemIdRef = React.useRef<number | null>(null);
+  const enqueueChainRef = React.useRef<Promise<unknown>>(Promise.resolve());
+  const captureGroupRef = React.useRef<{ uploadId: string; itemId?: number } | null>(null);
+  const sessionRef = React.useRef(0);
+  const previewUrlsRef = React.useRef(new Set<string>());
+  React.useEffect(() => {
+    const urls = previewUrlsRef.current;
+    return () => { urls.forEach(url => URL.revokeObjectURL(url)); urls.clear(); };
+  }, []);
 
   React.useEffect(() => {
     const completed = (event: Event) => {
       const result = (event as CustomEvent<UploadResult>).detail;
+      const group = captureGroupRef.current;
+      if (group && group.uploadId === result.upload_id) group.itemId = result.item_id;
       setState(current => {
         if (result.mode === "item" || current.selectedCollection?.id !== result.collection_id) return current;
         if (current.items.some(item => item.images.some(image => image.imageId === result.image_id))) return current;
@@ -603,7 +617,10 @@ export default function SpeedCapturePage() {
         const items = exists
           ? current.items.map(item => item.itemId === result.item_id ? { ...item, images: [...item.images, image] } : item)
           : [...current.items, { itemId: result.item_id, name: result.item_name, images: [image] }];
-        return { ...current, items, currentItemId: result.item_id, uploadError: null,
+        return { ...current, items,
+          currentItemId: !group || group.itemId === result.item_id ? result.item_id : current.currentItemId,
+          uploadError: current.uploadErrorId === result.upload_id ? null : current.uploadError,
+          uploadErrorId: current.uploadErrorId === result.upload_id ? null : current.uploadErrorId,
           existingDrafts: current.existingDrafts.filter(item => item.id !== result.item_id),
           stats: { items: items.length, images: current.stats.images + 1 } };
       });
@@ -641,15 +658,18 @@ export default function SpeedCapturePage() {
 
   const handleSelectCollection = async (c: CollectionResponse) => {
     // A new session must not append to the previous collection's item.
-    captureItemIdRef.current = null;
+    captureGroupRef.current = null;
+    sessionRef.current += 1;
     setState((s) => ({
       ...s,
       status: "capturing",
       selectedCollection: c,
       items: [],
       currentItemId: null,
+      currentUploadId: null,
       pendingShots: [],
       uploadError: null,
+      uploadErrorId: null,
       stats: { items: 0, images: 0 },
       existingDrafts: [],
       existingDraftsLoading: true,
@@ -681,7 +701,7 @@ export default function SpeedCapturePage() {
         existingDrafts: [...s.existingDrafts, ...drafts], existingDraftsLoading: false,
         existingDraftsHasMore: drafts.length === 100 }));
     } catch {
-      setState(s => ({ ...s, existingDraftsLoading: false, uploadError: "Could not load drafts. Please retry." }));
+      setState(s => ({ ...s, existingDraftsLoading: false, uploadErrorId: null, uploadError: "Could not load drafts. Please retry." }));
     }
   };
 
@@ -697,29 +717,40 @@ export default function SpeedCapturePage() {
     setState((s) => ({
       ...s,
       pendingShots: [...s.pendingShots, shot],
-      uploadError: null
+      uploadError: null,
+      uploadErrorId: null
     }));
 
-    const send = async () => {
-      // Uploads run one at a time, so a "Same Item" shot taken immediately
-      // after a "New Item" one always finds the id the server just assigned.
-      // The id is tracked here rather than read from React state, which would
-      // not have re-rendered yet by the time the next upload starts.
-      const parentId = captureItemIdRef.current;
-      if (mode === "new" || parentId === null) {
-        const result = await speedCaptureApi.newItem(collection.id, file);
-        captureItemIdRef.current = result.item_id;
-      } else {
-        await speedCaptureApi.addImage(collection.id, parentId, file);
-      }
-    };
+    const session = sessionRef.current;
+    const parentUploadId = mode === "same" ? captureGroupRef.current?.uploadId : undefined;
+    const parentItemId = mode === "same"
+      ? (captureGroupRef.current ? captureGroupRef.current.itemId ?? null : state.currentItemId)
+      : null;
+    const isNew = mode === "new" || (!parentUploadId && parentItemId === null);
+    if (isNew) {
+      captureGroupRef.current = { uploadId: shot.id };
+      setState(s => ({ ...s, currentItemId: null, currentUploadId: shot.id }));
+    }
+    previewUrlsRef.current.add(shot.previewUrl);
 
-    uploadChainRef.current = uploadChainRef.current
-      .catch(() => {})
-      .then(send)
+    // Only disk writes wait for one another. Every selected file is durable
+    // before waiting for preceding network requests, including its parent link.
+    const queued = enqueueChainRef.current.catch(() => {}).then(() => enqueuePhoto(
+      isNew
+        ? { mode: "capture-new", collection_id: collection.id }
+        : { mode: "capture-add", collection_id: collection.id,
+            ...(parentItemId === null ? {} : { item_id: parentItemId }) },
+      file, { id: shot.id, parentUploadId }
+    ));
+    enqueueChainRef.current = queued.catch(() => {});
+    const previous = uploadChainRef.current;
+    uploadChainRef.current = queued
+      .then(async id => { await previous.catch(() => {}); return resumeUpload(id); })
       .catch((error: unknown) => {
+        if (sessionRef.current !== session) return;
         setState((s) => ({
           ...s,
+          uploadErrorId: shot.id,
           uploadError: isApiError(error)
             ? error.detail
             : error instanceof Error
@@ -729,6 +760,8 @@ export default function SpeedCapturePage() {
       })
       .finally(() => {
         URL.revokeObjectURL(shot.previewUrl);
+        previewUrlsRef.current.delete(shot.previewUrl);
+        if (sessionRef.current !== session) return;
         setState((s) => ({
           ...s,
           pendingShots: s.pendingShots.filter((pending) => pending.id !== shot.id)
@@ -746,7 +779,9 @@ export default function SpeedCapturePage() {
         selectedCollection: null,
         items: [],
         currentItemId: null,
+        currentUploadId: null,
         uploadError: null,
+        uploadErrorId: null,
         stats: { items: 0, images: 0 },
         existingDrafts: [],
         existingDraftsLoading: false,
@@ -802,6 +837,7 @@ export default function SpeedCapturePage() {
         collection={state.selectedCollection}
         items={state.items}
         currentItemId={state.currentItemId}
+        currentUploadId={state.currentUploadId}
         pendingShots={state.pendingShots}
         uploadError={state.uploadError}
         stats={state.stats}

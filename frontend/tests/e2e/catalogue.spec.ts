@@ -481,3 +481,112 @@ test("capture stays available while photos upload, and queued shots keep their o
   expect(drafts).toHaveLength(2);
   expect(drafts.map((d: { image_count: number }) => d.image_count).sort()).toEqual([1, 2]);
 });
+
+
+test("rapid captures survive reload while the first upload is blocked", async ({ page }) => {
+  await account(page, "durablecapture@example.com");
+  const collection = await create(page, "/collections", { name: "Durable captures" });
+  await page.goto("/speed-capture");
+  await page.getByRole("button", { name: /Durable captures/ }).click();
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/uploads", async route => {
+    await held;
+    // Reload may have already cancelled the held request.
+    await route.abort().catch(error => {
+      if (!String(error).includes("Route is already handled")) throw error;
+    });
+  });
+  try {
+    for (const mode of ["New Item", "New Item", "Same Item"]) {
+      await page.getByRole("button", { name: mode, exact: true }).click();
+      await page.locator('input[type="file"]').setInputFiles(photo);
+    }
+    // Count durable records, not the in-memory preview thumbnails.
+    await expect.poll(() => page.evaluate(() => new Promise<number>((resolve, reject) => {
+      const request = indexedDB.open("antique-upload-queue", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const count = db.transaction("uploads").objectStore("uploads").count();
+        count.onsuccess = () => { db.close(); resolve(count.result); };
+        count.onerror = () => reject(count.error);
+      };
+    }))).toBe(3);
+    await page.reload();
+  } finally {
+    release();
+    await page.unroute("**/api/uploads");
+  }
+  await page.reload();
+  await expect.poll(async () => {
+    const drafts = await (await page.request.get(`/api/collections/${collection.id}/items?drafts_only=true`, { headers: await headers(page) })).json();
+    return drafts.map((draft: { image_count: number }) => draft.image_count).sort();
+  }, { timeout: 20000 }).toEqual([1, 2]);
+});
+
+test("retrying a failed new capture keeps subsequent photos with that item", async ({ page }) => {
+  await account(page, "failedcapture@example.com");
+  const collection = await create(page, "/collections", { name: "Failed captures" });
+  await page.goto("/speed-capture");
+  await page.getByRole("button", { name: /Failed captures/ }).click();
+  await page.getByRole("button", { name: "New Item", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles(photo);
+  await expect(page.getByRole("button", { name: "Uploads (0)", exact: true })).toBeVisible();
+  let blocked = true;
+  await page.route("**/api/uploads", async route => {
+    if (blocked) await route.abort(); else await route.continue();
+  });
+  await page.getByRole("button", { name: "New Item", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles(photo);
+  await expect(page.getByText("Photo saved on this device. Open Uploads to resume.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Same Item", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles(photo);
+  await expect(page.getByRole("button", { name: "Uploads (2)", exact: true })).toBeVisible();
+  blocked = false;
+  await page.reload();
+  await expect.poll(async () => {
+    const drafts = await (await page.request.get(`/api/collections/${collection.id}/items?drafts_only=true`, { headers: await headers(page) })).json();
+    // Newest first: the second draft must receive both photos.
+    return drafts.sort((a: { id: number }, b: { id: number }) => b.id - a.id)
+      .map((draft: { image_count: number }) => draft.image_count);
+  }, { timeout: 20000 }).toEqual([2, 1]);
+});
+
+
+test("upload size validation reaches the server above the former client limit", async ({ page }) => {
+  await account(page, "configuredlimit@example.com");
+  await create(page, "/collections", { name: "Configured limit" });
+  await page.goto("/speed-capture");
+  await page.getByRole("button", { name: /Configured limit/ }).click();
+  let receivedSize = 0;
+  await page.route("**/api/uploads", async route => {
+    receivedSize = route.request().postDataJSON().size;
+    await route.fulfill({ status: 422, json: { detail: "Configured server limit" } });
+  });
+  // Undecodable image input follows the resize fallback, retaining its size.
+  const buffer = Buffer.alloc(11 * 1024 * 1024);
+  await page.getByRole("button", { name: "New Item", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles({ name: "unsupported.jpg", mimeType: "image/jpeg", buffer });
+  await expect.poll(() => receivedSize).toBe(buffer.length);
+  await page.getByRole("button", { name: "Uploads (1)", exact: true }).click();
+  await expect(page.getByText("Configured server limit", { exact: true })).toBeVisible();
+});
+
+
+test("resuming a capture clears its error without leaving the capture screen", async ({ page }) => {
+  await account(page, "capture-retry-feedback@example.com");
+  await create(page, "/collections", { name: "Retry feedback" });
+  await page.goto("/speed-capture");
+  await page.getByRole("button", { name: /Retry feedback/ }).click();
+  let blocked = true;
+  await page.route("**/api/uploads", route => blocked ? route.abort() : route.continue());
+  await page.getByRole("button", { name: "New Item", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles(photo);
+  const message = page.getByText("Photo saved on this device. Open Uploads to resume.", { exact: true });
+  await expect(message).toBeVisible();
+  blocked = false;
+  await page.getByRole("button", { name: "Uploads (1)", exact: true }).click();
+  await page.getByRole("button", { name: "Resume upload", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Uploads (0)", exact: true })).toBeVisible();
+  await expect(message).toHaveCount(0);
+});

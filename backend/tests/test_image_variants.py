@@ -95,3 +95,29 @@ def test_sizes_and_quality_follow_the_environment(monkeypatch):
 
 def test_original_is_uncapped_by_default():
     assert variant_max_sizes()["original"] is None
+
+
+@pytest.mark.parametrize("limit", [1024, 12 * 1024 * 1024])
+def test_direct_and_resumable_uploads_respect_the_configured_limit(monkeypatch, limit):
+    from uuid import uuid4
+
+    from fastapi import HTTPException, UploadFile
+    from pydantic import ValidationError
+
+    from app.api.images import _read_upload as read_item
+    from app.api.resumable import Start
+    from app.api.speed_capture import _read_upload as read_capture
+
+    monkeypatch.setenv("MAX_IMAGE_BYTES", str(limit))
+    get_settings.cache_clear()
+    payload = b"x" * limit
+    for read in (read_item, read_capture):
+        assert read(UploadFile(file=BytesIO(payload))) == payload
+        with pytest.raises(HTTPException) as error:
+            read(UploadFile(file=BytesIO(payload + b"x")))
+        assert error.value.status_code == 413
+    request = {"id": uuid4(), "target": {"mode": "capture-new", "collection_id": 1},
+               "filename": "photo.jpg", "size": limit}
+    assert Start.model_validate(request).size == limit
+    with pytest.raises(ValidationError):
+        Start.model_validate({**request, "size": limit + 1})
