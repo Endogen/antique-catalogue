@@ -21,7 +21,9 @@ const getFocusable = (container: HTMLElement) =>
  * and their firing order follows registration, not stacking order.
  * Only the most recently opened trap reacts to a key.
  */
-const openTraps: symbol[] = [];
+const openTraps: { id: symbol; container: HTMLElement | null }[] = [];
+let originalOverflow = "";
+let originalFocus: HTMLElement | null = null;
 
 /**
  * Makes an open overlay behave like a real modal dialog:
@@ -47,8 +49,15 @@ export function useFocusTrap<T extends HTMLElement>(
     const container = containerRef.current;
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const trapId = Symbol("focus-trap");
-    openTraps.push(trapId);
-    const isTopmost = () => openTraps[openTraps.length - 1] === trapId;
+    // All open traps share one scroll lock and the original page focus target.
+    // Per-dialog snapshots would restore another dialog's "hidden" overflow
+    // when dialogs close out of order or their page unmounts.
+    if (openTraps.length === 0) {
+      originalOverflow = document.body.style.overflow;
+      originalFocus = previouslyFocused;
+    }
+    openTraps.push({ id: trapId, container });
+    const isTopmost = () => openTraps[openTraps.length - 1]?.id === trapId;
 
     if (container) {
       const focusable = getFocusable(container);
@@ -103,17 +112,26 @@ export function useFocusTrap<T extends HTMLElement>(
     };
 
     document.addEventListener("keydown", handleKeyDown, true);
-    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     return () => {
-      const index = openTraps.indexOf(trapId);
+      const wasTopmost = isTopmost();
+      const index = openTraps.findIndex((trap) => trap.id === trapId);
       if (index !== -1) {
         openTraps.splice(index, 1);
       }
       document.removeEventListener("keydown", handleKeyDown, true);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus?.({ preventScroll: true });
+      if (openTraps.length === 0) {
+        document.body.style.overflow = originalOverflow;
+        if (originalFocus?.isConnected) originalFocus.focus({ preventScroll: true });
+        originalFocus = null;
+      } else if (wasTopmost) {
+        const remaining = openTraps[openTraps.length - 1].container;
+        const target = previouslyFocused?.isConnected && remaining?.contains(previouslyFocused)
+          ? previouslyFocused
+          : remaining && (getFocusable(remaining)[0] ?? remaining);
+        target?.focus({ preventScroll: true });
+      }
     };
   }, [open]);
 

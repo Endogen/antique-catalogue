@@ -101,3 +101,31 @@ it("does not let a read started before a write overwrite the updated list", asyn
   await waitFor(() => expect(observer.getCurrentResult().data).toEqual([{ id: 1, name: "Ceramics" }]));
   unsubscribe();
 });
+
+it("refetches a cancelled inactive query when its view is reopened", async () => {
+  const key = queryKeys.collections.fields(1);
+  client.setQueryData(key, ["old field"]);
+  // Some callers do not consume the abort signal, so a background read can
+  // still be in flight after its last observer has left.
+  const pending = client.fetchQuery({
+    queryKey: key,
+    queryFn: () => new Promise<string[]>(() => {}),
+    staleTime: 0
+  });
+  await apiRequest("/collections/1/fields", { method: "POST" });
+  await pending;
+  // Reopen after the mutation's cancellation/refetch chain has settled.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+  const observer = new QueryObserver(client, {
+    queryKey: key,
+    queryFn: async () => ["new field"],
+    staleTime: 30_000
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  try {
+    await waitFor(() => expect(observer.getCurrentResult().data).toEqual(["new field"]));
+  } finally {
+    unsubscribe();
+  }
+});

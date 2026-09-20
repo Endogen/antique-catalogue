@@ -28,13 +28,12 @@ export function connectQueryInvalidation(client: QueryClient) {
       // Mark everything stale straight away, so a view mounted later in this
       // same tick already knows its data is obsolete.
       void client.invalidateQueries({ ...filters, refetchType: "none" });
-      // Then cancel in-flight reads before refetching. Cancelling is async, so
-      // firing it alongside a refetching invalidate would abort the refetch
-      // that invalidate had just started and every query would be fetched
-      // twice. Cancel first, refetch once it has settled.
+      // Cancellation restores the pre-fetch state, including its old freshness
+      // flag. Invalidate again after it settles so inactive queries remain stale
+      // and active queries refetch once, without racing cancellation.
       void client
         .cancelQueries(filters)
-        .then(() => client.refetchQueries({ ...filters, type: "active" }));
+        .then(() => client.invalidateQueries({ ...filters, refetchType: "active" }));
     }
   });
 }
