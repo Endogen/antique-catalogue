@@ -1320,8 +1320,9 @@ export const imageApi = {
 export const speedCaptureApi = {
   newItem: (collectionId: number | string, file: File) => uploadPhoto({ mode: "capture-new", collection_id: Number(collectionId) }, file),
   addImage: (collectionId: number | string, itemId: number | string, file: File) => uploadPhoto({ mode: "capture-add", collection_id: Number(collectionId), item_id: Number(itemId) }, file),
-  session: (collectionId: number | string) =>
+  session: (collectionId: number | string, options: ReadOptions = {}) =>
     apiRequest<SpeedCaptureSessionResponse>(
-      `/speed-capture/${collectionId}/session`
+      `/speed-capture/${collectionId}/session`,
+      { signal: options.signal }
     ),
 };

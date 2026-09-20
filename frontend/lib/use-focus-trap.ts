@@ -15,6 +15,15 @@ const getFocusable = (container: HTMLElement) =>
   ).filter((element) => element.offsetParent !== null || element === document.activeElement);
 
 /**
+ * Open traps, oldest first. Every trap listens on `document`, so without this
+ * a single Escape would close an entire stack of overlays at once: listeners
+ * bound to the same node are not isolated from each other by stopPropagation,
+ * and their firing order follows registration, not stacking order.
+ * Only the most recently opened trap reacts to a key.
+ */
+const openTraps: symbol[] = [];
+
+/**
  * Makes an open overlay behave like a real modal dialog:
  * moves focus inside, keeps Tab cycling within it, closes on Escape,
  * locks body scroll, and restores focus to the trigger on close.
@@ -37,6 +46,9 @@ export function useFocusTrap<T extends HTMLElement>(
 
     const container = containerRef.current;
     const previouslyFocused = document.activeElement as HTMLElement | null;
+    const trapId = Symbol("focus-trap");
+    openTraps.push(trapId);
+    const isTopmost = () => openTraps[openTraps.length - 1] === trapId;
 
     if (container) {
       const focusable = getFocusable(container);
@@ -44,8 +56,13 @@ export function useFocusTrap<T extends HTMLElement>(
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Defer to whichever overlay is on top; it stops the event for the rest.
+      if (!isTopmost()) {
+        return;
+      }
+
       if (event.key === "Escape") {
-        event.stopPropagation();
+        event.stopImmediatePropagation();
         onCloseRef.current?.();
         return;
       }
@@ -90,6 +107,10 @@ export function useFocusTrap<T extends HTMLElement>(
     document.body.style.overflow = "hidden";
 
     return () => {
+      const index = openTraps.indexOf(trapId);
+      if (index !== -1) {
+        openTraps.splice(index, 1);
+      }
       document.removeEventListener("keydown", handleKeyDown, true);
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus?.({ preventScroll: true });

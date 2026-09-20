@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { ConfirmProvider, useConfirm } from "@/components/ui/confirm-dialog";
 import { Lightbox } from "@/components/lightbox";
 import { toLoadState } from "@/lib/query-state";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { ApiError } from "@/lib/api";
 
 vi.mock("@/components/i18n-provider", () => ({
@@ -134,5 +135,34 @@ describe("query state mapping", () => {
       []
     );
     expect(unknown.error).toBe("fallback");
+  });
+});
+
+describe("stacked overlays", () => {
+  it("closes only the topmost trap on Escape", async () => {
+    const closeOuter = vi.fn();
+    const closeInner = vi.fn();
+
+    function Stacked() {
+      const outer = useFocusTrap<HTMLDivElement>(true, closeOuter);
+      const inner = useFocusTrap<HTMLDivElement>(true, closeInner);
+      return (
+        <>
+          <div ref={outer} data-testid="outer" tabIndex={-1}>
+            <button type="button">outer action</button>
+          </div>
+          <div ref={inner} data-testid="inner" tabIndex={-1}>
+            <button type="button">inner action</button>
+          </div>
+        </>
+      );
+    }
+
+    render(<Stacked />);
+    await userEvent.keyboard("{Escape}");
+
+    // The later-opened trap owns the key; the one beneath it must survive.
+    expect(closeInner).toHaveBeenCalledTimes(1);
+    expect(closeOuter).not.toHaveBeenCalled();
   });
 });

@@ -211,32 +211,6 @@ export default function AdminPage() {
     [queryClient]
   );
 
-  const loadCollectionsData = React.useCallback(
-    async (_pageIndex?: number) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-      await collectionsQuery.refetch();
-    },
-    [queryClient, collectionsQuery]
-  );
-  const loadUsers = React.useCallback(
-    async (_pageIndex?: number) => {
-      await usersQuery.refetch();
-    },
-    [usersQuery]
-  );
-  const loadItems = React.useCallback(
-    async (_pageIndex?: number) => {
-      await itemsQuery.refetch();
-    },
-    [itemsQuery]
-  );
-  const loadFeaturedItems = React.useCallback(
-    async (_collectionId?: number | null) => {
-      await featuredItemsQuery.refetch();
-    },
-    [featuredItemsQuery]
-  );
-
   React.useEffect(() => {
     setIsAuthenticated(Boolean(getAdminToken()));
     setIsReady(true);
@@ -287,8 +261,8 @@ export default function AdminPage() {
     setFeaturePending(collectionId ?? -1);
     setActionErrorMessage(null);
     try {
+      // The write publishes a mutation, which invalidates every admin query.
       await adminApi.feature(collectionId);
-      await loadCollectionsData(collectionsPage);
     } catch (error) {
       setActionErrorMessage(
         isApiError(error) ? error.detail : "Unable to update featured collection."
@@ -303,7 +277,6 @@ export default function AdminPage() {
     setUsersActionError(null);
     try {
       await adminApi.setUserLocked(user.id, user.is_active);
-      await loadUsers(usersPage);
     } catch (error) {
       setUsersActionError(
         isApiError(error) ? error.detail : "Unable to update user lock status."
@@ -328,11 +301,6 @@ export default function AdminPage() {
     setUsersActionError(null);
     try {
       await adminApi.deleteUser(user.id);
-      await Promise.all([
-        loadCollectionsData(collectionsPage),
-        loadUsers(usersPage),
-        loadItems(itemsPage)
-      ]);
     } catch (error) {
       setUsersActionError(isApiError(error) ? error.detail : "Unable to delete user.");
     } finally {
@@ -353,10 +321,6 @@ export default function AdminPage() {
     setItemsActionError(null);
     try {
       await adminApi.deleteItem(item.id);
-      await loadItems(itemsPage);
-      if (stats?.featured_collection_id === item.collection_id) {
-        await loadFeaturedItems(item.collection_id);
-      }
     } catch (error) {
       setItemsActionError(isApiError(error) ? error.detail : "Unable to delete item.");
     } finally {

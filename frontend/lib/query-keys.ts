@@ -10,7 +10,9 @@ export const queryKeys = {
     list: () => ["collections", "list"] as const,
     detail: (id: number) => ["collections", "detail", id] as const,
     fields: (id: number) => ["collections", "fields", id] as const,
-    items: (id: number) => ["collections", "items", id] as const
+    items: (id: number) => ["collections", "items", id] as const,
+    captureSession: (id: number) =>
+      ["collections", "capture-session", id] as const
   },
   items: {
     all: ["items"] as const,

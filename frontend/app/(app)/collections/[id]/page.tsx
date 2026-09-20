@@ -168,14 +168,12 @@ export default function CollectionDetailPage() {
   const [filterFieldId, setFilterFieldId] = React.useState("");
   const [filterValue, setFilterValue] = React.useState("");
   const [filterError, setFilterError] = React.useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = React.useState(0);
   const [collectionStarred, setCollectionStarred] = React.useState(false);
   const [isUpdatingCollectionStar, setIsUpdatingCollectionStar] = React.useState(false);
   const [collectionStarError, setCollectionStarError] = React.useState<string | null>(null);
   const [showDrafts, setShowDrafts] = React.useState(
     searchParams.get("include_drafts") === "true"
   );
-  const [draftCount, setDraftCount] = React.useState<number | null>(null);
   const filterIdRef = React.useRef(0);
 
   const formatDate = React.useCallback(
@@ -296,17 +294,16 @@ export default function CollectionDetailPage() {
     void loadCollectionStarStatus();
   }, [loadCollectionStarStatus]);
 
-  React.useEffect(() => {
-    if (!collectionId) return;
-    void (async () => {
-      try {
-        const session = await speedCaptureApi.session(collectionId);
-        setDraftCount(session.draft_count);
-      } catch {
-        // Non-critical — just won't show draft count
-      }
-    })();
-  }, [collectionId, refreshKey]);
+  // Keyed under the collections root, so publishing or capturing a draft
+  // refreshes the badge through the usual invalidation instead of only on a
+  // manual refresh — and a slow response for a collection you have already
+  // navigated away from can no longer land on the new one.
+  const captureSessionQuery = useQuery({
+    queryKey: queryKeys.collections.captureSession(Number(collectionId)),
+    queryFn: ({ signal }) => speedCaptureApi.session(collectionId!, { signal }),
+    enabled: Boolean(collectionId)
+  });
+  const draftCount = captureSessionQuery.data?.draft_count ?? null;
 
   const filterParams = React.useMemo(
     () => filters.map((filter) => `${filter.fieldName}=${filter.value}`),
@@ -374,8 +371,8 @@ export default function CollectionDetailPage() {
     void loadFields();
     void loadCollectionStarStatus();
     setCollectionStarError(null);
-    setRefreshKey((prev) => prev + 1);
     void itemsQuery.refetch();
+    void captureSessionQuery.refetch();
   };
 
   const handleToggleCollectionStar = async () => {

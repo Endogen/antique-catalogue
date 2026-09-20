@@ -43,6 +43,7 @@ it("refreshes an active list after creation and invalidates inactive derived vie
 
 it.each([
   ["/collections/1/items/2", "PATCH", {}, queryKeys.collections.items(1)],
+  ["/collections/1/items", "POST", {}, queryKeys.collections.captureSession(1)],
   ["/collections/1/items/2", "DELETE", {}, queryKeys.search.items("vase")],
   ["/collections/1/fields", "POST", {}, queryKeys.collections.fields(1)],
   ["/collections/1/apply-template", "POST", {}, queryKeys.collections.fields(1)],

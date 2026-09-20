@@ -25,10 +25,16 @@ export function connectQueryInvalidation(client: QueryClient) {
     const roots = affectedRoots(mutation);
     if (roots.length) {
       const filters: QueryFilters = { predicate: (query) => roots.includes(String(query.queryKey[0])) };
-      // Cancel even an initial read with no cached data. Otherwise invalidation
-      // can reuse that pre-write request and store its obsolete response.
-      void client.cancelQueries(filters);
-      void client.invalidateQueries(filters);
+      // Mark everything stale straight away, so a view mounted later in this
+      // same tick already knows its data is obsolete.
+      void client.invalidateQueries({ ...filters, refetchType: "none" });
+      // Then cancel in-flight reads before refetching. Cancelling is async, so
+      // firing it alongside a refetching invalidate would abort the refetch
+      // that invalidate had just started and every query would be fetched
+      // twice. Cancel first, refetch once it has settled.
+      void client
+        .cancelQueries(filters)
+        .then(() => client.refetchQueries({ ...filters, type: "active" }));
     }
   });
 }
