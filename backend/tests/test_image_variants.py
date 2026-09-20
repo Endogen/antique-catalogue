@@ -14,6 +14,8 @@ else:
 
 from app.core.settings import get_settings
 from app.services.image_processing import (
+    MAX_IMAGE_PIXELS,
+    ImageProcessingError,
     VARIANT_NAMES,
     build_variant_filename,
     generate_image_variants,
@@ -95,6 +97,20 @@ def test_sizes_and_quality_follow_the_environment(monkeypatch):
 
 def test_original_is_uncapped_by_default():
     assert variant_max_sizes()["original"] is None
+
+
+def test_decode_pixel_cap_is_applied():
+    # The cap must be installed on Pillow at import time, so every decode path
+    # (direct upload, speed capture, resumable upload, archive restore) is bounded.
+    assert Image.MAX_IMAGE_PIXELS == MAX_IMAGE_PIXELS
+
+
+def test_oversized_images_are_rejected(monkeypatch):
+    # Lower the cap to a value the normal test photo exceeds, then confirm the
+    # bomb is rejected with a clear error instead of decoding or a generic 500.
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1000)
+    with pytest.raises(ImageProcessingError, match="dimensions are too large"):
+        generate_image_variants(_photo(4000, 3000))
 
 
 @pytest.mark.parametrize("limit", [1024, 12 * 1024 * 1024])

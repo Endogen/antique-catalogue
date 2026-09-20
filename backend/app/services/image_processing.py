@@ -8,6 +8,13 @@ from typing import Mapping
 
 from app.core.settings import get_settings
 
+# Hard ceiling on decoded pixel count, applied to every entry point that reads
+# an uploaded image (direct upload, speed capture, resumable upload, archive
+# restore). The default lives here rather than in Pillow's own default so the
+# limit cannot drift between Pillow releases and is reviewed alongside the rest
+# of the image pipeline.
+MAX_IMAGE_PIXELS = 80_000_000
+
 try:
     from PIL import Image, ImageOps, UnidentifiedImageError
 except ModuleNotFoundError:  # pragma: no cover - handled via runtime check
@@ -18,6 +25,11 @@ except ModuleNotFoundError:  # pragma: no cover - handled via runtime check
     PIL_AVAILABLE = False
 else:
     PIL_AVAILABLE = True
+    # Bound how much memory a crafted image can make Pillow allocate while
+    # decoding. Pillow raises DecompressionBombError above this limit and only
+    # warns at half of it. 80 megapixels keeps the largest common sensors
+    # (61/64MP mirrorless, 12-50MP phones) while capping a single decode.
+    Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 # "original" keeps whatever resolution was uploaded unless a cap is configured;
 # "large" backs the lightbox, which would otherwise download the full-size file.
@@ -64,6 +76,8 @@ def _open_image(data: bytes) -> Image.Image:
             return image.convert("RGB")
     except UnidentifiedImageError as exc:
         raise ImageProcessingError("Unsupported image format") from exc
+    except Image.DecompressionBombError as exc:
+        raise ImageProcessingError("Image dimensions are too large") from exc
     except Exception as exc:
         raise ImageProcessingError("Failed to read image data") from exc
 
