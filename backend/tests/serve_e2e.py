@@ -38,6 +38,10 @@ def main():
                 "SMTP_FROM": "test@example.com",
                 "PUBLIC_APP_URL": "http://127.0.0.1:3410",
                 "REFRESH_TOKEN_COOKIE_SECURE": "false",
+                # Throwaway console credentials so browser tests can exercise
+                # the admin views. Only ever reachable on this loopback server.
+                "ADMIN_EMAIL": "admin@example.com",
+                "ADMIN_PASSWORD": "Isolated-e2e-admin-password-42",
             }
         )
         root = Path(__file__).resolve().parents[1]

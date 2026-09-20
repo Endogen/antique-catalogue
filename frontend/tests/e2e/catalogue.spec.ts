@@ -385,3 +385,42 @@ test("reopening a public photo checks access after its owner makes it private", 
     await anonymous.close();
   }
 });
+
+test("one admin write refreshes each admin view exactly once", async ({ page }) => {
+  await account(page, "adminfeature@example.com");
+  await create(page, "/collections", { name: "Featurable", is_public: true });
+
+  await page.goto("/admin");
+  await page.locator("#admin-email").fill("admin@example.com");
+  await page.locator("#admin-password").fill("Isolated-e2e-admin-password-42");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  // Earlier tests leave their own public collections in the shared database,
+  // so scope to the row that holds this collection's heading and button.
+  const row = page
+    .locator("div")
+    .filter({ has: page.getByRole("heading", { name: "Featurable", exact: true }) })
+    .filter({ has: page.getByRole("button", { name: "Feature", exact: true }) })
+    .last();
+  const feature = row.getByRole("button", { name: "Feature", exact: true });
+  await expect(feature).toBeVisible();
+  // Let the reads the console issues on sign-in settle before counting.
+  await expect(page.getByText("Registered accounts", { exact: false })).toBeVisible();
+
+  const reads: string[] = [];
+  page.on("request", request => {
+    const { pathname } = new URL(request.url());
+    if (request.method() === "GET" && pathname.startsWith("/api/admin/")) reads.push(pathname);
+  });
+
+  await feature.click();
+  await expect(row.getByText("Featured", { exact: true })).toBeVisible();
+  await page.waitForTimeout(500);
+
+  // The write publishes one invalidation, which refreshes every admin view.
+  // A handler that also refreshed by hand would race that invalidation: the
+  // second pass cancels the first mid-flight and the same view is read twice.
+  const counts = new Map<string, number>();
+  for (const path of reads) counts.set(path, (counts.get(path) ?? 0) + 1);
+  expect([...counts.entries()].filter(([, count]) => count > 1)).toEqual([]);
+  expect(counts.get("/api/admin/stats")).toBe(1);
+});
