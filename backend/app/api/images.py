@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.settings import get_settings
 from app.api.deps import get_current_user, get_optional_user
 from app.db.session import get_db
 from app.models.collection import Collection
@@ -27,7 +28,6 @@ from app.services.uploads import item_upload_dir
 router = APIRouter(prefix="/items/{item_id}/images", tags=["images"])
 serve_router = APIRouter(prefix="/images", tags=["images"])
 
-MAX_IMAGE_BYTES = 10 * 1024 * 1024
 MULTIPART_AVAILABLE = find_spec("multipart") is not None
 NO_CACHE_HEADERS = {
     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -124,16 +124,17 @@ def _cleanup_variants(output_dir: Path, image_id: int) -> None:
 
 
 def _read_upload(file: UploadFile) -> bytes:
-    data = file.file.read(MAX_IMAGE_BYTES + 1)
+    max_bytes = get_settings().max_image_bytes
+    data = file.file.read(max_bytes + 1)
     if not data:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Image file is empty",
         )
-    if len(data) > MAX_IMAGE_BYTES:
+    if len(data) > max_bytes:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Image exceeds 10MB limit",
+            detail=f"Image exceeds the {max_bytes // (1024 * 1024)}MB limit",
         )
     return data
 

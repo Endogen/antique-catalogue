@@ -976,4 +976,6 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "Match system": "Systemeinstellung folgen",
   "Light": "Hell",
   "Dark": "Dunkel",
+  "{count} photo uploading": "{count} Foto wird hochgeladen",
+  "{count} photos uploading": "{count} Fotos werden hochgeladen",
 };

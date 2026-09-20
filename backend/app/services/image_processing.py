@@ -5,6 +5,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Mapping
 
+from app.core.settings import get_settings
+
 try:
     from PIL import Image, ImageOps, UnidentifiedImageError
 except ModuleNotFoundError:  # pragma: no cover - handled via runtime check
@@ -16,14 +18,20 @@ except ModuleNotFoundError:  # pragma: no cover - handled via runtime check
 else:
     PIL_AVAILABLE = True
 
-JPEG_QUALITY = 85
-MEDIUM_MAX_SIZE = 800
-THUMB_MAX_SIZE = 200
-VARIANT_SPECS: dict[str, int | None] = {
-    "original": None,
-    "medium": MEDIUM_MAX_SIZE,
-    "thumb": THUMB_MAX_SIZE,
-}
+# "original" keeps whatever resolution was uploaded unless a cap is configured;
+# "large" backs the lightbox, which would otherwise download the full-size file.
+VARIANT_NAMES: tuple[str, ...] = ("original", "large", "medium", "thumb")
+
+
+def variant_max_sizes() -> dict[str, int | None]:
+    """Longest-edge limit per variant, or None to keep the uploaded size."""
+    settings = get_settings()
+    return {
+        "original": settings.image_original_max_size,
+        "large": settings.image_large_max_size,
+        "medium": settings.image_medium_max_size,
+        "thumb": settings.image_thumb_max_size,
+    }
 
 
 class ImageProcessingError(ValueError):
@@ -32,16 +40,10 @@ class ImageProcessingError(ValueError):
 
 @dataclass(frozen=True)
 class ProcessedImageVariants:
-    original: bytes
-    medium: bytes
-    thumb: bytes
+    variants: Mapping[str, bytes]
 
     def as_dict(self) -> dict[str, bytes]:
-        return {
-            "original": self.original,
-            "medium": self.medium,
-            "thumb": self.thumb,
-        }
+        return dict(self.variants)
 
 
 def _resample_filter():
@@ -71,28 +73,32 @@ def _resize_image(image: Image.Image, max_size: int) -> Image.Image:
     return resized
 
 
-def _encode_jpeg(image: Image.Image, quality: int = JPEG_QUALITY) -> bytes:
+def _encode_jpeg(image: Image.Image, quality: int | None = None) -> bytes:
+    if quality is None:
+        quality = get_settings().image_jpeg_quality
     buffer = BytesIO()
     image.save(buffer, format="JPEG", quality=quality, optimize=True, progressive=True)
     return buffer.getvalue()
 
 
 def build_variant_filename(image_id: int | str, variant: str) -> str:
-    if variant not in VARIANT_SPECS:
+    if variant not in VARIANT_NAMES:
         raise ImageProcessingError(f"Unsupported image variant '{variant}'")
     return f"{image_id}_{variant}.jpg"
 
 
 def generate_image_variants(data: bytes) -> ProcessedImageVariants:
     base_image = _open_image(data)
-    original_bytes = _encode_jpeg(base_image)
-    medium_bytes = _encode_jpeg(_resize_image(base_image, MEDIUM_MAX_SIZE))
-    thumb_bytes = _encode_jpeg(_resize_image(base_image, THUMB_MAX_SIZE))
-    return ProcessedImageVariants(
-        original=original_bytes,
-        medium=medium_bytes,
-        thumb=thumb_bytes,
-    )
+    sizes = variant_max_sizes()
+    variants: dict[str, bytes] = {}
+    for variant in VARIANT_NAMES:
+        max_size = sizes[variant]
+        # Never upscale: a variant larger than the source is just wasted bytes.
+        if max_size is None or max(base_image.size) <= max_size:
+            variants[variant] = _encode_jpeg(base_image)
+        else:
+            variants[variant] = _encode_jpeg(_resize_image(base_image, max_size))
+    return ProcessedImageVariants(variants)
 
 
 def save_image_variants(

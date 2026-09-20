@@ -10,8 +10,8 @@ A responsive web platform for cataloguing antique items with custom metadata sch
 - **Custom Metadata Schemas** — Define per-collection fields (text, number, date, select, checkbox, timestamp) with validation, ordering, and privacy controls
 - **Backup & Restore** — Export complete owner ZIP backups and restore new private collections with validation
 - **Resumable Uploads** — Persistent photo queue with chunk recovery, retries, and duplicate prevention
-- **Image Management** — Upload, resize (original/medium/thumb), and drag-to-reorder item photos; full-screen lightbox viewer
-- **Camera Capture** — Take photos directly from your browser on mobile devices
+- **Image Management** — Upload, resize (original/large/medium/thumb), and drag-to-reorder item photos; full-screen lightbox viewer served the `large` variant rather than the full-size original
+- **Camera Capture** — Take photos directly from your browser on mobile devices; photos are downscaled in the browser first, so uploads are quick and full-resolution shots are never rejected for size
 - **Public Collections** — Share curated collections publicly while keeping others private
 - **User Authentication** — Email verification, password reset, JWT-based sessions with refresh tokens
 - **Search & Filter** — Text search with metadata filtering and one selected sort field/direction
@@ -26,6 +26,7 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 - Full-screen camera interface — no distractions, buttons always visible
 - Two-tap flow: **New Item** creates a draft, **Same Item** adds another photo
 - Live stats counter (items + photos captured)
+- Shooting never waits on the network: photos appear immediately and upload in the background, in order, through the resumable queue
 - Existing drafts shown as scrollable thumbnails when re-entering a collection
 - Drafts remain private, including their photos; saving a name or metadata publishes them only after required fields validate
 - Draft-only pagination keeps older captures accessible
@@ -350,7 +351,15 @@ Image responses require revalidation so newly fetched photos follow current visi
 | `SMTP_FROM` | — | From address for emails |
 | `SMTP_USE_TLS` | `true` | Use STARTTLS |
 | `PUBLIC_APP_URL` | `http://localhost:3010` | Public frontend origin used in verification and reset emails |
+| `MAX_IMAGE_BYTES` | `10485760` | Largest accepted upload, in bytes (direct and resumable) |
+| `IMAGE_JPEG_QUALITY` | `85` | JPEG quality for every stored variant |
+| `IMAGE_ORIGINAL_MAX_SIZE` | `0` | Longest edge for the archived original; `0` keeps the uploaded resolution |
+| `IMAGE_LARGE_MAX_SIZE` | `1600` | Longest edge for the lightbox variant |
+| `IMAGE_MEDIUM_MAX_SIZE` | `800` | Longest edge for card and gallery previews |
+| `IMAGE_THUMB_MAX_SIZE` | `200` | Longest edge for thumbnails |
 | `NEXT_PUBLIC_API_URL` | `/api` | Client-side API base URL |
+| `NEXT_PUBLIC_IMAGE_MAX_SIZE` | `2560` | Longest edge a photo is downscaled to in the browser before upload. Build-time, like every `NEXT_PUBLIC_*` value |
+| `NEXT_PUBLIC_IMAGE_QUALITY` | `0.82` | JPEG quality for that downscale, 0-1 |
 | `INTERNAL_API_URL` | `http://backend:8000` | Server-side API URL (Docker internal). Also baked into the `/api/*` rewrite at build time, so change it and rebuild the frontend rather than only restarting it |
 
 ## Testing

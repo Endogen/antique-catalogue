@@ -103,6 +103,12 @@ class Settings:
     smtp_from: str | None
     smtp_use_tls: bool
     uploads_path: str
+    max_image_bytes: int
+    image_jpeg_quality: int
+    image_original_max_size: int | None
+    image_large_max_size: int
+    image_medium_max_size: int
+    image_thumb_max_size: int
     public_app_url: str = "http://localhost:3010"
 
     @property
@@ -155,6 +161,13 @@ def get_settings() -> Settings:
         smtp_from=os.environ.get("SMTP_FROM"),
         smtp_use_tls=_get_bool_env("SMTP_USE_TLS", True),
         uploads_path=_get_first_env("UPLOADS_PATH", "UPLOADS_DIR", default="uploads"),
+        max_image_bytes=_get_int_env("MAX_IMAGE_BYTES", 10 * 1024 * 1024),
+        image_jpeg_quality=_get_int_env("IMAGE_JPEG_QUALITY", 85),
+        # 0 keeps the uploaded resolution; clients already downscale before sending.
+        image_original_max_size=_get_int_env("IMAGE_ORIGINAL_MAX_SIZE", 0) or None,
+        image_large_max_size=_get_int_env("IMAGE_LARGE_MAX_SIZE", 1600),
+        image_medium_max_size=_get_int_env("IMAGE_MEDIUM_MAX_SIZE", 800),
+        image_thumb_max_size=_get_int_env("IMAGE_THUMB_MAX_SIZE", 200),
     )
 
 

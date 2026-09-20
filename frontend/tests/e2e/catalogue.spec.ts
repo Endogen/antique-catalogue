@@ -202,11 +202,28 @@ test("an interrupted photo resumes after reload without retransmitting accepted 
     if (interrupt && offset >= 1024 * 1024) await route.abort("internetdisconnected");
     else await route.continue();
   });
-  const buffer = Buffer.concat([await (await import("node:fs/promises")).readFile(photo), Buffer.alloc(2 * 1024 * 1024)]);
-  await page.locator('input[type="file"]').setInputFiles({ name: "resumable-vase.png", mimeType: "image/png", buffer });
+  // Real photo detail, not zero padding: the client downscales and re-encodes
+  // before queueing, which discards padding and would leave a single chunk.
+  const dataUrl = await page.evaluate(() => {
+    const side = 2600;
+    const canvas = document.createElement("canvas");
+    canvas.width = side;
+    canvas.height = side;
+    const context = canvas.getContext("2d")!;
+    const image = context.createImageData(side, side);
+    for (let offset = 0; offset < image.data.length; offset += 65536) {
+      crypto.getRandomValues(image.data.subarray(offset, offset + 65536));
+    }
+    for (let pixel = 3; pixel < image.data.length; pixel += 4) image.data[pixel] = 255;
+    context.putImageData(image, 0, 0);
+    return canvas.toDataURL("image/jpeg", 0.95);
+  });
+  const buffer = Buffer.from(dataUrl.split(",")[1], "base64");
+  expect(buffer.byteLength).toBeGreaterThan(2 * 1024 * 1024);
+  await page.locator('input[type="file"]').setInputFiles({ name: "resumable-photo.jpg", mimeType: "image/jpeg", buffer });
   await expect(page.getByText("Photo saved on this device. Open Uploads to resume.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Uploads (1)", exact: true }).click();
-  await expect(page.getByRole("progressbar", { name: "resumable-vase.png" })).toHaveAttribute("value", "1048576");
+  await expect(page.getByRole("progressbar", { name: "resumable-photo.jpg" })).toHaveAttribute("value", "1048576");
   await page.screenshot({ path: "test-results/interrupted-upload.png", fullPage: true });
   const before = offsets.length;
   interrupt = false;
@@ -423,4 +440,44 @@ test("one admin write refreshes each admin view exactly once", async ({ page }) 
   for (const path of reads) counts.set(path, (counts.get(path) ?? 0) + 1);
   expect([...counts.entries()].filter(([, count]) => count > 1)).toEqual([]);
   expect(counts.get("/api/admin/stats")).toBe(1);
+});
+
+test("capture stays available while photos upload, and queued shots keep their order", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await account(page, "rapidcapture@example.com");
+  const collection = await create(page, "/collections", { name: "Rapid captures" });
+  await page.goto("/speed-capture");
+  await page.getByRole("button", { name: /Rapid captures/ }).click();
+
+  // Hold every upload open so all three shots are in flight together.
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/uploads", async route => {
+    await held;
+    await route.continue();
+  });
+
+  const newItem = page.getByRole("button", { name: "New Item", exact: true });
+  await newItem.click();
+  await page.locator('input[type="file"]').setInputFiles(photo);
+
+  // The button must stay usable: that is the whole point of the background queue.
+  await expect(newItem).toBeEnabled();
+  await newItem.click();
+  await page.locator('input[type="file"]').setInputFiles(photo);
+  await page.getByRole("button", { name: "Same Item", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles(photo);
+
+  // All three are pending, previewed locally before any server round trip.
+  await expect(page.getByText("3 photos uploading", { exact: true })).toBeVisible();
+  await expect(page.locator('img[src^="blob:"]')).toHaveCount(3);
+
+  release();
+  await expect(page.getByText(/photos? uploading/)).toHaveCount(0, { timeout: 20000 });
+
+  // Two drafts, and the "Same Item" shot joined the second one rather than
+  // creating a third or attaching to the first.
+  const drafts = await (await page.request.get(`/api/collections/${collection.id}/items?drafts_only=true`, { headers: await headers(page) })).json();
+  expect(drafts).toHaveLength(2);
+  expect(drafts.map((d: { image_count: number }) => d.image_count).sort()).toEqual([1, 2]);
 });

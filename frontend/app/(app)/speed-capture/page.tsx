@@ -52,6 +52,17 @@ type CapturedItem = {
   images: CapturedImage[];
 };
 
+/**
+ * A shot that has been taken but whose upload has not come back yet. It is
+ * rendered from a local object URL so the photo appears the moment it is
+ * taken, instead of after the round trip.
+ */
+type PendingShot = {
+  id: string;
+  previewUrl: string;
+  mode: "new" | "same";
+};
+
 type CaptureState = {
   status: "pick-collection" | "capturing" | "reviewing";
   collections: CollectionResponse[];
@@ -60,7 +71,7 @@ type CaptureState = {
   selectedCollection: CollectionResponse | null;
   items: CapturedItem[];
   currentItemId: number | null;
-  uploading: boolean;
+  pendingShots: PendingShot[];
   uploadError: string | null;
   stats: { items: number; images: number };
   existingDrafts: ItemResponse[];
@@ -186,27 +197,30 @@ function CollectionPicker({
 function ThumbnailStrip({
   items,
   currentItemId,
+  pendingShots,
 }: {
   items: CapturedItem[];
   currentItemId: number | null;
+  pendingShots: PendingShot[];
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const currentItem = items.find((i) => i.itemId === currentItemId);
+  const confirmed = currentItem?.images ?? [];
 
   React.useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
     }
-  }, [currentItem?.images.length]);
+  }, [confirmed.length, pendingShots.length]);
 
-  if (!currentItem || currentItem.images.length === 0) return null;
+  if (confirmed.length === 0 && pendingShots.length === 0) return null;
 
   return (
     <div
       ref={scrollRef}
       className="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
     >
-      {currentItem.images.map((img) => (
+      {confirmed.map((img) => (
         <div
           key={img.id}
           className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-sm"
@@ -216,6 +230,22 @@ function ThumbnailStrip({
             alt=""
             className="h-full w-full object-cover"
           />
+        </div>
+      ))}
+      {pendingShots.map((shot) => (
+        <div
+          key={shot.id}
+          className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-sm"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={shot.previewUrl}
+            alt=""
+            className="h-full w-full object-cover opacity-60"
+          />
+          <span className="absolute inset-0 flex items-center justify-center bg-panel/30">
+            <Loader2 className="h-4 w-4 animate-spin text-white" />
+          </span>
         </div>
       ))}
     </div>
@@ -230,7 +260,7 @@ function CaptureScreen({
   collection,
   items,
   currentItemId,
-  uploading,
+  pendingShots,
   uploadError,
   stats,
   existingDrafts,
@@ -244,7 +274,7 @@ function CaptureScreen({
   collection: CollectionResponse;
   items: CapturedItem[];
   currentItemId: number | null;
-  uploading: boolean;
+  pendingShots: PendingShot[];
   uploadError: string | null;
   stats: { items: number; images: number };
   existingDrafts: ItemResponse[];
@@ -255,10 +285,13 @@ function CaptureScreen({
   onExit: () => void;
   onReview: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, tc } = useI18n();
   const cameraRef = React.useRef<HTMLInputElement>(null);
   const pendingModeRef = React.useRef<"new" | "same">("new");
-  const hasCurrentItem = currentItemId !== null;
+  // A shot still in flight already counts: "Same Item" queues behind it.
+  const hasCurrentItem =
+    currentItemId !== null || pendingShots.some((shot) => shot.mode === "new");
+  const uploading = pendingShots.length > 0;
 
   const triggerCapture = (mode: "new" | "same") => {
     pendingModeRef.current = mode;
@@ -291,7 +324,6 @@ function CaptureScreen({
           type="button"
           className="flex items-center gap-2 text-sm text-muted-strong transition hover:text-foreground"
           onClick={onExit}
-          disabled={uploading}
         >
           <ArrowLeft className="h-4 w-4" />
           {t("Exit")}
@@ -320,7 +352,11 @@ function CaptureScreen({
 
       {/* Thumbnail strip */}
       <div className="min-h-[3.75rem] px-4">
-        <ThumbnailStrip items={items} currentItemId={currentItemId} />
+        <ThumbnailStrip
+          items={items}
+          currentItemId={currentItemId}
+          pendingShots={pendingShots}
+        />
       </div>
 
       {/* Existing drafts */}
@@ -364,24 +400,20 @@ function CaptureScreen({
 
       {/* Spacer / center area */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-muted-subtle">
+          <Camera className="h-10 w-10" />
+        </div>
         {uploading ? (
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-muted">
-              <Loader2 className="h-10 w-10 animate-spin text-brand" />
-            </div>
-            <p className="text-sm text-muted-strong">{t("Uploading...")}</p>
-          </div>
+          <p className="flex items-center gap-2 text-sm text-muted-strong">
+            <Loader2 className="h-4 w-4 animate-spin text-brand" />
+            {tc(pendingShots.length, "{count} photo uploading", "{count} photos uploading")}
+          </p>
         ) : (
-          <>
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-muted-subtle">
-              <Camera className="h-10 w-10" />
-            </div>
-            <p className="max-w-xs text-center text-sm text-muted-foreground">
-              {hasCurrentItem
-                ? t("Add another photo to the current item, or start a new one.")
-                : t("Take a photo to create your first draft item.")}
-            </p>
-          </>
+          <p className="max-w-xs text-center text-sm text-muted-foreground">
+            {hasCurrentItem
+              ? t("Add another photo to the current item, or start a new one.")
+              : t("Take a photo to create your first draft item.")}
+          </p>
         )}
 
         {uploadError ? (
@@ -397,7 +429,6 @@ function CaptureScreen({
           <Button
             className="flex-1 gap-2 rounded-2xl py-6 text-base"
             onClick={() => triggerCapture("new")}
-            disabled={uploading}
           >
             <Plus className="h-5 w-5" />
             {t("New Item")}
@@ -407,7 +438,6 @@ function CaptureScreen({
               variant="secondary"
               className="flex-1 gap-2 rounded-2xl py-6 text-base"
               onClick={() => triggerCapture("same")}
-              disabled={uploading}
             >
               <ImagePlus className="h-5 w-5" />
               {t("Same Item")}
@@ -549,7 +579,7 @@ export default function SpeedCapturePage() {
     selectedCollection: null,
     items: [],
     currentItemId: null,
-    uploading: false,
+    pendingShots: [],
     uploadError: null,
     stats: { items: 0, images: 0 },
     existingDrafts: [],
@@ -557,11 +587,16 @@ export default function SpeedCapturePage() {
     existingDraftsHasMore: false,
   });
 
+  // Photos upload one after another so the capture screen never has to wait,
+  // and so each shot knows which item the previous one created.
+  const uploadChainRef = React.useRef<Promise<unknown>>(Promise.resolve());
+  const captureItemIdRef = React.useRef<number | null>(null);
+
   React.useEffect(() => {
     const completed = (event: Event) => {
       const result = (event as CustomEvent<UploadResult>).detail;
       setState(current => {
-        if (current.uploading || result.mode === "item" || current.selectedCollection?.id !== result.collection_id) return current;
+        if (result.mode === "item" || current.selectedCollection?.id !== result.collection_id) return current;
         if (current.items.some(item => item.images.some(image => image.imageId === result.image_id))) return current;
         const exists = current.items.some(item => item.itemId === result.item_id);
         const image = { id: String(result.image_id), imageId: result.image_id };
@@ -605,12 +640,15 @@ export default function SpeedCapturePage() {
   }, [collectionsData, collectionsPending, collectionsError]);
 
   const handleSelectCollection = async (c: CollectionResponse) => {
+    // A new session must not append to the previous collection's item.
+    captureItemIdRef.current = null;
     setState((s) => ({
       ...s,
       status: "capturing",
       selectedCollection: c,
       items: [],
       currentItemId: null,
+      pendingShots: [],
       uploadError: null,
       stats: { items: 0, images: 0 },
       existingDrafts: [],
@@ -647,81 +685,55 @@ export default function SpeedCapturePage() {
     }
   };
 
-  const handleCapture = async (file: File, mode: "new" | "same") => {
-    if (!state.selectedCollection) return;
+  const handleCapture = (file: File, mode: "new" | "same") => {
+    const collection = state.selectedCollection;
+    if (!collection) return;
 
-    setState((s) => ({ ...s, uploading: true, uploadError: null }));
+    const shot: PendingShot = {
+      id: crypto.randomUUID(),
+      previewUrl: URL.createObjectURL(file),
+      mode
+    };
+    setState((s) => ({
+      ...s,
+      pendingShots: [...s.pendingShots, shot],
+      uploadError: null
+    }));
 
-    try {
-      if (mode === "new" || state.currentItemId === null) {
-        const result = await speedCaptureApi.newItem(
-          state.selectedCollection.id,
-          file
-        );
-        const newItem: CapturedItem = {
-          itemId: result.item_id,
-          name: result.item_name,
-          images: [
-            {
-              id: `${result.image_id}`,
-              imageId: result.image_id,
-            },
-          ],
-        };
-        setState((s) => {
-          const items = [...s.items, newItem];
-          return {
-            ...s,
-            uploading: false,
-            items,
-            currentItemId: result.item_id,
-            stats: {
-              items: s.stats.items + 1,
-              images: s.stats.images + 1,
-            },
-          };
-        });
+    const send = async () => {
+      // Uploads run one at a time, so a "Same Item" shot taken immediately
+      // after a "New Item" one always finds the id the server just assigned.
+      // The id is tracked here rather than read from React state, which would
+      // not have re-rendered yet by the time the next upload starts.
+      const parentId = captureItemIdRef.current;
+      if (mode === "new" || parentId === null) {
+        const result = await speedCaptureApi.newItem(collection.id, file);
+        captureItemIdRef.current = result.item_id;
       } else {
-        const result = await speedCaptureApi.addImage(
-          state.selectedCollection.id,
-          state.currentItemId,
-          file
-        );
-        setState((s) => {
-          const items = s.items.map((item) =>
-            item.itemId === s.currentItemId
-              ? {
-                  ...item,
-                  images: [
-                    ...item.images,
-                    {
-                      id: `${result.image_id}`,
-                      imageId: result.image_id,
-                    },
-                  ],
-                }
-              : item
-          );
-          return {
-            ...s,
-            uploading: false,
-            items,
-            stats: {
-              items: s.stats.items,
-              images: s.stats.images + 1,
-            },
-          };
-        });
+        await speedCaptureApi.addImage(collection.id, parentId, file);
       }
-    } catch (error) {
-      setState((s) => ({
-        ...s,
-        uploading: false,
-        uploadError: isApiError(error)
-          ? error.detail
-          : error instanceof Error ? error.message : "Failed to upload image",
-      }));
-    }
+    };
+
+    uploadChainRef.current = uploadChainRef.current
+      .catch(() => {})
+      .then(send)
+      .catch((error: unknown) => {
+        setState((s) => ({
+          ...s,
+          uploadError: isApiError(error)
+            ? error.detail
+            : error instanceof Error
+              ? error.message
+              : "Failed to upload image"
+        }));
+      })
+      .finally(() => {
+        URL.revokeObjectURL(shot.previewUrl);
+        setState((s) => ({
+          ...s,
+          pendingShots: s.pendingShots.filter((pending) => pending.id !== shot.id)
+        }));
+      });
   };
 
   const handleExit = () => {
@@ -790,7 +802,7 @@ export default function SpeedCapturePage() {
         collection={state.selectedCollection}
         items={state.items}
         currentItemId={state.currentItemId}
-        uploading={state.uploading}
+        pendingShots={state.pendingShots}
         uploadError={state.uploadError}
         stats={state.stats}
         existingDrafts={state.existingDrafts}

@@ -446,7 +446,7 @@ export function ImageGallery({
                       onDragStart={(event) => event.preventDefault()}
                       onClick={() =>
                         setLightboxImage({
-                          src: imageApi.url(image.id, "original"),
+                          src: imageApi.url(image.id, "large"),
                           alt: image.filename || t("Item image")
                         })
                       }

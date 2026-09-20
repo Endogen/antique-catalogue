@@ -1,6 +1,7 @@
 "use client";
 
 import { apiRequest, authApi, getAccessToken } from "@/lib/api";
+import { prepareImageForUpload } from "@/lib/image-resize";
 import type { ItemImageResponse, SpeedCaptureNewResponse } from "@/lib/api";
 
 export type UploadTarget = { mode: "item" | "capture-new" | "capture-add"; item_id?: number; collection_id?: number };
@@ -85,8 +86,14 @@ export function resumeUpload(id: string): Promise<UploadResult> {
   return promise;
 }
 
-export async function uploadPhoto(target: UploadTarget, file: File): Promise<UploadResult> {
-  if (!file.size || file.size > 10 * 1024 * 1024 || (file.type && !file.type.startsWith("image/"))) {
+export async function uploadPhoto(target: UploadTarget, original: File): Promise<UploadResult> {
+  if (!original.size || (original.type && !original.type.startsWith("image/"))) {
+    throw new Error("Choose an image up to 10MB.");
+  }
+  // Shrink first: a full-resolution phone photo is both slow to send and often
+  // over the limit, and both problems disappear once it is downscaled.
+  const file = await prepareImageForUpload(original);
+  if (file.size > 10 * 1024 * 1024) {
     throw new Error("Choose an image up to 10MB.");
   }
   // Decode only to partition local storage; the server validates every transfer.

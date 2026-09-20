@@ -578,7 +578,7 @@ export default function PublicItemDetailPage() {
 
       <Lightbox
         open={lightboxOpen}
-        src={selectedImage ? imageApi.url(selectedImage.id, "original") : null}
+        src={selectedImage ? imageApi.url(selectedImage.id, "large") : null}
         alt={itemState.data?.name}
         onClose={() => setLightboxOpen(false)}
       />

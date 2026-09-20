@@ -1313,7 +1313,10 @@ export const imageApi = {
     apiRequest<MessageResponse>(`/items/${itemId}/images/${imageId}`, {
       method: "DELETE"
     }),
-  url: (imageId: number | string, variant: "original" | "medium" | "thumb") =>
+  url: (
+    imageId: number | string,
+    variant: "original" | "large" | "medium" | "thumb"
+  ) =>
     buildApiUrl(`/images/${imageId}/${variant}.jpg`),
 };
 

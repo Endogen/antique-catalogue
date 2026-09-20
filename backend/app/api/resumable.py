@@ -6,10 +6,11 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
+from app.core.settings import get_settings
 from app.api.deps import get_current_user
 from app.api.images import _cleanup_variants, _get_item_or_404, _get_next_position
 from app.api.speed_capture import _get_own_collection_or_404, _next_draft_number
@@ -49,7 +50,17 @@ class Start(BaseModel):
     id: UUID
     target: Target
     filename: str = Field(min_length=1, max_length=255)
-    size: int = Field(gt=0, le=10 * CHUNK_SIZE)
+    size: int = Field(gt=0)
+
+    @field_validator("size")
+    @classmethod
+    def _within_configured_limit(cls, value: int) -> int:
+        # Read at validation time, not class definition, so the deployed
+        # MAX_IMAGE_BYTES applies here as well as to direct uploads.
+        max_bytes = get_settings().max_image_bytes
+        if value > max_bytes:
+            raise ValueError(f"Image exceeds the {max_bytes // (1024 * 1024)}MB limit")
+        return value
 
 
 def target_item(db, target, user):
