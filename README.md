@@ -19,6 +19,7 @@ A responsive web platform for cataloguing antique items with custom metadata sch
 - **Activity Log** — Track item/collection creation, updates, and deletions
 - **Schema Templates** — Create reusable metadata schemas, copy between collections
 - **Dashboard** — Personal overview with collections summary and recent activity feed
+- **Light & Dark Theme** — Follows the system setting by default with an in-app toggle; applied before first paint, so there is no flash on load
 
 ### Speed Capture ⚡
 A mobile-optimized capture-first workflow for fast cataloguing:
@@ -33,7 +34,7 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 ### Profiles & Public Pages
 - **User Profiles** — Custom username, avatar upload (with auto-generated variants)
 - **Public Profile Pages** — `/profile/{username}` showing public collections and star stats
-- **Account Settings** — Language preference, password reset, and account deletion
+- **Account Settings** — Language and appearance preferences, password reset, and account deletion
 - **Featured Collections** — Admin-curated featured collection on the homepage
 - **Spotlight Items** — Mark specific items as spotlights within the featured collection to highlight them on the homepage
 
@@ -44,26 +45,33 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 - Stats dashboard (total users, collections, items, featured status)
 
 ### Internationalization
-- English and German (auto-detected from browser, switchable in settings)
+- English and German, switchable in settings
+- The locale is resolved on the server from a saved cookie, falling back to `Accept-Language`, so the first response already carries the right copy and a matching `<html lang>` for crawlers
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    browser["Browser<br/>React 19 + TanStack Query"]
+    nginx["Nginx<br/>TLS, single public origin"]
+    frontend["Next.js 16 App Router<br/>host 3010 to container 3000"]
+    backend["FastAPI + Pydantic v2<br/>host 8050 to container 8000"]
+    db[("SQLite<br/>backend-data volume")]
+    files[("Photos and avatars<br/>backend-uploads volume")]
+
+    browser -->|HTTPS| nginx
+    nginx -->|"all routes"| frontend
+    frontend -->|"/api/* rewrite to INTERNAL_API_URL"| backend
+    frontend -->|"server components: metadata, OG tags"| backend
+    nginx -.->|"optional direct /api/ bypass"| backend
+    backend --> db
+    backend --> files
 ```
-┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │
-│  Next.js        │---->│  FastAPI        │
-│  Frontend       │     │  Backend        │
-│  (Port 3010)    │     │  (Port 8000)    │
-│                 │     │                 │
-└─────────────────┘     └────────┬────────┘
-                                 │
-                        ┌────────▼────────┐
-                        │                 │
-                        │  SQLite DB      │
-                        │  + File Storage │
-                        │                 │
-                        └─────────────────┘
-```
+
+The browser only ever talks to the frontend origin: Next.js rewrites `/api/*` to
+the backend, so authentication cookies stay same-origin. Server components reach
+the backend directly over `INTERNAL_API_URL` to render public metadata. Only the
+two host ports above are published, and both bind to loopback.
 
 ## Tech Stack
 
@@ -77,7 +85,11 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 
 ### Frontend
 - **Next.js 16 / React 19** — React framework with App Router
-- **Tailwind CSS** — Utility-first styling
+- **TanStack Query** — Server-state cache; cancels superseded reads, deduplicates
+  identical ones, and refreshes affected views after every write
+- **Tailwind CSS** — Utility-first styling over semantic design tokens that drive
+  both themes from one palette definition
+- **React Hook Form + Zod** — Form state and schema validation
 - **Lucide React** — Icon library
 - **TypeScript** — Full type safety across the frontend
 
@@ -339,7 +351,7 @@ Image responses require revalidation so newly fetched photos follow current visi
 | `SMTP_USE_TLS` | `true` | Use STARTTLS |
 | `PUBLIC_APP_URL` | `http://localhost:3010` | Public frontend origin used in verification and reset emails |
 | `NEXT_PUBLIC_API_URL` | `/api` | Client-side API base URL |
-| `INTERNAL_API_URL` | `http://backend:8000` | Server-side API URL (Docker internal) |
+| `INTERNAL_API_URL` | `http://backend:8000` | Server-side API URL (Docker internal). Also baked into the `/api/*` rewrite at build time, so change it and rebuild the frontend rather than only restarting it |
 
 ## Testing
 
@@ -375,7 +387,8 @@ Browser tests start the production frontend on port 3410 and an isolated real AP
 on port 8410, using a migrated temporary SQLite database, temporary image storage,
 and a local SMTP sink on port 8411. Install backend development dependencies first
 and leave these ports free. Test mail and accounts never reach an external service.
-The test-only mailbox/token-expiry endpoints exist only in `tests/serve_e2e.py`.
+The test-only mailbox/token-expiry endpoints, and the throwaway admin console
+credentials the browser tests sign in with, exist only in `tests/serve_e2e.py`.
 Rebuild with your normal `INTERNAL_API_URL` before running outside these tests.
 
 ## Project Structure
@@ -401,7 +414,9 @@ antique-catalogue/
 │   │   ├── explore/       # Public collection browser
 │   │   └── profile/       # Public profile pages
 │   ├── components/        # React components (app-shell, image-gallery, lightbox, ...)
-│   ├── lib/               # API client, i18n, utilities
+│   │   └── ui/            # Shared primitives (card, alert, input, typography, confirm dialog)
+│   ├── lib/               # API client, query keys and invalidation, i18n, hooks
+│   ├── tests/             # Vitest unit tests and Playwright browser tests
 │   ├── Dockerfile
 │   └── package.json
 ├── docker-compose.yml
