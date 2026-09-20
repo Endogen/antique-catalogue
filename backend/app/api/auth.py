@@ -463,6 +463,12 @@ def resend_verification(
             expires_at=now + timedelta(hours=VERIFY_TOKEN_EXPIRE_HOURS),
         )
     )
-    db.commit()
-    _deliver_email(send_verification_email, user.email, token)
+    # Deliver first, then commit: a failed send must roll back so the previous
+    # verification token stays valid and no orphaned token is left behind.
+    try:
+        _deliver_email(send_verification_email, user.email, token)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
     return MessageResponse(message=message)

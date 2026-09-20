@@ -320,6 +320,39 @@ def test_delivery_failure_is_visible_and_resend_can_recover(app_with_db, db_sess
     asyncio.run(flow())
 
 
+def test_failed_resend_keeps_previous_verification_token_valid(app_with_db, db_session_factory):
+    _create_user(
+        db_session_factory, email="unverified@example.com", password="strongpass", verified=False
+    )
+
+    async def flow():
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app_with_db), base_url="http://test"
+        ) as c:
+            assert (
+                await c.post("/auth/resend-verification", json={"email": "unverified@example.com"})
+            ).status_code == 200
+            with db_session_factory() as db:
+                first = db.scalar(select(EmailToken.token).where(EmailToken.used_at.is_(None)))
+
+            with patch("app.services.email.send_email", side_effect=EmailDeliveryError("offline")):
+                failed = await c.post(
+                    "/auth/resend-verification", json={"email": "unverified@example.com"}
+                )
+            assert failed.status_code == 503
+
+            with db_session_factory() as db:
+                unused = db.scalars(
+                    select(EmailToken.token).where(EmailToken.used_at.is_(None))
+                ).all()
+            # A failed resend must neither invalidate the previous token nor
+            # leave an orphaned, never-delivered token behind.
+            assert unused == [first]
+            assert (await c.post("/auth/verify", json={"token": first})).status_code == 200
+
+    asyncio.run(flow())
+
+
 def test_draft_only_pagination_finds_older_drafts(app_with_db, db_session_factory):
     async def flow(c, h, uid):
         cid = await _create_collection(c, h)
