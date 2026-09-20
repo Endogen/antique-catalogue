@@ -20,6 +20,11 @@ _PWD_ALGORITHM = "pbkdf2_sha256"
 # OWASP recommendation for PBKDF2-HMAC-SHA256 (2023+). The iteration count is
 # stored in each hash, so older hashes keep verifying after this changes.
 _PWD_ITERATIONS = 600_000
+# Upper bound on the stored iteration count. Legitimate hashes use
+# _PWD_ITERATIONS (or a smaller legacy count); this only rejects a corrupted or
+# maliciously crafted hash that would otherwise turn a login into a CPU denial
+# of service.
+_PWD_MAX_ITERATIONS = 5_000_000
 _PWD_SALT_BYTES = 16
 
 _JWT_ALGORITHMS = {"HS256"}
@@ -50,6 +55,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         if algorithm != _PWD_ALGORITHM:
             return False
         iterations = int(iterations_str)
+        if not 1 <= iterations <= _PWD_MAX_ITERATIONS:
+            return False
         salt = _b64url_decode(salt_b64)
         expected = _b64url_decode(digest_b64)
     except (ValueError, TypeError):
