@@ -11,7 +11,7 @@ export const THEME_STORAGE_KEY = "preferred-theme";
  * Runs before first paint to apply the stored theme, so a dark-mode user never
  * sees a white flash. Kept in sync with the provider below.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var p=localStorage.getItem("${THEME_STORAGE_KEY}");var d=p==="dark"||((!p||p==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var p;try{p=localStorage.getItem("${THEME_STORAGE_KEY}");}catch(e){}var d=p==="dark"||(p==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
 
 type ThemeContextValue = {
   preference: ThemePreference;
@@ -31,7 +31,7 @@ const resolve = (preference: ThemePreference): ResolvedTheme =>
 
 const readStoredPreference = (): ThemePreference => {
   if (typeof window === "undefined") {
-    return "system";
+    return "light";
   }
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -39,9 +39,9 @@ const readStoredPreference = (): ThemePreference => {
       return stored;
     }
   } catch {
-    // Storage unavailable (private mode); fall back to the system setting.
+    // Storage unavailable (private mode); fall back to light mode.
   }
-  return "system";
+  return "light";
 };
 
 const applyTheme = (theme: ResolvedTheme) => {
@@ -58,7 +58,7 @@ const applyTheme = (theme: ResolvedTheme) => {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // The inline script already set the class; this state only mirrors it.
   const [preference, setPreferenceState] =
-    React.useState<ThemePreference>("system");
+    React.useState<ThemePreference>("light");
   const [theme, setTheme] = React.useState<ResolvedTheme>("light");
 
   React.useEffect(() => {

@@ -20,6 +20,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { SocialShareActions } from "@/components/social-share-actions";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   avatarUrl,
   profileApi,
@@ -109,7 +110,7 @@ export default function PublicProfilePage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/80 bg-background/80 px-6 py-6 backdrop-blur lg:px-12">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/logo.png"
@@ -126,6 +127,7 @@ export default function PublicProfilePage() {
             </div>
           </Link>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Button variant="ghost" size="sm" asChild>
               <Link href="/explore">
                 <ArrowLeft className="h-4 w-4" />

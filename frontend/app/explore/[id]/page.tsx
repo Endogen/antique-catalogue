@@ -22,6 +22,7 @@ import {
 } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ItemPreviewCard } from "@/components/item-preview-card";
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
@@ -399,7 +400,7 @@ export default function PublicCollectionPage() {
       <div className="pointer-events-none absolute bottom-[-15%] right-[-8%] h-80 w-80 rounded-full bg-panel/10 blur-[160px]" />
       <div className="relative z-10">
         <header className="px-6 py-6 lg:px-12">
-          <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-3">
               <Image
                 src="/logo.png"
@@ -429,6 +430,7 @@ export default function PublicCollectionPage() {
               </Link>
             </nav>
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               {showAuthenticatedCtas ? (
                 <Button
                   variant="secondary"

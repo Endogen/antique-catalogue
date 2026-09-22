@@ -17,6 +17,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { publicCollectionApi, type CollectionResponse } from "@/lib/api";
@@ -108,7 +109,7 @@ export default function ExplorePage() {
       <div className="pointer-events-none absolute bottom-[-15%] right-[-8%] h-80 w-80 rounded-full bg-panel/10 blur-[160px]" />
       <div className="relative z-10">
         <header className="px-6 py-6 lg:px-12">
-          <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-3">
               <Image
                 src="/logo.png"
@@ -138,6 +139,7 @@ export default function ExplorePage() {
               </Link>
             </nav>
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               {showAuthenticatedCtas ? (
                 <Button
                   variant="secondary"
@@ -188,14 +190,15 @@ export default function ExplorePage() {
                 </Button>
               </div>
               <div className="mt-8 rounded-2xl border border-border bg-card/90 p-4 shadow-sm">
-                <label className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                <label htmlFor="collection-search" className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
                   {t("Search collections")}
                 </label>
-                <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-sm focus-within:border-brand-border focus-within:ring-2 focus-within:ring-ring">
                   <Search className="h-4 w-4 text-muted-subtle" />
                   <input
+                    id="collection-search"
                     type="search"
-                    className="w-full text-sm text-muted-strong focus:outline-none"
+                    className="min-w-0 w-full appearance-none bg-transparent text-sm text-muted-strong focus:outline-none"
                     placeholder={t("Search by collection name or description")}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
