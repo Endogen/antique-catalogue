@@ -328,6 +328,8 @@ Image responses require revalidation so newly fetched photos follow current visi
 | GET | `/search/items` | Global item search |
 | GET | `/health` | Health check |
 
+Image processing rejects photos above 80 million pixels before decoding, including direct and resumable uploads, avatar uploads, and archive restores. This limit is separate from the upload byte limit.
+
 ## Environment Variables
 
 | Variable | Default | Description |

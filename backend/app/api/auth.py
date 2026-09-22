@@ -444,25 +444,31 @@ def resend_verification(
     message = "If the account needs verification, a new email has been sent."
     if not user or not user.is_active or user.is_verified:
         return MessageResponse(message=message)
-    now = datetime.now(timezone.utc)
-    db.execute(
-        update(EmailToken)
-        .where(
-            EmailToken.user_id == user.id,
-            EmailToken.token_type == "verify",
-            EmailToken.used_at.is_(None),
-        )
-        .values(used_at=now)
-    )
     token = _generate_unique_token(db, "verification")
-    db.add(
-        EmailToken(
-            user_id=user.id,
-            token=token,
-            token_type="verify",
-            expires_at=now + timedelta(hours=VERIFY_TOKEN_EXPIRE_HOURS),
+    # Do not take SQLite's write lock while SMTP may wait or retry. Only replace
+    # the old tokens once delivery succeeds, in a single short transaction.
+    try:
+        _deliver_email(send_verification_email, user.email, token)
+        now = datetime.now(timezone.utc)
+        db.execute(
+            update(EmailToken)
+            .where(
+                EmailToken.user_id == user.id,
+                EmailToken.token_type == "verify",
+                EmailToken.used_at.is_(None),
+            )
+            .values(used_at=now)
         )
-    )
-    db.commit()
-    _deliver_email(send_verification_email, user.email, token)
+        db.add(
+            EmailToken(
+                user_id=user.id,
+                token=token,
+                token_type="verify",
+                expires_at=now + timedelta(hours=VERIFY_TOKEN_EXPIRE_HOURS),
+            )
+        )
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
     return MessageResponse(message=message)

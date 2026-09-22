@@ -13,7 +13,10 @@ else:
     PIL_AVAILABLE = True
 
 from app.core.settings import get_settings
+from app.services import image_processing
 from app.services.image_processing import (
+    MAX_IMAGE_PIXELS,
+    ImageProcessingError,
     VARIANT_NAMES,
     build_variant_filename,
     generate_image_variants,
@@ -97,6 +100,20 @@ def test_original_is_uncapped_by_default():
     assert variant_max_sizes()["original"] is None
 
 
+def test_decode_pixel_cap_is_applied():
+    # The cap must be installed on Pillow at import time, so every decode path
+    # (direct upload, speed capture, resumable upload, archive restore) is bounded.
+    assert Image.MAX_IMAGE_PIXELS == MAX_IMAGE_PIXELS
+
+
+def test_oversized_images_are_rejected(monkeypatch):
+    # Lower the cap to a value the normal test photo exceeds, then confirm the
+    # bomb is rejected with a clear error instead of decoding or a generic 500.
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1000)
+    with pytest.raises(ImageProcessingError, match="dimensions are too large"):
+        generate_image_variants(_photo(4000, 3000))
+
+
 @pytest.mark.parametrize("limit", [1024, 12 * 1024 * 1024])
 def test_direct_and_resumable_uploads_respect_the_configured_limit(monkeypatch, limit):
     from uuid import uuid4
@@ -121,3 +138,29 @@ def test_direct_and_resumable_uploads_respect_the_configured_limit(monkeypatch, 
     assert Start.model_validate(request).size == limit
     with pytest.raises(ValidationError):
         Start.model_validate({**request, "size": limit + 1})
+
+
+@pytest.mark.parametrize("single_variant", [False, True])
+def test_pixel_limit_rejects_before_decode_even_without_pillow_guard(monkeypatch, single_variant):
+    # Stay small while exercising the exact boundary independently of Pillow's
+    # warning/error thresholds and of whether its global guard is enabled.
+    payload = _photo(41, 25)
+    monkeypatch.setattr(image_processing, "MAX_IMAGE_PIXELS", 1000)
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", None)
+
+    def decode_must_not_start(*args, **kwargs):
+        pytest.fail("Pixel-limit validation must happen before EXIF processing or decoding")
+
+    monkeypatch.setattr(image_processing.ImageOps, "exif_transpose", decode_must_not_start)
+    with pytest.raises(ImageProcessingError, match="dimensions are too large"):
+        if single_variant:
+            image_processing.generate_image_variant(payload, "large")
+        else:
+            generate_image_variants(payload)
+
+
+def test_photo_at_pixel_limit_is_accepted(monkeypatch):
+    payload = _photo(40, 25)
+    monkeypatch.setattr(image_processing, "MAX_IMAGE_PIXELS", 1000)
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1000)
+    assert _size(generate_image_variants(payload).as_dict()["original"]) == (40, 25)

@@ -328,7 +328,21 @@ def serve_image(
         # lightbox preview on first authorized access without altering originals.
         original = output_dir / build_variant_filename(image.id, "original")
         if original.exists():
-            payload = generate_image_variant(original.read_bytes(), "large")
+            try:
+                payload = generate_image_variant(original.read_bytes(), "large")
+            except ImageProcessingError as exc:
+                # Older originals may exceed the current decode limit. Reuse
+                # their safe preview without decoding the oversized original.
+                medium = output_dir / build_variant_filename(image.id, "medium")
+                try:
+                    if not medium.exists():
+                        raise exc
+                    payload = generate_image_variant(medium.read_bytes(), "large")
+                except ImageProcessingError as fallback_exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail=str(fallback_exc),
+                    ) from fallback_exc
             save_image_variants({"large": payload}, output_dir, image.id)
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")

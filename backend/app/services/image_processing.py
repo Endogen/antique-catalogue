@@ -8,6 +8,13 @@ from typing import Mapping
 
 from app.core.settings import get_settings
 
+# Hard ceiling on decoded pixel count, applied to every entry point that reads
+# an uploaded image (direct upload, speed capture, resumable upload, archive
+# restore). The default lives here rather than in Pillow's own default so the
+# limit cannot drift between Pillow releases and is reviewed alongside the rest
+# of the image pipeline.
+MAX_IMAGE_PIXELS = 80_000_000
+
 try:
     from PIL import Image, ImageOps, UnidentifiedImageError
 except ModuleNotFoundError:  # pragma: no cover - handled via runtime check
@@ -18,6 +25,10 @@ except ModuleNotFoundError:  # pragma: no cover - handled via runtime check
     PIL_AVAILABLE = False
 else:
     PIL_AVAILABLE = True
+    # Pillow warns above this threshold and errors above twice the threshold.
+    # Keep its guard as defense in depth; _open_image enforces our exact cap
+    # before EXIF processing or decoding can allocate the full pixel buffer.
+    Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 # "original" keeps whatever resolution was uploaded unless a cap is configured;
 # "large" backs the lightbox, which would otherwise download the full-size file.
@@ -60,10 +71,16 @@ def _open_image(data: bytes) -> Image.Image:
         raise ImageProcessingError("Image payload is empty")
     try:
         with Image.open(BytesIO(data)) as image:
+            if image.width * image.height > MAX_IMAGE_PIXELS:
+                raise ImageProcessingError("Image dimensions are too large")
             image = ImageOps.exif_transpose(image)
             return image.convert("RGB")
+    except ImageProcessingError:
+        raise
     except UnidentifiedImageError as exc:
         raise ImageProcessingError("Unsupported image format") from exc
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+        raise ImageProcessingError("Image dimensions are too large") from exc
     except Exception as exc:
         raise ImageProcessingError("Failed to read image data") from exc
 

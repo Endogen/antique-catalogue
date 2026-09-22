@@ -320,6 +320,39 @@ def test_delivery_failure_is_visible_and_resend_can_recover(app_with_db, db_sess
     asyncio.run(flow())
 
 
+def test_failed_resend_keeps_previous_verification_token_valid(app_with_db, db_session_factory):
+    _create_user(
+        db_session_factory, email="unverified@example.com", password="strongpass", verified=False
+    )
+
+    async def flow():
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app_with_db), base_url="http://test"
+        ) as c:
+            assert (
+                await c.post("/auth/resend-verification", json={"email": "unverified@example.com"})
+            ).status_code == 200
+            with db_session_factory() as db:
+                first = db.scalar(select(EmailToken.token).where(EmailToken.used_at.is_(None)))
+
+            with patch("app.services.email.send_email", side_effect=EmailDeliveryError("offline")):
+                failed = await c.post(
+                    "/auth/resend-verification", json={"email": "unverified@example.com"}
+                )
+            assert failed.status_code == 503
+
+            with db_session_factory() as db:
+                unused = db.scalars(
+                    select(EmailToken.token).where(EmailToken.used_at.is_(None))
+                ).all()
+            # A failed resend must neither invalidate the previous token nor
+            # leave an orphaned, never-delivered token behind.
+            assert unused == [first]
+            assert (await c.post("/auth/verify", json={"token": first})).status_code == 200
+
+    asyncio.run(flow())
+
+
 def test_draft_only_pagination_finds_older_drafts(app_with_db, db_session_factory):
     async def flow(c, h, uid):
         cid = await _create_collection(c, h)
@@ -354,3 +387,42 @@ def test_draft_only_pagination_finds_older_drafts(app_with_db, db_session_factor
         assert all(row["is_draft"] for row in rows)
 
     run_flow(app_with_db, db_session_factory, flow)
+
+
+def test_resend_does_not_hold_sqlite_write_lock_during_email_delivery(tmp_path):
+    from sqlalchemy import create_engine, update
+    from sqlalchemy.orm import sessionmaker
+
+    from app.api.auth import resend_verification
+    from app.db.base import Base
+    from app.db.session import enable_sqlite_pragmas
+    from app.models.user import User
+    from app.schemas.auth import ForgotPasswordRequest
+
+    # Use distinct connections to an actual SQLite file: an in-memory fixture
+    # with a shared connection cannot expose the production write-lock problem.
+    engine = create_engine(f"sqlite:///{tmp_path / 'mail-lock.db'}")
+    enable_sqlite_pragmas(engine)
+    factory = sessionmaker(bind=engine, autoflush=False)
+    Base.metadata.create_all(engine)
+    try:
+        user_id = _create_user(
+            factory, email="slow-mail@example.com", password="strongpass", verified=False
+        )
+
+        def deliver_while_another_request_writes(email, token):
+            with engine.begin() as connection:
+                connection.exec_driver_sql("PRAGMA busy_timeout=50")
+                connection.execute(
+                    update(User).where(User.id == user_id).values(username="still-responsive")
+                )
+
+        with factory() as db, patch(
+            "app.api.auth.send_verification_email", side_effect=deliver_while_another_request_writes
+        ):
+            resend_verification(ForgotPasswordRequest(email="slow-mail@example.com"), db)
+        with factory() as db:
+            assert db.get(User, user_id).username == "still-responsive"
+            assert db.scalar(select(EmailToken).where(EmailToken.user_id == user_id)) is not None
+    finally:
+        engine.dispose()

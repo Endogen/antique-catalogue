@@ -271,8 +271,9 @@ def test_image_serving_public_access(app_with_db, db_session_factory, tmp_path) 
         asyncio.run(_flow())
 
 
+@pytest.mark.parametrize("restrict_original", [False, True])
 def test_legacy_photo_large_variant_is_generated_after_authorization(
-    app_with_db, db_session_factory, tmp_path
+    app_with_db, db_session_factory, tmp_path, monkeypatch, restrict_original
 ):
     email = "legacy-photo@example.com"
     user_id = _create_user(db_session_factory, email=email, password="strongpass")
@@ -297,15 +298,29 @@ def test_legacy_photo_large_variant_is_generated_after_authorization(
             original = directory / f"{image_id}_original.jpg"
             original_bytes = original.read_bytes()
             large.unlink()  # Photos uploaded before the large variant existed.
+            if restrict_original:
+                # An original accepted before the new cap must not break the
+                # lightbox when its already-stored medium preview is still safe.
+                monkeypatch.setattr("app.services.image_processing.MAX_IMAGE_PIXELS", 1_000_000)
             url = f"/images/{image_id}/large.jpg"
             assert (await client.get(url)).status_code == 404
             assert not large.exists()
             response = await client.get(url, headers=headers)
             assert response.status_code == 200
-            assert Image.open(BytesIO(response.content)).size == (1600, 1200)
+            expected_size = (800, 600) if restrict_original else (1600, 1200)
+            assert Image.open(BytesIO(response.content)).size == expected_size
             assert large.exists()
             assert original.read_bytes() == original_bytes
             assert (await client.get(url, headers=headers)).content == response.content
+            if restrict_original:
+                rejected = await client.post(
+                    f"/items/{item_id}/images", headers=headers,
+                    files={"file": ("too-large.jpg", buffer.getvalue(), "image/jpeg")},
+                )
+                assert rejected.status_code == 422
+                assert rejected.json()["detail"] == "Image dimensions are too large"
+                listing = await client.get(f"/items/{item_id}/images", headers=headers)
+                assert [row["id"] for row in listing.json()] == [image_id]
 
     with _temp_uploads_dir(tmp_path):
         asyncio.run(_flow())
