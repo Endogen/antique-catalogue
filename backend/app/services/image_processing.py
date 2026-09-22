@@ -85,6 +85,12 @@ def _open_image(data: bytes) -> Image.Image:
         raise ImageProcessingError("Failed to read image data") from exc
 
 
+def validate_image(data: bytes) -> None:
+    """Decode with the same dimension/corruption checks, without encoding variants."""
+    with _open_image(data):
+        pass
+
+
 def _resize_image(image: Image.Image, max_size: int) -> Image.Image:
     resized = image.copy()
     resized.thumbnail((max_size, max_size), resample=_resample_filter())

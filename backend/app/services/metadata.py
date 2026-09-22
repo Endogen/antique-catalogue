@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime
+from math import isfinite
 from typing import Any
 
 from app.models.field_definition import FieldDefinition
@@ -57,7 +58,11 @@ def validate_metadata(
             continue
 
         if field.field_type == "number":
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or (isinstance(value, float) and not isfinite(value))
+            ):
                 errors.append({"field": field.name, "message": "Value must be a number"})
                 continue
             normalized[field.name] = value
@@ -152,3 +157,16 @@ def validate_metadata(
     if not normalized and not provided:
         return None
     return normalized
+
+
+def require_finite_json(value: Any) -> Any:
+    """Reject non-JSON numbers even inside untyped/preserved archive values."""
+    if isinstance(value, float) and not isfinite(value):
+        raise ValueError("Metadata numbers must be finite")
+    if isinstance(value, dict):
+        for nested in value.values():
+            require_finite_json(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            require_finite_json(nested)
+    return value

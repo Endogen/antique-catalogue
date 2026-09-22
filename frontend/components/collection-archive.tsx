@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import { apiFetch, apiRequest, isApiError } from "@/lib/api";
 
+import { useFocusTrap } from "@/lib/use-focus-trap";
+
 type Preview = { name: string; items: number; photos: number; drafts: number; private_fields: number; digest: string; fields: { name: string; is_private: boolean }[] };
 
 export function CollectionArchive({ collectionId }: { collectionId?: string | number }) {
@@ -17,13 +19,7 @@ export function CollectionArchive({ collectionId }: { collectionId?: string | nu
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const requestId = React.useRef("");
-  const dialog = React.useRef<HTMLElement>(null);
-  React.useEffect(() => {
-    if (!open) return;
-    const previous = document.activeElement as HTMLElement | null;
-    dialog.current?.focus();
-    return () => previous?.focus();
-  }, [open]);
+  const dialog = useFocusTrap<HTMLElement>(open, () => { if (!busy) setOpen(false); });
   const message = (error: unknown) => isApiError(error) ? error.detail : error instanceof Error ? error.message : "Transfer failed. Please retry.";
   const exportArchive = async () => {
     setBusy(true); setError(null);
@@ -59,15 +55,7 @@ export function CollectionArchive({ collectionId }: { collectionId?: string | nu
   return <>
     <Button variant="outline" onClick={() => setOpen(true)}>{t(collectionId ? "Export collection" : "Restore collection")}</Button>
     {open && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-stone-950/40 p-4">
-      <section ref={dialog} tabIndex={-1} onKeyDown={event => {
-        if (event.key === "Escape" && !busy) setOpen(false);
-        if (event.key === "Tab") {
-          const controls = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [href]') ?? []);
-          const first = controls[0], last = controls.at(-1);
-          if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { event.preventDefault(); last?.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-        }
-      }} role="dialog" aria-modal="true" aria-labelledby="archive-title" className="max-h-[85vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-3xl bg-card p-6 shadow-xl">
+      <section ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="archive-title" className="max-h-[85vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-3xl bg-card p-6 shadow-xl">
         <h2 id="archive-title" className="font-display text-2xl">{t(collectionId ? "Export collection" : "Restore collection")}</h2>
         {collectionId ? <>
           <p className="text-sm text-muted-strong">{t("This owner backup includes all photos, drafts, private fields, and preserved values. Keep it somewhere safe.")}</p>
@@ -82,7 +70,7 @@ export function CollectionArchive({ collectionId }: { collectionId?: string | nu
             <p>{t("Private fields")}: {preview.private_fields}</p>
             <p className="break-words">{t("Fields")}: {preview.fields.map(field => field.name).join(", ") || "—"}</p>
             <label className="block" htmlFor="restore-name">{t("Collection name")}</label>
-            <input id="restore-name" className="w-full rounded-xl border p-2" value={name} maxLength={200} onChange={event => setName(event.target.value)} />
+            <input id="restore-name" className="w-full rounded-xl border p-2" value={name} onChange={event => setName(event.target.value)} />
             <Button disabled={busy || !name.trim()} onClick={() => void restore()}>{t("Restore as private collection")}</Button>
           </div>}
         </>}

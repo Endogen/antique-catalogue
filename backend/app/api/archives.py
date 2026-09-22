@@ -12,7 +12,7 @@ from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.background import BackgroundTask
@@ -32,7 +32,9 @@ from app.services.image_processing import (
     ImageProcessingError,
     generate_image_variants,
     save_image_variants,
+    validate_image,
 )
+from app.services.metadata import require_finite_json
 from app.services.metadata_preservation import preserve_values
 from app.services.uploads import collection_upload_dir, item_upload_dir
 
@@ -53,7 +55,8 @@ class Photo(Record):
 
 
 class ArchiveItem(Record):
-    name: str = Field(min_length=1, max_length=200)
+    # Backups preserve names accepted by older versions without truncation.
+    name: str = Field(min_length=1)
     notes: str | None = None
     metadata: dict | None = None
     preserved_metadata: list[dict] = Field(default_factory=list)
@@ -63,9 +66,15 @@ class ArchiveItem(Record):
     updated_at: datetime
     photos: list[Photo] = Field(max_length=1000)
 
+    @field_validator("metadata", "preserved_metadata")
+    @classmethod
+    def validate_numbers(cls, value):
+        return require_finite_json(value)
+
 
 class ArchiveCollection(Record):
-    name: str = Field(min_length=1, max_length=200)
+    # Backups preserve names accepted by older versions without truncation.
+    name: str = Field(min_length=1)
     description: str | None = None
     is_public: bool
     created_at: datetime
@@ -232,7 +241,7 @@ def inspect(file: UploadFile):
                     payload = zipfile.read(photo.path)
                     if hashlib.sha256(payload).hexdigest() != photo.sha256:
                         raise ValueError("Photo checksum mismatch")
-                    generate_image_variants(payload)
+                    validate_image(payload)
             if len(set(expected)) != len(expected) or set(names) != set(expected):
                 raise ValueError("Unexpected or shared archive paths")
         return manifest, digest
@@ -269,7 +278,7 @@ def restore(
     file: UploadFile = File(...),
     digest: str = Form(...),
     request_id: UUID = Form(...),
-    name: str = Form(..., min_length=1, max_length=200),
+    name: str = Form(..., min_length=1),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -278,6 +287,8 @@ def restore(
         archive, actual_digest = inspect(file)
         if digest != actual_digest or not name.strip():
             raise HTTPException(409, "Archive changed since preview. Preview it again.")
+        if len(name.strip()) > 200 and name.strip() != archive.collection.name:
+            raise HTTPException(422, "New collection names must be at most 200 characters.")
         # A write reserves the key before restoring, serializing retries across workers.
         existing = db.get(ArchiveRestore, str(request_id))
         if existing:

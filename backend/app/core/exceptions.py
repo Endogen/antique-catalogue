@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from math import isfinite
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -42,7 +43,7 @@ def _error_response(
 
 
 def _stringify_exceptions(value: Any) -> Any:
-    if isinstance(value, Exception):
+    if isinstance(value, Exception) or (isinstance(value, float) and not isfinite(value)):
         return str(value)
     if isinstance(value, dict):
         return {key: _stringify_exceptions(item) for key, item in value.items()}

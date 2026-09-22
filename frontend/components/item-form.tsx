@@ -130,13 +130,13 @@ export const buildMetadataDefaults = (
     }
 
     if (field.field_type === "number") {
-      if (typeof raw === "number" && !Number.isNaN(raw)) {
+      if (typeof raw === "number" && Number.isFinite(raw)) {
         defaults[key] = raw;
         return;
       }
       if (typeof raw === "string") {
         const parsed = Number(raw);
-        defaults[key] = Number.isNaN(parsed) ? "" : parsed;
+        defaults[key] = Number.isFinite(parsed) ? parsed : "";
         return;
       }
       defaults[key] = "";
@@ -220,7 +220,7 @@ export const validateMetadata = (
           : typeof rawValue === "string"
             ? Number(rawValue)
             : NaN;
-      if (Number.isNaN(numericValue)) {
+      if (!Number.isFinite(numericValue)) {
         errors.push({ fieldId: key, message: t("Value must be a number") });
         return;
       }

@@ -8,8 +8,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.settings import get_settings
 from app.api.deps import get_current_user, get_optional_user
+from app.core.settings import get_settings
 from app.db.session import get_db
 from app.models.collection import Collection
 from app.models.item import Item
@@ -134,7 +134,7 @@ def _read_upload(file: UploadFile) -> bytes:
         )
     if len(data) > max_bytes:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"Image exceeds the {max_bytes // (1024 * 1024)}MB limit",
         )
     return data

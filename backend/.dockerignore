@@ -1,0 +1,16 @@
+.venv
+venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+*.egg-info
+build
+dist
+uploads
+*.db
+*.db-*
+.env
+.env.*
+!.env.example
+.DS_Store

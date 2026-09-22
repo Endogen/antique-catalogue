@@ -9,7 +9,7 @@ export type UploadResult = ItemImageResponse & SpeedCaptureNewResponse & { mode:
 export type UploadJob = {
   id: string; owner: number; target: UploadTarget; file: Blob; filename: string; size: number;
   received: number; state: "queued" | "uploading" | "error" | "done"; error?: string; result?: UploadResult;
-  parentUploadId?: string; needsPreparation?: boolean;
+  parentUploadId?: string; needsPreparation?: boolean; sequence?: number;
 };
 type Receipt = { received: number; chunk_size: number; result: UploadResult | null };
 const active = new Map<string, Promise<UploadResult>>();
@@ -32,7 +32,10 @@ async function access<T>(mode: IDBTransactionMode, operation: (store: IDBObjectS
     transaction.onabort = transaction.onerror = () => { db.close(); reject(new Error("Could not save the photo on this device. Check browser storage and retry.")); };
   });
 }
-export const listUploads = () => access("readonly", store => store.getAll()) as Promise<UploadJob[]>;
+export const listUploads = async () => {
+  const jobs = await access("readonly", store => store.getAll()) as UploadJob[];
+  return jobs.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+};
 const get = (id: string) => access("readonly", store => store.get(id)) as Promise<UploadJob | undefined>;
 async function save(job: UploadJob) { await access("readwrite", store => store.put(job)); changed(); }
 
@@ -105,31 +108,70 @@ export function resumeUpload(id: string): Promise<UploadResult> {
   return promise;
 }
 
-export async function enqueuePhoto(
-  target: UploadTarget, original: File,
-  options: { id?: string; parentUploadId?: string } = {}
-): Promise<string> {
+export function validatePhoto(original: File): void {
   if (!original.size || (original.type && !original.type.startsWith("image/"))) {
     throw new Error("Choose a non-empty image.");
   }
+}
+
+type PhotoSelection = { target: UploadTarget; file: File; id?: string; parentUploadId?: string };
+
+/** Commit the entire selection before starting any decoding or network work. */
+export async function enqueuePhotos(selections: PhotoSelection[]): Promise<string[]> {
+  if (!selections.length) return [];
+  selections.forEach(({ file }) => validatePhoto(file));
   // Decode only to partition local storage; the server validates every transfer.
   let owner: number;
   try { owner = Number(JSON.parse(atob(getAccessToken()!.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub); }
   catch { throw new Error("Sign in before selecting photos."); }
   if (!Number.isSafeInteger(owner) || owner < 1) throw new Error("Sign in before selecting photos.");
-  const jobs = await listUploads();
-  if (jobs.filter(job => job.state !== "done").length >= 20) throw new Error("Finish or discard pending uploads first.");
-  // Persist before decoding or waiting on the network. The server enforces its
-  // configured byte limit after resizing, rather than a fixed client-side 10MB.
-  const job: UploadJob = { id: options.id ?? crypto.randomUUID(), owner, target,
-    file: original, filename: original.name, size: original.size, received: 0,
-    state: "queued", needsPreparation: true, parentUploadId: options.parentUploadId };
-  await save(job);
-  // Persistent storage is best effort; browsers may still evict data under storage pressure.
+  const jobs: UploadJob[] = selections.map(({ target, file, id, parentUploadId }) => ({
+    id: id ?? crypto.randomUUID(), owner, target, file, filename: file.name, size: file.size,
+    received: 0, state: "queued", needsPreparation: true, parentUploadId
+  }));
+  const db = await database();
+  await new Promise<void>((resolve, reject) => {
+    // IndexedDB serializes read/write transactions across tabs. Count and insert
+    // together so concurrent selections cannot exceed this account's allowance.
+    const transaction = db.transaction("uploads", "readwrite");
+    const store = transaction.objectStore("uploads");
+    let error = "Could not save the photo on this device. Check browser storage and retry.";
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const pending = (request.result as UploadJob[]).filter(job => job.owner === owner && job.state !== "done");
+      if (pending.length + jobs.length > 20) {
+        error = "Finish or discard pending uploads first.";
+        transaction.abort();
+        return;
+      }
+      // add, not put: a reused ID must never overwrite an existing photo.
+      let sequence = (request.result as UploadJob[]).reduce((last, job) => job.owner === owner ? Math.max(last, job.sequence ?? 0) : last, 0);
+      jobs.forEach(job => store.add({ ...job, sequence: ++sequence }));
+    };
+    transaction.oncomplete = () => { db.close(); resolve(); };
+    transaction.onabort = () => { db.close(); reject(new Error(error)); };
+  });
+  changed();
   void navigator.storage?.persist?.().catch(() => false);
-  return job.id;
+  return jobs.map(job => job.id);
 }
 
-export async function uploadPhoto(target: UploadTarget, original: File): Promise<UploadResult> {
-  return resumeUpload(await enqueuePhoto(target, original));
+export async function enqueuePhoto(
+  target: UploadTarget, file: File, options: { id?: string; parentUploadId?: string } = {}
+): Promise<string> {
+  return (await enqueuePhotos([{ target, file, ...options }]))[0];
+}
+
+let uploadChain: Promise<unknown> = Promise.resolve();
+const scheduled = new Map<string, Promise<UploadResult>>();
+
+/** Shared network sequencing; persistence never waits for this chain. */
+export function scheduleUpload(id: string): Promise<UploadResult> {
+  const existing = scheduled.get(id);
+  if (existing) return existing;
+  const promise = uploadChain.catch(() => {}).then(() => resumeUpload(id))
+    .finally(() => scheduled.delete(id));
+  scheduled.set(id, promise);
+  uploadChain = promise.catch(() => {});
+  return promise;
 }

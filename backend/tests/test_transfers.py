@@ -226,3 +226,38 @@ def test_resume_upload_to_existing_item(app_with_db, db_session_factory, mode):
         assert (await c.post(f"/uploads/{key}/complete", headers=h)).json() == result.json()
 
     run_flow(app_with_db, db_session_factory, flow)
+
+
+def test_disconnect_during_chunk_keeps_last_receipt(app_with_db, db_session_factory):
+    from starlette.requests import ClientDisconnect
+
+    async def flow(c, h, uid):
+        cid = await _create_collection(c, h)
+        photo = _image_payload()
+        key = str(uuid4())
+        request = {
+            "id": key,
+            "filename": "photo.png",
+            "size": len(photo),
+            "target": {"mode": "capture-new", "collection_id": cid},
+        }
+        assert (await c.post("/uploads", headers=h, json=request)).status_code == 200
+        half = len(photo) // 2
+        endpoint = f"/uploads/{key}"
+        await c.put(endpoint + "?offset=0", headers=h, content=photo[:half])
+
+        async def interrupted():
+            yield photo[half : half + 10]
+            raise ClientDisconnect()
+
+        response = await c.put(endpoint + f"?offset={half}", headers=h, content=interrupted())
+        assert response.status_code == 400
+        assert (await c.get(endpoint, headers=h)).json()["received"] == half
+        with db_session_factory() as db:
+            assert db.get(UploadSession, key).data == photo[:half]
+        assert (await c.put(endpoint + f"?offset={half}", headers=h, content=photo[half:])).json()[
+            "received"
+        ] == len(photo)
+        assert (await c.post(endpoint + "/complete", headers=h)).status_code == 200
+
+    run_flow(app_with_db, db_session_factory, flow)

@@ -1,4 +1,3 @@
-import { uploadPhoto } from "@/lib/upload-queue";
 import { publishApiMutation } from "@/lib/api-mutations";
 
 export type MessageResponse = {
@@ -176,12 +175,6 @@ export type SpeedCaptureNewResponse = {
   image_id: number;
   image_count: number;
   collection_id: number;
-};
-
-export type SpeedCaptureAddResponse = {
-  item_id: number;
-  image_id: number;
-  image_count: number;
 };
 
 export type SpeedCaptureSessionResponse = {
@@ -759,15 +752,6 @@ export const authApi = {
     setAccessToken(data.access_token);
     return data;
   },
-  refresh: async () => {
-    const data = await apiRequest<TokenResponse>("/auth/refresh", {
-      method: "POST",
-      skipAuth: true,
-      skipRefresh: true
-    });
-    setAccessToken(data.access_token);
-    return data;
-  },
   logout: async () => {
     try {
       await apiRequest<MessageResponse>("/auth/logout", { method: "POST", skipRefresh: true });
@@ -878,10 +862,6 @@ export const adminApi = {
       { signal: options.signal }
     );
   },
-  deleteCollection: (collectionId: number) =>
-    adminRequest<MessageResponse>(`/admin/collections/${collectionId}`, {
-      method: "DELETE"
-    }),
   users: (
     options: { offset?: number; limit?: number; q?: string } & ReadOptions = {}
   ) => {
@@ -1135,18 +1115,6 @@ export const publicCollectionApi = {
       skipRefresh: true,
       signal: options.signal
     }),
-  featured: (options: ReadOptions = {}) =>
-    apiRequest<CollectionResponse | null>("/public/collections/featured", {
-      skipAuth: true,
-      skipRefresh: true,
-      signal: options.signal
-    }),
-  featuredItems: (options: ReadOptions = {}) =>
-    apiRequest<FeaturedItemResponse[]>("/public/collections/featured/items", {
-      skipAuth: true,
-      skipRefresh: true,
-      signal: options.signal
-    }),
   get: (collectionId: number | string, options: ReadOptions = {}) =>
     apiRequest<CollectionResponse>(`/public/collections/${collectionId}`, {
       skipAuth: true,
@@ -1295,7 +1263,6 @@ export const fieldApi = {
 };
 
 export const imageApi = {
-  upload: (itemId: number | string, file: File) => uploadPhoto({ mode: "item", item_id: Number(itemId) }, file),
   list: (itemId: number | string, options: ReadOptions = {}) =>
     apiRequest<ItemImageResponse[]>(`/items/${itemId}/images`, {
       signal: options.signal
@@ -1321,8 +1288,6 @@ export const imageApi = {
 };
 
 export const speedCaptureApi = {
-  newItem: (collectionId: number | string, file: File) => uploadPhoto({ mode: "capture-new", collection_id: Number(collectionId) }, file),
-  addImage: (collectionId: number | string, itemId: number | string, file: File) => uploadPhoto({ mode: "capture-add", collection_id: Number(collectionId), item_id: Number(itemId) }, file),
   session: (collectionId: number | string, options: ReadOptions = {}) =>
     apiRequest<SpeedCaptureSessionResponse>(
       `/speed-capture/${collectionId}/session`,

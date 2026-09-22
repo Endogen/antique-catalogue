@@ -269,7 +269,7 @@ def _read_avatar_upload(file: UploadFile) -> bytes:
         )
     if len(data) > MAX_AVATAR_BYTES:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="Avatar image exceeds 5MB limit",
         )
     return data

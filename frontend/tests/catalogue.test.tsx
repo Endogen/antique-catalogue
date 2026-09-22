@@ -2,7 +2,7 @@ import React from "react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ItemForm } from "@/components/item-form";
+import { ItemForm, buildMetadataDefaults, validateMetadata } from "@/components/item-form";
 import { VerificationResend } from "@/components/verification-resend";
 import { apiFetch, authApi, setAccessToken } from "@/lib/api";
 import { clearAuthenticatedImageCache, useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
@@ -122,5 +122,19 @@ describe("authenticated images", () => {
     const fetcher = vi.mocked(fetch).mockResolvedValue(json({ ok: true }));
     await apiFetch("/images/1/thumb.jpg");
     expect(new Headers(fetcher.mock.calls[0][1]?.headers).get("Authorization")).toBe("Bearer memory-token");
+  });
+});
+
+
+describe("numeric metadata", () => {
+  const numeric = [{ ...fields[0], field_type: "number" as const }];
+  it.each([Infinity, -Infinity, NaN, "1e309"])("rejects %s before JSON serialization", value => {
+    const result = validateMetadata(numeric, { "1": value }, key => key);
+    expect(result.errors).toEqual([{ fieldId: "1", message: "Value must be a number" }]);
+    expect(result.payload?.Manufacturer).toBeUndefined();
+    expect(buildMetadataDefaults(numeric, { Manufacturer: value })["1"]).toBe("");
+  });
+  it("keeps finite numeric values", () => {
+    expect(validateMetadata(numeric, { "1": "9.5" }, key => key)).toEqual({ payload: { Manufacturer: 9.5 }, errors: [] });
   });
 });

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { discardUpload, listUploads, resumeUpload, type UploadJob } from "@/lib/upload-queue";
+import { discardUpload, listUploads, scheduleUpload, type UploadJob } from "@/lib/upload-queue";
 
 export function UploadQueue() {
   const { user } = useAuth();
@@ -24,7 +24,7 @@ export function UploadQueue() {
         const all = await listUploads();
         for (const job of all.filter(job => job.owner === user.id && job.state !== "done")) {
           if (!mounted) return;
-          await resumeUpload(job.id).catch(() => undefined);
+          await scheduleUpload(job.id).catch(() => undefined);
         }
       } catch { /* Storage failure is surfaced on selection. */ }
     };
@@ -48,7 +48,7 @@ export function UploadQueue() {
         {job.error && <p className="break-words text-xs text-destructive">{t(job.error)}</p>}
         <div className="flex gap-2">
           {job.result ? <Button size="sm" asChild><Link href={`/collections/${job.result.collection_id}/items/${job.result.item_id}`}>{t("View item")}</Link></Button>
-            : <Button size="sm" disabled={job.state === "uploading"} onClick={() => { setError(null); void resumeUpload(job.id).catch(e => setError(e.message)); }}>{t("Resume upload")}</Button>}
+            : <Button size="sm" disabled={job.state === "uploading"} onClick={() => { setError(null); void scheduleUpload(job.id).catch(e => setError(e.message)); }}>{t("Resume upload")}</Button>}
           <Button size="sm" variant="ghost" disabled={job.state === "uploading"} onClick={() => { setError(null); void discardUpload(job).catch(e => setError(e.detail || e.message)); }}>{t(job.state === "done" ? "Dismiss" : "Discard upload")}</Button>
         </div>
       </div>)}

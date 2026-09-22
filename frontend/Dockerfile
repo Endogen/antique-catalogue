@@ -10,6 +10,10 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM base AS builder
+ARG NEXT_PUBLIC_IMAGE_MAX_SIZE=2560
+ARG NEXT_PUBLIC_IMAGE_QUALITY=0.82
+ENV NEXT_PUBLIC_IMAGE_MAX_SIZE=$NEXT_PUBLIC_IMAGE_MAX_SIZE
+ENV NEXT_PUBLIC_IMAGE_QUALITY=$NEXT_PUBLIC_IMAGE_QUALITY
 RUN apk add --no-cache libc6-compat
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

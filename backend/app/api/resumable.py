@@ -9,11 +9,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session
+from starlette.requests import ClientDisconnect
 
-from app.core.settings import get_settings
 from app.api.deps import get_current_user
 from app.api.images import _cleanup_variants, _get_item_or_404, _get_next_position
 from app.api.speed_capture import _get_own_collection_or_404, _next_draft_number
+from app.core.settings import get_settings
 from app.db.session import get_db
 from app.models.item import Item
 from app.models.item_image import ItemImage
@@ -150,10 +151,15 @@ async def chunk(
     db: Session = Depends(get_db),
 ):
     data = bytearray()
-    async for part in request.stream():
-        data.extend(part)
-        if len(data) > CHUNK_SIZE:
-            raise HTTPException(413, "Chunk exceeds 1MB")
+    try:
+        async for part in request.stream():
+            data.extend(part)
+            if len(data) > CHUNK_SIZE:
+                raise HTTPException(413, "Chunk exceeds 1MB")
+    except ClientDisconnect as exc:
+        # Nothing is persisted until the whole chunk arrives. A reload or lost
+        # connection is an expected resumable-transfer event, not a server error.
+        raise HTTPException(400, "Upload interrupted. Resume this photo.") from exc
     session = own(db, upload_id, user)
     if session.result is not None:
         return status(session)

@@ -151,7 +151,10 @@ def test_register_rolls_back_when_verification_email_fails(
 
         session = db_session_factory()
         try:
-            assert session.execute(select(User).where(User.email == email)).scalar_one_or_none() is None
+            assert (
+                session.execute(select(User).where(User.email == email)).scalar_one_or_none()
+                is None
+            )
             assert (
                 session.execute(
                     select(EmailToken).join(User).where(User.email == email)
@@ -193,7 +196,9 @@ def test_forgot_password_rolls_back_reset_token_when_email_fails(
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post("/auth/forgot", json={"email": email})
             assert response.status_code == 200
-            assert response.json()["message"] == "If the account exists, a reset email has been sent"
+            assert response.json()["message"] == (
+                "If the account exists, a reset email has been sent"
+            )
 
         session = db_session_factory()
         try:

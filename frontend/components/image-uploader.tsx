@@ -11,18 +11,14 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  imageApi,
-  isApiError,
-  type ItemImageResponse
-} from "@/lib/api";
+import { type ItemImageResponse } from "@/lib/api";
+import { useAuth } from "@/components/auth-provider";
+import { enqueuePhotos, listUploads, scheduleUpload, validatePhoto } from "@/lib/upload-queue";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Eyebrow, SectionHeading } from "@/components/ui/typography";
 import { Alert } from "@/components/ui/alert";
-
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 const formatFileSize = (bytes: number) => {
   if (bytes <= 0) {
@@ -38,25 +34,13 @@ const formatFileSize = (bytes: number) => {
   return `${value.toFixed(precision)} ${units[exponent]}`;
 };
 
-const buildUploadId = (file: File, index: number) =>
-  `${file.name}-${file.size}-${file.lastModified}-${index}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
-
-const isSupportedImage = (file: File) => {
-  if (!file.type) {
-    return true;
-  }
-  return file.type.startsWith("image/");
-};
-
-type UploadStatus = "queued" | "uploading" | "success" | "error";
-
 type UploadEntry = {
   id: string;
-  file: File;
-  status: UploadStatus;
+  filename: string;
+  size: number;
+  status: "saving" | "queued" | "uploading" | "success" | "error";
   error?: string;
+  persisted?: boolean;
 };
 
 export type ImageUploaderProps = {
@@ -71,6 +55,7 @@ export function ImageUploader({
   onUploaded
 }: ImageUploaderProps) {
   const { t } = useI18n();
+  const { user } = useAuth();
   const [uploads, setUploads] = React.useState<UploadEntry[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [globalError, setGlobalError] = React.useState<string | null>(null);
@@ -89,80 +74,53 @@ export function ImageUploader({
 
   const isReady = Boolean(itemId) && !disabled;
 
-  const updateUpload = React.useCallback((id: string, patch: Partial<UploadEntry>) => {
-    setUploads((prev) =>
-      prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry))
-    );
-  }, []);
-
-  const uploadEntries = React.useCallback(
-    async (entries: UploadEntry[]) => {
-      if (!itemId) {
-        setGlobalError(t("Upload is unavailable until the item finishes loading."));
-        return;
-      }
-
-      for (const entry of entries) {
-        updateUpload(entry.id, { status: "uploading", error: undefined });
-        try {
-          await imageApi.upload(itemId, entry.file);
-          updateUpload(entry.id, { status: "success" });
-        } catch (error) {
-          updateUpload(entry.id, {
-            status: "error",
-            error: isApiError(error)
-              ? t(error.detail)
-              : t(error instanceof Error ? error.message : "We couldn't upload this image.")
-          });
-        }
-      }
-    },
-    [itemId, t, updateUpload]
-  );
+  React.useEffect(() => {
+    let mounted = true;
+    const read = async () => {
+      try {
+        const jobs = (await listUploads()).filter(job => job.owner === user?.id && job.target.item_id === Number(itemId));
+        if (!mounted) return;
+        setUploads(previous => {
+          const saved = jobs.map(job => ({
+            id: job.id, filename: job.filename, size: job.size, persisted: true,
+            status: job.state === "done" ? "success" as const : job.state,
+            error: job.state === "error" ? t("Photo saved on this device. Open Uploads to resume.") : undefined
+          }));
+          const ids = new Set(saved.map(job => job.id));
+          return [...saved, ...previous.filter(entry => !ids.has(entry.id) && !entry.persisted && (entry.status === "saving" || entry.status === "error"))];
+        });
+      } catch { /* Selection surfaces storage errors. */ }
+    };
+    void read();
+    window.addEventListener("upload-queue-change", read);
+    return () => { mounted = false; window.removeEventListener("upload-queue-change", read); };
+  }, [itemId, user?.id, t]);
 
   const handleFiles = React.useCallback(
     (files: FileList | File[]) => {
-      const fileList = Array.from(files);
-      if (!fileList.length) {
-        return;
-      }
-
+      if (!itemId || disabled) return;
+      const selections = Array.from(files).map(file => ({ id: crypto.randomUUID(), file, target: { mode: "item" as const, item_id: Number(itemId) } }));
+      if (!selections.length) return;
       setGlobalError(null);
-
-      const entries: UploadEntry[] = fileList.map((file, index) => {
-        const entry: UploadEntry = {
-          id: buildUploadId(file, index),
-          file,
-          status: "queued"
-        };
-
-        if (!isSupportedImage(file)) {
-          return {
-            ...entry,
-            status: "error",
-            error: t("Unsupported file type")
-          };
+      const entries: UploadEntry[] = selections.map(({ id, file }) => {
+        try {
+          validatePhoto(file);
+          return { id, filename: file.name, size: file.size, status: "saving" };
+        } catch (error) {
+          return { id, filename: file.name, size: file.size, status: "error", error: t((error as Error).message) };
         }
-
-        if (file.size > MAX_IMAGE_BYTES) {
-          return {
-            ...entry,
-            status: "error",
-            error: t("File exceeds the 10MB limit")
-          };
-        }
-
-        return entry;
       });
-
-      setUploads((prev) => [...entries, ...prev]);
-
-      const validEntries = entries.filter((entry) => entry.status === "queued");
-      if (validEntries.length > 0) {
-        void uploadEntries(validEntries);
-      }
+      setUploads(previous => [...previous, ...entries]);
+      const valid = selections.filter(selection => entries.find(entry => entry.id === selection.id)?.status === "saving");
+      void enqueuePhotos(valid).then(ids => {
+        for (const id of ids) void scheduleUpload(id).catch(() => {});
+      }).catch((error: Error) => {
+        setGlobalError(t(error.message));
+        const ids = new Set(valid.map(selection => selection.id));
+        setUploads(previous => previous.map(entry => ids.has(entry.id) ? { ...entry, status: "error", error: t(error.message) } : entry));
+      });
     },
-    [t, uploadEntries]
+    [itemId, disabled, t]
   );
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -251,7 +209,7 @@ export function ImageUploader({
                 {t("Drop images to upload")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {t("JPG, PNG, WebP, or HEIC. Up to 10MB each.")}
+                {t("JPG, PNG, WebP, or HEIC. Photos are resized before uploading.")}
               </p>
             </div>
           </div>
@@ -322,10 +280,10 @@ export function ImageUploader({
                 >
                   <div>
                     <p className="font-medium text-foreground">
-                      {entry.file.name}
+                      {entry.filename}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatFileSize(entry.file.size)}
+                      {formatFileSize(entry.size)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
@@ -347,7 +305,7 @@ export function ImageUploader({
                         </span>
                       </>
                     ) : (
-                      <span className="text-muted-foreground">{t("Queued")}</span>
+                      <span className="text-muted-foreground">{t(entry.status === "saving" ? "Saving on this device..." : "Queued")}</span>
                     )}
                   </div>
                 </div>

@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:unused": "node scripts/check-unused-api.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

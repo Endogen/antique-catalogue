@@ -36,7 +36,9 @@ def test_verify_password_rejects_absurd_iteration_counts() -> None:
     # Zero and negative counts are equally invalid and would make
     # hashlib.pbkdf2_hmac raise.
     for iterations in ("0", "-1"):
-        assert verify_password(password, f"{algorithm}${iterations}${salt_b64}${digest_b64}") is False
+        assert (
+            verify_password(password, f"{algorithm}${iterations}${salt_b64}${digest_b64}") is False
+        )
 
 
 def test_create_and_decode_access_token() -> None:

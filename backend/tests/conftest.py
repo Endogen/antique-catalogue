@@ -12,10 +12,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.api.archives import router as archives_router
-from app.api.resumable import router as resumable_router
 from app.api.activity import router as activity_router
 from app.api.admin import router as admin_router
+from app.api.archives import router as archives_router
 from app.api.auth import router as auth_router
 from app.api.collections import public_router as public_collections_router
 from app.api.collections import router as collections_router
@@ -26,6 +25,7 @@ from app.api.items import public_router as public_items_router
 from app.api.items import router as items_router
 from app.api.profiles import avatar_router as avatar_serve_router
 from app.api.profiles import router as profiles_router
+from app.api.resumable import router as resumable_router
 from app.api.schema_templates import router as schema_templates_router
 from app.api.search import router as search_router
 from app.api.speed_capture import router as speed_capture_router

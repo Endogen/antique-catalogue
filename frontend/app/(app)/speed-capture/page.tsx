@@ -1,6 +1,6 @@
 "use client";
 
-import { enqueuePhoto, resumeUpload, type UploadResult } from "@/lib/upload-queue";
+import { enqueuePhoto, scheduleUpload, type UploadResult } from "@/lib/upload-queue";
 
 import * as React from "react";
 import Image from "next/image";
@@ -594,8 +594,6 @@ export default function SpeedCapturePage() {
 
   // Photos upload one after another so the capture screen never has to wait,
   // and so each shot knows which item the previous one created.
-  const uploadChainRef = React.useRef<Promise<unknown>>(Promise.resolve());
-  const enqueueChainRef = React.useRef<Promise<unknown>>(Promise.resolve());
   const captureGroupRef = React.useRef<{ uploadId: string; itemId?: number } | null>(null);
   const sessionRef = React.useRef(0);
   const previewUrlsRef = React.useRef(new Set<string>());
@@ -735,17 +733,15 @@ export default function SpeedCapturePage() {
 
     // Only disk writes wait for one another. Every selected file is durable
     // before waiting for preceding network requests, including its parent link.
-    const queued = enqueueChainRef.current.catch(() => {}).then(() => enqueuePhoto(
+    const queued = enqueuePhoto(
       isNew
         ? { mode: "capture-new", collection_id: collection.id }
         : { mode: "capture-add", collection_id: collection.id,
             ...(parentItemId === null ? {} : { item_id: parentItemId }) },
       file, { id: shot.id, parentUploadId }
-    ));
-    enqueueChainRef.current = queued.catch(() => {});
-    const previous = uploadChainRef.current;
-    uploadChainRef.current = queued
-      .then(async id => { await previous.catch(() => {}); return resumeUpload(id); })
+    );
+    void queued
+      .then(scheduleUpload)
       .catch((error: unknown) => {
         if (sessionRef.current !== session) return;
         setState((s) => ({

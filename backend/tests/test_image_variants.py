@@ -16,8 +16,8 @@ from app.core.settings import get_settings
 from app.services import image_processing
 from app.services.image_processing import (
     MAX_IMAGE_PIXELS,
-    ImageProcessingError,
     VARIANT_NAMES,
+    ImageProcessingError,
     build_variant_filename,
     generate_image_variants,
     variant_max_sizes,

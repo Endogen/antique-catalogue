@@ -170,6 +170,12 @@ test("owner can download a backup, preview it, and restore a private copy", asyn
   expect(backup).toBeTruthy();
   await page.goto("/collections");
   await page.getByRole("button", { name: "Restore collection", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
+  await expect(page.getByRole("button", { name: "Restore collection", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "Restore collection", exact: true }).click();
   await page.locator("#archive-file").setInputFiles(backup!);
   await expect(page.locator("#restore-name")).toHaveValue("Ceramics backup");
   await expect(page.getByRole("dialog")).toContainText("Private fields: 1");
@@ -589,4 +595,151 @@ test("resuming a capture clears its error without leaving the capture screen", a
   await page.getByRole("button", { name: "Resume upload", exact: true }).click();
   await expect(page.getByRole("button", { name: "Uploads (0)", exact: true })).toBeVisible();
   await expect(message).toHaveCount(0);
+});
+
+test("item uploader resizes large originals before enforcing server limits", async ({ page }) => {
+  await account(page, "audit-large@example.com");
+  const collection = await create(page, "/collections", { name: "Audit large photo" });
+  const item = await create(page, `/collections/${collection.id}/items`, { name: "Vase" });
+  await page.goto(`/collections/${collection.id}/items/${item.id}`);
+  let starts = 0;
+  page.on("request", request => { if (request.url().endsWith("/api/uploads") && request.method() === "POST") starts++; });
+  const original = await (await import("node:fs/promises")).readFile(photo);
+  const buffer = Buffer.concat([original, Buffer.alloc(11 * 1024 * 1024)]);
+  await page.locator('input[type="file"][multiple]').setInputFiles({ name: "large-photo.png", mimeType: "image/png", buffer });
+  await expect(page.getByText("Uploaded", { exact: true })).toBeVisible();
+  expect(starts).toBe(1);
+  const images = await page.request.get(`/api/items/${item.id}/images`, { headers: await headers(page) });
+  expect(await images.json()).toHaveLength(1);
+});
+
+test("all item photos survive reload while the first upload is blocked", async ({ page }) => {
+  await account(page, "audit-batch@example.com");
+  const collection = await create(page, "/collections", { name: "Audit batch" });
+  const item = await create(page, `/collections/${collection.id}/items`, { name: "Vase" });
+  await page.goto(`/collections/${collection.id}/items/${item.id}`);
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  let started = false;
+  await page.route("**/api/uploads", async route => {
+    started = true;
+    await held;
+    await route.abort().catch(() => undefined);
+  });
+  const buffer = await (await import("node:fs/promises")).readFile(photo);
+  try {
+    await page.locator('input[type="file"][multiple]').setInputFiles(
+      ["one.png", "two.png", "three.png"].map(name => ({ name, mimeType: "image/png", buffer }))
+    );
+    await expect.poll(() => started).toBe(true);
+    await expect(page.getByText("Queued", { exact: true })).toHaveCount(2);
+    const count = () => page.evaluate(() => new Promise<number>(resolve => {
+      const request = indexedDB.open("antique-upload-queue", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const count = db.transaction("uploads").objectStore("uploads").count();
+        count.onsuccess = () => { db.close(); resolve(count.result); };
+      };
+    }));
+    expect(await count()).toBe(3);
+    await page.unroute("**/api/uploads");
+    await page.reload();
+    expect(await count()).toBe(3);
+    await expect.poll(async () => {
+      const response = await page.request.get(`/api/items/${item.id}/images`, { headers: await headers(page) });
+      return (await response.json()).map((image: { filename: string }) => image.filename.split(".")[0]);
+    }).toEqual(["one", "two", "three"]);
+    await expect(page.getByText("Uploaded", { exact: true })).toHaveCount(3);
+  } finally { release(); }
+});
+
+test("other accounts' pending photos do not consume this account's quota", async ({ page }) => {
+  await account(page, "audit-quota@example.com");
+  await create(page, "/collections", { name: "Audit quota" });
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("antique-upload-queue", 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("uploads", { keyPath: "id" });
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction("uploads", "readwrite");
+      for (let i = 0; i < 20; i++) tx.objectStore("uploads").put({
+        id: crypto.randomUUID(), owner: 999999, target: { mode: "capture-new", collection_id: 999999 },
+        file: new Blob(["photo"]), filename: "previous-account.jpg", size: 5, received: 0, state: "queued"
+      });
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+  }));
+  await page.goto("/speed-capture");
+  await page.getByRole("button", { name: /Audit quota/ }).click();
+  await page.getByRole("button", { name: "New Item", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles(photo);
+  await expect(page.getByRole("button", { name: "Uploads (0)", exact: true })).toBeVisible();
+  await expect(page.getByText("Finish or discard pending uploads first.", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Uploads (0)", exact: true }).click();
+  await expect(page.getByRole("link", { name: "View item", exact: true })).toHaveCount(1);
+  await expect(page.getByText("previous-account.jpg", { exact: true })).toHaveCount(0);
+});
+
+
+test("resuming an item upload updates its inline status", async ({ page }) => {
+  await account(page, "item-retry@example.com");
+  const collection = await create(page, "/collections", { name: "Item retry" });
+  const item = await create(page, `/collections/${collection.id}/items`, { name: "Vase" });
+  await page.goto(`/collections/${collection.id}/items/${item.id}`);
+  let blocked = true;
+  await page.route("**/api/uploads", route => blocked ? route.abort() : route.continue());
+  await page.locator('input[type="file"][multiple]').setInputFiles(photo);
+  await expect(page.getByText("Photo saved on this device. Open Uploads to resume.", { exact: true })).toBeVisible();
+  blocked = false;
+  await page.getByRole("button", { name: "Uploads (1)", exact: true }).click();
+  await page.getByRole("button", { name: "Resume upload", exact: true }).click();
+  await expect(page.getByText("Uploaded", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("Photo saved on this device. Open Uploads to resume.", { exact: true })).toHaveCount(0);
+  blocked = true;
+  await page.locator('input[type="file"][multiple]').setInputFiles(photo);
+  await expect(page.getByText("Photo saved on this device. Open Uploads to resume.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Discard upload", exact: true }).click();
+  await expect(page.getByText("Photo saved on this device. Open Uploads to resume.", { exact: true })).toHaveCount(0);
+});
+
+test("simultaneous tabs cannot exceed the account's pending-photo allowance", async ({ page, context }) => {
+  await account(page, "atomic-quota@example.com");
+  const collection = await create(page, "/collections", { name: "Atomic quota" });
+  const item = await create(page, `/collections/${collection.id}/items`, { name: "Vase" });
+  await context.route("**/api/uploads", route => route.abort());
+  await page.evaluate(({ itemId }) => new Promise<void>((resolve, reject) => {
+    const token = localStorage.getItem("antique_access_token")!;
+    const owner = Number(JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub);
+    const request = indexedDB.open("antique-upload-queue", 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("uploads", { keyPath: "id" });
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction("uploads", "readwrite");
+      for (let i = 0; i < 19; i++) tx.objectStore("uploads").add({
+        id: crypto.randomUUID(), owner, target: { mode: "item", item_id: itemId },
+        file: new Blob(["photo"]), filename: `pending-${i}.jpg`, size: 5, received: 0, state: "error"
+      });
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onabort = () => reject(tx.error);
+    };
+  }), { itemId: item.id });
+  const second = await context.newPage();
+  try {
+    await Promise.all([page, second].map(tab => tab.goto(`/collections/${collection.id}/items/${item.id}`)));
+    await Promise.all([page, second].map(tab => tab.locator('input[type="file"][multiple]').setInputFiles(photo)));
+    await expect.poll(async () => {
+      const errors = await Promise.all([page, second].map(tab => tab.getByRole("alert").filter({ hasText: "Finish or discard pending uploads first." }).count()));
+      return errors.reduce((sum, count) => sum + count, 0);
+    }).toBe(1);
+    const count = await page.evaluate(() => new Promise<number>(resolve => {
+      const request = indexedDB.open("antique-upload-queue", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const count = db.transaction("uploads").objectStore("uploads").count();
+        count.onsuccess = () => { db.close(); resolve(count.result); };
+      };
+    }));
+    expect(count).toBe(20);
+  } finally { await second.close(); }
 });

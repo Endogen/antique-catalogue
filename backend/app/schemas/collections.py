@@ -20,7 +20,7 @@ def _normalize_description(value: str | None) -> str | None:
 
 
 class CollectionCreateRequest(BaseModel):
-    name: str = Field(..., examples=["Vintage Cameras"])
+    name: str = Field(..., max_length=200, examples=["Vintage Cameras"])
     description: str | None = Field(None, examples=["Mid-century cameras and accessories"])
     is_public: bool = Field(False, description="Whether the collection is publicly visible")
     schema_template_id: int | None = Field(
@@ -48,7 +48,7 @@ class CollectionCreateRequest(BaseModel):
 
 
 class CollectionUpdateRequest(BaseModel):
-    name: str | None = Field(None, examples=["Vintage Cameras"])
+    name: str | None = Field(None, max_length=200, examples=["Vintage Cameras"])
     description: str | None = Field(None, examples=["Mid-century cameras and accessories"])
     is_public: bool | None = Field(None, description="Whether the collection is publicly visible")
 

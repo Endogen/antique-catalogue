@@ -20,7 +20,7 @@ def _normalize_notes(value: str | None) -> str | None:
 
 
 class ItemCreateRequest(BaseModel):
-    name: str = Field(..., examples=["Kodak Brownie Camera"])
+    name: str = Field(..., max_length=200, examples=["Kodak Brownie Camera"])
     metadata: dict[str, object] | None = Field(
         None,
         description="Metadata values keyed by field name",
@@ -41,7 +41,7 @@ class ItemCreateRequest(BaseModel):
 
 class ItemUpdateRequest(BaseModel):
     collection_id: int | None = Field(None, description="Destination collection ID")
-    name: str | None = Field(None, examples=["Kodak Brownie Camera"])
+    name: str | None = Field(None, max_length=200, examples=["Kodak Brownie Camera"])
     metadata: dict[str, object] | None = Field(
         None,
         description="Metadata values keyed by field name",

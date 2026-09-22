@@ -364,13 +364,27 @@ Image processing rejects photos above 80 million pixels before decoding, includi
 | `NEXT_PUBLIC_IMAGE_QUALITY` | `0.82` | JPEG quality for that downscale, 0-1 |
 | `INTERNAL_API_URL` | `http://backend:8000` | Server-side API URL (Docker internal). Also baked into the `/api/*` rewrite at build time, so change it and rebuild the frontend rather than only restarting it |
 
+Docker Compose passes the backend image settings into the running container and
+passes the two browser image settings as frontend build arguments. After editing
+these values in `.env`, run `docker compose up -d --build`; restarting an existing
+frontend image does not change its browser resizing settings.
+
+New item and collection names are limited to 200 characters by the API. Backups
+preserve longer names accepted by older versions, including when restoring the
+original collection name. Numeric metadata must be finite. Migration `0018`
+moves historical non-finite field values into private preserved metadata as text
+(`inf`, `-inf`, or `nan`), keeping any surrounding structure and finite values.
+Run `alembic upgrade head` before starting an upgraded backend; Compose does this
+at startup.
+
 ## Testing
 
 ```bash
 cd backend
 source .venv/bin/activate
 
-# Run all tests
+# Run static checks and all tests
+ruff check .
 pytest
 
 # Run with coverage
@@ -387,6 +401,7 @@ cd frontend
 npm ci
 npm run lint
 npm run typecheck
+npm run check:unused
 npm test
 npm audit
 INTERNAL_API_URL=http://127.0.0.1:8410 npm run build
@@ -401,6 +416,13 @@ and leave these ports free. Test mail and accounts never reach an external servi
 The test-only mailbox/token-expiry endpoints, and the throwaway admin console
 credentials the browser tests sign in with, exist only in `tests/serve_e2e.py`.
 Rebuild with your normal `INTERNAL_API_URL` before running outside these tests.
+
+GitHub Actions runs backend Ruff/tests, frontend lint/type checks, the internal
+API-wrapper reference check, unit tests, a production build, and the full
+Chromium suite on pushes to `main` and pull requests. Failed browser traces are
+retained as workflow artifacts. The wrapper check follows TypeScript symbols for
+property access, literal bracket access, and destructuring; avoid dynamic string
+lookups in the internal API facade so usage remains statically verifiable.
 
 ## Project Structure
 
