@@ -208,6 +208,7 @@ def complete(
         raise HTTPException(422, str(exc)) from exc
     if item is None:
         cid = session.target["collection_id"]
+        collection = _get_own_collection_or_404(db, cid, user.id)
         item = Item(collection_id=cid, name=f"Draft {_next_draft_number(db, cid)}", is_draft=True)
         db.add(item)
         db.flush()
@@ -217,8 +218,12 @@ def complete(
             action_type="item.created",
             resource_type="item",
             resource_id=item.id,
-            summary=f'Captured draft "{item.name}".',
-            context={"item_name": item.name, "via": "speed_capture"},
+            summary=f'Speed capture: created draft in "{collection.name}".',
+            context={
+                "item_name": item.name,
+                "collection_name": collection.name,
+                "via": "speed_capture",
+            },
         )
     image = ItemImage(
         item_id=item.id,
