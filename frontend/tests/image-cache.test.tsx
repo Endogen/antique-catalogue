@@ -8,7 +8,7 @@ afterEach(() => { clearAuthenticatedImageCache(); vi.restoreAllMocks(); vi.unstu
 
 it("revalidates a previously public image when it is reopened", async () => {
   vi.stubGlobal("URL", class extends URL { static createObjectURL = vi.fn(() => "blob:photo"); static revokeObjectURL = vi.fn(); });
-  vi.mocked(apiFetch).mockResolvedValueOnce(new Response(new Blob(["photo"])))
+  vi.mocked(apiFetch).mockResolvedValueOnce(new Response("photo"))
     .mockResolvedValueOnce(new Response(null, { status: 404 }));
   const first = renderHook(() => useAuthenticatedImageUrl("/api/images/999/thumb.jpg"));
   await waitFor(() => expect(first.result.current).toBe("blob:photo"));
@@ -31,7 +31,7 @@ it.each(["network", "http"])("an old %s failure cannot delete a new identity's c
   old.unmount();
   const current = renderHook(() => useAuthenticatedImageUrl("/api/images/777/thumb.jpg"));
   await act(async () => { failOld(); });
-  await act(async () => { finishNew(new Response(new Blob(["new"]))); });
+  await act(async () => { finishNew(new Response("new")); });
   await waitFor(() => expect(current.result.current).toBe("blob:new"));
 });
 
@@ -41,7 +41,7 @@ it("an old consumer's cleanup cannot release a new entry for the same URL", asyn
     static createObjectURL = vi.fn(() => `blob:${++serial}`);
     static revokeObjectURL = vi.fn();
   });
-  vi.mocked(apiFetch).mockImplementation(async () => new Response(new Blob(["photo"])));
+  vi.mocked(apiFetch).mockImplementation(async () => new Response("photo"));
   const url = "/api/images/7/thumb.jpg";
   const old = renderHook(() => useAuthenticatedImageUrl(url));
   await waitFor(() => expect(old.result.current).toBe("blob:1"));

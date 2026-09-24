@@ -68,7 +68,7 @@ describe("authenticated images", () => {
   it("refreshes an expired session and then loads the image", async () => {
     setAccessToken(expired);
     vi.stubGlobal("URL", class extends URL { static createObjectURL = vi.fn(() => "blob:photo"); static revokeObjectURL = vi.fn(); });
-    const fetcher = vi.mocked(fetch).mockImplementation(async url => String(url).endsWith("/auth/refresh") ? json({ access_token: "fresh-token" }) : new Response(new Blob(["photo"], { type: "image/jpeg" })));
+    const fetcher = vi.mocked(fetch).mockImplementation(async url => String(url).endsWith("/auth/refresh") ? json({ access_token: "fresh-token" }) : new Response("photo", { headers: { "Content-Type": "image/jpeg" } }));
     const { result, unmount } = renderHook(() => useAuthenticatedImageUrl("/api/images/1/thumb.jpg"));
     await waitFor(() => expect(result.current).toBe("blob:photo"));
     expect(fetcher).toHaveBeenCalledTimes(2);
@@ -83,7 +83,7 @@ describe("authenticated images", () => {
   it("shares concurrent image requests but revalidates after the last consumer leaves", async () => {
     setAccessToken("token");
     vi.stubGlobal("URL", class extends URL { static createObjectURL = vi.fn(() => "blob:photo"); static revokeObjectURL = vi.fn(); });
-    const fetcher = vi.mocked(fetch).mockImplementation(async () => new Response(new Blob(["photo"], { type: "image/jpeg" })));
+    const fetcher = vi.mocked(fetch).mockImplementation(async () => new Response("photo", { headers: { "Content-Type": "image/jpeg" } }));
     const url = "/api/images/7/medium.jpg";
 
     const first = renderHook(() => useAuthenticatedImageUrl(url));
