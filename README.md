@@ -181,9 +181,20 @@ sudo certbot --nginx -d antique.example.com
 cd backend
 python3.14 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install --require-hashes -r requirements-dev.lock
+pip install --no-deps -e .
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
+```
+
+Python dependencies are pinned with hashes in `requirements.lock` (production
+image) and `requirements-dev.lock` (CI and local development). After changing
+`pyproject.toml`, or to pick up new releases on purpose, regenerate both with
+[uv](https://docs.astral.sh/uv/) and let CI verify the result:
+
+```bash
+uv pip compile pyproject.toml -o requirements.lock --universal --python-version 3.14 --generate-hashes --upgrade
+uv pip compile pyproject.toml --extra dev -o requirements-dev.lock --universal --python-version 3.14 --generate-hashes --upgrade
 ```
 
 ### Frontend

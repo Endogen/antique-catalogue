@@ -14,13 +14,18 @@ RUN apt-get update \
 
 WORKDIR /app
 
+# Dependencies come from the hashed lock file, so every build installs the
+# exact versions CI tested. The project itself adds no further packages.
+COPY requirements.lock ./
+RUN pip install --upgrade pip \
+    && pip install --require-hashes -r requirements.lock
+
 COPY pyproject.toml README.md ./
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
 
-RUN pip install --upgrade pip \
-    && pip install .
+RUN pip install --no-deps .
 
 RUN mkdir -p /app/uploads
 
