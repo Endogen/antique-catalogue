@@ -179,7 +179,7 @@ export default function SchemaTemplateDetailPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-3">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" className="-ml-3" asChild>
             <Link href="/schema-templates">
               <ArrowLeft className="h-4 w-4" />
               {t("Back to schema templates")}
@@ -202,9 +202,14 @@ export default function SchemaTemplateDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={() => loadTemplate()}>
+          <Button
+            variant="outline"
+            className="w-10 px-0"
+            onClick={() => loadTemplate()}
+            aria-label={t("Refresh")}
+            title={t("Refresh")}
+          >
             <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
           </Button>
           <Button
             variant="ghost"

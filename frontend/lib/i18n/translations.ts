@@ -3,6 +3,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {};
 export const DE_TRANSLATIONS: Record<string, string> = {
   "Connection interrupted. Resume when you are back online.": "Verbindung unterbrochen. Setze den Upload fort, sobald du wieder online bist.",
   "Uploads": "Uploads",
+  "Sort items": "Objekte sortieren",
   "Resume upload": "Upload fortsetzen",
   "Discard upload": "Upload verwerfen",
   "Dismiss": "Ausblenden",

@@ -165,6 +165,8 @@ export default function CollectionDetailPage() {
   const [search, setSearch] = React.useState("");
   const [sort, setSort] = React.useState("-created_at");
   const [filters, setFilters] = React.useState<FilterEntry[]>([]);
+  // Below lg the filter form folds behind a toggle so the items stay near the top.
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [filterFieldId, setFilterFieldId] = React.useState("");
   const [filterValue, setFilterValue] = React.useState("");
   const [filterError, setFilterError] = React.useState<string | null>(null);
@@ -441,7 +443,7 @@ export default function CollectionDetailPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-3">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" className="-ml-3" asChild>
             <Link href="/collections">
               <ArrowLeft className="h-4 w-4" />
               {t("Back to collections")}
@@ -461,17 +463,8 @@ export default function CollectionDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <CollectionArchive collectionId={collectionId} />
-          <Button
-            variant={collectionStarred ? "secondary" : "outline"}
-            onClick={handleToggleCollectionStar}
-            disabled={isUpdatingCollectionStar}
-          >
-            <Star className={`h-4 w-4 ${collectionStarred ? "fill-current" : ""}`} />
-            {collectionStarred ? t("Starred") : t("Star")}
-          </Button>
-          <Button asChild>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:gap-3">
+          <Button className="grow px-3 sm:grow-0 sm:px-4" asChild>
             <Link href={`/collections/${collectionId}/items/new`}>
               <Plus className="h-4 w-4" />
               {t("Add item")}
@@ -480,6 +473,7 @@ export default function CollectionDetailPage() {
           {(draftCount ?? 0) > 0 ? (
             <Button
               variant={showDrafts ? "secondary" : "outline"}
+              className="grow px-3 sm:grow-0 sm:px-4"
               onClick={() => setShowDrafts((prev) => !prev)}
             >
               <FileEdit className="h-4 w-4" />
@@ -488,10 +482,25 @@ export default function CollectionDetailPage() {
                 : tc(draftCount ?? 0, "{count} draft", "{count} drafts")}
             </Button>
           ) : null}
-          <Button variant="outline" onClick={handleRefresh}>
+          <Button
+            variant="outline"
+            className="w-10 px-0 sm:order-last"
+            onClick={handleRefresh}
+            aria-label={t("Refresh")}
+            title={t("Refresh")}
+          >
             <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
           </Button>
+          <Button
+            variant={collectionStarred ? "secondary" : "outline"}
+            className="grow px-3 sm:grow-0 sm:px-4"
+            onClick={handleToggleCollectionStar}
+            disabled={isUpdatingCollectionStar}
+          >
+            <Star className={`h-4 w-4 ${collectionStarred ? "fill-current" : ""}`} />
+            {collectionStarred ? t("Starred") : t("Star")}
+          </Button>
+          <CollectionArchive collectionId={collectionId} className="grow px-3 sm:grow-0 sm:px-4" />
         </div>
       </header>
 
@@ -523,7 +532,7 @@ export default function CollectionDetailPage() {
             <Eyebrow>
               {t("Collection details")}
             </Eyebrow>
-            <SectionHeading className="mt-3">
+            <SectionHeading className="mt-3 hidden lg:block">
               {collectionState.data?.name}
             </SectionHeading>
             <p className="mt-3 text-sm text-muted-strong">
@@ -591,9 +600,9 @@ export default function CollectionDetailPage() {
                 </Button>
               </div>
             ) : (
-              <div className="mt-4 space-y-3 text-sm text-muted-strong">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-sm text-muted-strong lg:mt-4 lg:block lg:space-y-3">
                 <p>{tc(fieldsState.data.length, "{count} field defined.", "{count} fields defined.")}</p>
-                <div className="space-y-2">
+                <div className="hidden space-y-2 lg:block">
                   {sortedFields.slice(0, 4).map((field) => (
                     <div
                       key={field.id}
@@ -613,7 +622,7 @@ export default function CollectionDetailPage() {
                     </p>
                   ) : null}
                 </div>
-                <Button size="sm" variant="ghost" asChild>
+                <Button size="sm" variant="ghost" className="-mr-3 lg:-ml-3 lg:mr-0" asChild>
                   <Link href={`/collections/${collectionId}/settings`}>
                     {t("Edit schema")}
                   </Link>
@@ -634,32 +643,54 @@ export default function CollectionDetailPage() {
               {t("Collection items")}
             </SectionHeading>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
               <input
                 type="search"
                 placeholder={t("Search items")}
-                className="h-10 w-56 rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-10 w-full rounded-full sm:w-56 border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
             </div>
-            <select
-              className="h-10 rounded-full border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
-              value={sort}
-              onChange={(event) => setSort(event.target.value)}
-            >
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2 sm:gap-3">
+              <select
+                aria-label={t("Sort items")}
+                className="h-10 min-w-0 flex-1 rounded-full border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring sm:flex-none"
+                value={sort}
+                onChange={(event) => setSort(event.target.value)}
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant={filtersOpen ? "secondary" : "outline"}
+                className="rounded-full lg:hidden"
+                onClick={() => setFiltersOpen((open) => !open)}
+                aria-expanded={filtersOpen}
+                aria-controls="collection-filters"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                {t("Filters")}
+                {filters.length > 0 ? (
+                  <span className="rounded-full bg-brand px-1.5 text-xs leading-5 text-brand-foreground tabular-nums">
+                    {filters.length}
+                  </span>
+                ) : null}
+              </Button>
+            </div>
           </div>
         </div>
 
-        <Card tone="subtle">
+        <Card
+          id="collection-filters"
+          tone="subtle"
+          className={filtersOpen ? undefined : "hidden lg:block"}
+        >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <Eyebrow>
@@ -767,7 +798,7 @@ export default function CollectionDetailPage() {
                 </div>
                 <Button
                   variant="secondary"
-                  className="h-10"
+                  className="h-10 w-full sm:w-auto"
                   onClick={handleAddFilter}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
@@ -871,7 +902,7 @@ export default function CollectionDetailPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               {itemsState.data.map((item) => {
                 const metadataEntries = Object.entries(item.metadata ?? {});
                 const imageCount = item.image_count ?? 0;

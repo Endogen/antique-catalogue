@@ -178,7 +178,7 @@ export default function ProfilePage() {
       </header>
 
       <section className="rounded-3xl border border-panel-border bg-panel-deep p-6 text-panel-foreground">
-        <Eyebrow tone="subtle">
+        <Eyebrow tone="panel">
           {t("Profile summary")}
         </Eyebrow>
         <p className="mt-3 text-sm text-panel-muted-foreground">
@@ -186,7 +186,7 @@ export default function ProfilePage() {
             date: formatDate(profile?.created_at)
           })}
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="rounded-xl border border-panel-border bg-panel/70 p-3">
             <p className="inline-flex items-center gap-2 text-xs text-panel-muted-foreground">
               <Folder className="h-3.5 w-3.5 text-amber-300" />

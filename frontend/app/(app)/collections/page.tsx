@@ -98,60 +98,65 @@ export default function CollectionsPage() {
             )}
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <CollectionArchive />
-          <Button variant="outline" onClick={() => loadCollections()}>
-            <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
-          </Button>
-          <Button asChild>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:gap-3">
+          <Button className="grow px-3 sm:grow-0 sm:px-4" asChild>
             <Link href="/collections/new">
               <Plus className="h-4 w-4" />
               {t("Create collection")}
             </Link>
           </Button>
+          <CollectionArchive className="grow px-3 sm:grow-0 sm:px-4" />
+          <Button
+            variant="outline"
+            className="w-10 px-0"
+            onClick={() => loadCollections()}
+            aria-label={t("Refresh")}
+            title={t("Refresh")}
+          >
+            <RefreshCcw className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm sm:p-5">
           <Eyebrow tone="subtle">
             {t("Total items")}
           </Eyebrow>
-          <p className="mt-4 text-3xl font-semibold text-foreground">
+          <p className="mt-3 text-3xl font-semibold text-foreground sm:mt-4">
             {totalItems}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("Catalogued across your collections.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm sm:p-5">
           <Eyebrow tone="subtle">
             {t("Total collections")}
           </Eyebrow>
-          <p className="mt-4 text-3xl font-semibold text-foreground">
+          <p className="mt-3 text-3xl font-semibold text-foreground sm:mt-4">
             {totalCount}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("All archives in your studio.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm sm:p-5">
           <Eyebrow tone="subtle">
             {t("Public collections")}
           </Eyebrow>
-          <p className="mt-4 text-3xl font-semibold text-foreground">
+          <p className="mt-3 text-3xl font-semibold text-foreground sm:mt-4">
             {publicCount}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("Visible in the public directory.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm sm:p-5">
           <Eyebrow tone="subtle">
             {t("Private collections")}
           </Eyebrow>
-          <p className="mt-4 text-3xl font-semibold text-foreground">
+          <p className="mt-3 text-3xl font-semibold text-foreground sm:mt-4">
             {privateCount}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">

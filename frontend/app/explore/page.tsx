@@ -1,14 +1,12 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
   Boxes,
   CalendarDays,
   Globe2,
-  LogOut,
   RefreshCcw,
   Search,
   Star
@@ -17,9 +15,9 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
+import { PublicHeader } from "@/components/public-header";
 import { publicCollectionApi, type CollectionResponse } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { toLoadState } from "@/lib/query-state";
@@ -62,10 +60,9 @@ const filterCollections = (
 };
 
 export default function ExplorePage() {
-  const { isAuthenticated, logout, status: authStatus } = useAuth();
+  const { isAuthenticated, status: authStatus } = useAuth();
   const { t, tc, locale } = useI18n();
   const [search, setSearch] = React.useState("");
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   const query = useQuery({
     queryKey: queryKeys.explore.list(""),
@@ -90,82 +87,13 @@ export default function ExplorePage() {
   const showAuthenticatedCtas =
     authStatus === "authenticated" && isAuthenticated;
 
-  const handleLogout = async () => {
-    if (isLoggingOut) {
-      return;
-    }
-    setIsLoggingOut(true);
-    try {
-      await logout();
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute -top-32 right-0 h-72 w-72 rounded-full bg-amber-300/20 blur-[100px]" />
       <div className="pointer-events-none absolute top-[35%] left-[-8%] h-72 w-72 rounded-full bg-amber-200/25 blur-[140px]" />
       <div className="pointer-events-none absolute bottom-[-15%] right-[-8%] h-80 w-80 rounded-full bg-panel/10 blur-[160px]" />
       <div className="relative z-10">
-        <header className="px-6 py-6 lg:px-12">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3">
-              <Image
-                src="/logo.png"
-                alt="Antique Catalogue"
-                width={44}
-                height={44}
-                className="rounded-full"
-              />
-              <div>
-                <p className="font-display text-lg tracking-tight">
-                  {t("Antique Catalogue")}
-                </p>
-                <Eyebrow className="tracking-[0.35em]">
-                  {t("Studio Archive")}
-                </Eyebrow>
-              </div>
-            </Link>
-            <nav className="hidden items-center gap-6 text-sm text-muted-strong md:flex">
-              <Link href="/" className="hover:text-foreground">
-                {t("Home")}
-              </Link>
-              <Link href="/explore" className="font-medium text-foreground">
-                {t("Explore")}
-              </Link>
-              <Link href="/dashboard" className="hover:text-foreground">
-                {t("Dashboard")}
-              </Link>
-            </nav>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              {showAuthenticatedCtas ? (
-                <Button
-                  variant="secondary"
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                >
-                  <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? t("Logging out...") : t("Log out")}
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="hidden sm:inline-flex"
-                    asChild
-                  >
-                    <Link href="/login">{t("Log in")}</Link>
-                  </Button>
-                  <Button asChild>
-                    <Link href="/register">{t("Create account")}</Link>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
+        <PublicHeader />
 
         <section>
           <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-12 pt-6 lg:flex-row lg:items-center lg:px-12 lg:pt-12">
@@ -185,9 +113,11 @@ export default function ExplorePage() {
                 <Button size="lg" asChild>
                   <Link href="/register">{t("Start your own archive")}</Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <Link href="/dashboard">{t("Go to dashboard")}</Link>
-                </Button>
+                {showAuthenticatedCtas ? (
+                  <Button size="lg" variant="outline" asChild>
+                    <Link href="/dashboard">{t("Go to dashboard")}</Link>
+                  </Button>
+                ) : null}
               </div>
               <div className="mt-8 rounded-2xl border border-border bg-card/90 p-4 shadow-sm">
                 <label htmlFor="collection-search" className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
@@ -230,7 +160,7 @@ export default function ExplorePage() {
                     "Discover what others are cataloguing and share your own collection when you are ready."
                   )}
                 </p>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4">
                   <div className="rounded-2xl border border-border bg-background p-4">
                     <Eyebrow tone="subtle">
                       {t("Total")}
@@ -254,16 +184,16 @@ export default function ExplorePage() {
                     </p>
                   </div>
                 </div>
-                <div className="mt-6 flex items-center justify-between rounded-2xl bg-panel px-4 py-3 text-panel-foreground">
-                  <div>
-                    <Eyebrow tone="subtle">
+                <div className="mt-6 flex flex-col gap-3 rounded-2xl bg-panel px-4 py-4 text-panel-foreground sm:flex-row sm:items-center sm:justify-between sm:py-3">
+                  <div className="min-w-0">
+                    <Eyebrow tone="panel" spacing="tight">
                       {t("Publish your work")}
                     </Eyebrow>
-                    <p className="text-sm font-medium">
+                    <p className="mt-1 text-sm font-medium">
                       {t("Share curated catalogues publicly.")}
                     </p>
                   </div>
-                  <Button size="sm" variant="secondary" asChild>
+                  <Button size="sm" variant="secondary" className="shrink-0 self-start sm:self-auto" asChild>
                     <Link href="/collections/new">{t("Create collection")}</Link>
                   </Button>
                 </div>
@@ -282,9 +212,14 @@ export default function ExplorePage() {
                 {t("Browse the directory.")}
               </SectionHeading>
             </div>
-            <Button variant="outline" onClick={() => loadCollections()}>
+            <Button
+              variant="outline"
+              className="w-10 px-0"
+              onClick={() => loadCollections()}
+              aria-label={t("Refresh")}
+              title={t("Refresh")}
+            >
               <RefreshCcw className="h-4 w-4" />
-              {t("Refresh")}
             </Button>
           </div>
 

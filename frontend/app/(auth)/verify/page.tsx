@@ -110,7 +110,7 @@ function VerifyContent() {
   return (
     <>
       <div className="flex flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-4">
+        <header className="flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/logo.png"
@@ -136,7 +136,7 @@ function VerifyContent() {
           </div>
         </header>
 
-        <section className="mt-10 rounded-3xl border border-border bg-card/90 p-8 shadow-sm">
+        <section className="mt-6 rounded-3xl border border-border bg-card/90 p-6 shadow-sm sm:mt-10 sm:p-8">
           <Eyebrow tone="brand" spacing="wide">
             {t("Verify your email")}
           </Eyebrow>
@@ -216,7 +216,7 @@ function VerifyContent() {
         </section>
       </div>
 
-      <aside className="order-first lg:order-none">
+      <aside>
         <div className="rounded-3xl border border-panel-border/90 surface-panel p-8 text-panel-foreground shadow-sm">
           <Eyebrow tone="panel" spacing="wide">
             {t("Next steps")}

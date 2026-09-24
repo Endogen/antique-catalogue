@@ -22,6 +22,7 @@ import { ImageUploader } from "@/components/image-uploader";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useI18n } from "@/components/i18n-provider";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   collectionApi,
@@ -438,7 +439,7 @@ export default function ItemDetailPage() {
       {itemState.data?.is_draft && <p role="status" className="rounded-xl bg-brand-muted p-4 text-sm text-brand-strong">{t("This item is a private draft. Complete its fields and save to publish it in this collection.")}</p>}
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-3">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" className="-ml-3" asChild>
             <Link href={`/collections/${collectionId ?? ""}`}>
               <ArrowLeft className="h-4 w-4" />
               {t("Back to collection")}
@@ -460,22 +461,11 @@ export default function ItemDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Button
-            variant={itemStarred ? "secondary" : "outline"}
-            onClick={handleToggleItemStar}
-            disabled={isUpdatingItemStar}
-          >
-            <Star className={`h-4 w-4 ${itemStarred ? "fill-current" : ""}`} />
-            {itemStarred ? t("Starred") : t("Star")}
-          </Button>
-          <Button variant="outline" onClick={handleRefresh}>
-            <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
-          </Button>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:gap-3">
           {itemState.status === "ready" ? (
             <Button
               variant={isEditing ? "ghost" : "secondary"}
+              className="grow px-3 sm:grow-0 sm:px-4"
               onClick={() => setIsEditing((prev) => !prev)}
               disabled={!canEdit}
               title={!canEdit ? t("Reload schema to edit this item.") : undefined}
@@ -484,6 +474,24 @@ export default function ItemDetailPage() {
               {isEditing ? t("Cancel edit") : t("Edit item")}
             </Button>
           ) : null}
+          <Button
+            variant={itemStarred ? "secondary" : "outline"}
+            className="grow px-3 sm:grow-0 sm:px-4"
+            onClick={handleToggleItemStar}
+            disabled={isUpdatingItemStar}
+          >
+            <Star className={`h-4 w-4 ${itemStarred ? "fill-current" : ""}`} />
+            {itemStarred ? t("Starred") : t("Star")}
+          </Button>
+          <Button
+            variant="outline"
+            className="w-10 px-0"
+            onClick={handleRefresh}
+            aria-label={t("Refresh")}
+            title={t("Refresh")}
+          >
+            <RefreshCcw className="h-4 w-4" />
+          </Button>
         </div>
       </header>
       {itemStarError ? (
@@ -744,9 +752,11 @@ export default function ItemDetailPage() {
               )}
             />
           ) : (
+            // Below lg the two columns flatten into one list: photos lead,
+            // and the uploader follows them directly while there are none.
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
               <div className="contents lg:block lg:space-y-6">
-                <Card className="order-2  lg:order-none">
+                <Card className="order-3 lg:order-none">
                   <Eyebrow>
                     {t("Item overview")}
                   </Eyebrow>
@@ -787,7 +797,7 @@ export default function ItemDetailPage() {
                   </div>
                 </Card>
 
-                <div className="order-4 lg:order-none">
+                <div className="order-1 lg:order-none">
                   <ImageGallery
                     itemId={itemId ?? null}
                     disabled={itemState.status !== "ready"}
@@ -796,7 +806,12 @@ export default function ItemDetailPage() {
                   />
                 </div>
 
-                <div className="order-5 lg:order-none">
+                <div
+                  className={cn(
+                    (itemState.data?.image_count ?? 0) > 0 ? "order-5" : "order-2",
+                    "lg:order-none"
+                  )}
+                >
                   <ImageUploader
                     itemId={itemId ?? null}
                     disabled={itemState.status !== "ready"}
@@ -806,7 +821,7 @@ export default function ItemDetailPage() {
               </div>
 
               <div className="contents lg:block lg:space-y-6">
-                <Card tone="subtle" className="order-1  lg:order-none">
+                <Card tone="subtle" className="order-6 lg:order-none">
                   <Eyebrow>
                     {t("Item snapshot")}
                   </Eyebrow>
@@ -866,7 +881,7 @@ export default function ItemDetailPage() {
                   </div>
                 </Card>
 
-                <Card className="order-3  lg:order-none">
+                <Card className="order-4 lg:order-none">
                   <Eyebrow>
                     {t("Metadata")}
                   </Eyebrow>

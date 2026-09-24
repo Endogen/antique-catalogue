@@ -465,11 +465,11 @@ export default function AdminPage() {
   const totalItemsPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
   return (
-    <main className="min-h-screen bg-background px-6 py-10 lg:px-12">
+    <main className="min-h-screen bg-background px-4 py-6 sm:px-6 sm:py-10 lg:px-12">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <Link href="/" className="flex items-center gap-3">
+        <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-4">
+            <Link href="/" className="flex shrink-0 items-center gap-3">
               <Image
                 src="/logo.png"
                 alt="Antique Catalogue"
@@ -485,7 +485,7 @@ export default function AdminPage() {
               </div>
             </Link>
             <div className="hidden h-11 border-l border-border lg:block" />
-            <div>
+            <div className="min-w-0">
               <Eyebrow tone="brand" spacing="wide">{t("Admin")}</Eyebrow>
               <SectionHeading as="h1" size="xl" className="mt-3">
                 {t("Catalogue administration")}
@@ -496,9 +496,14 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" onClick={handleRefreshAll}>
+            <Button
+              variant="outline"
+              className="w-10 px-0"
+              onClick={handleRefreshAll}
+              aria-label={t("Refresh")}
+              title={t("Refresh")}
+            >
               <RefreshCcw className="h-4 w-4" />
-              {t("Refresh")}
             </Button>
             <Button variant="ghost" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />

@@ -18,9 +18,9 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
+import { PublicHeader } from "@/components/public-header";
 import { SocialShareActions } from "@/components/social-share-actions";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   avatarUrl,
   profileApi,
@@ -109,41 +109,22 @@ export default function PublicProfilePage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/80 bg-background/80 px-6 py-6 backdrop-blur lg:px-12">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="Antique Catalogue"
-              width={44}
-              height={44}
-              className="rounded-full"
-            />
-            <div>
-              <p className="font-display text-lg tracking-tight">{t("Antique Catalogue")}</p>
-              <Eyebrow className="tracking-[0.35em]">
-                {t("Studio Archive")}
-              </Eyebrow>
-            </div>
-          </Link>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/explore">
-                <ArrowLeft className="h-4 w-4" />
-                {t("Back to explore")}
-              </Link>
-            </Button>
-            {isOwnProfile ? (
-              <Button variant="secondary" size="sm" asChild>
-                <Link href="/profile">{t("Edit profile")}</Link>
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
-      <section className="mx-auto max-w-6xl px-6 py-10 lg:px-12">
+      <section className="mx-auto max-w-6xl px-6 pb-10 pt-2 sm:pt-4 lg:px-12">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <Button variant="ghost" size="sm" className="-ml-3" asChild>
+            <Link href="/explore">
+              <ArrowLeft className="h-4 w-4" />
+              {t("Back to explore")}
+            </Link>
+          </Button>
+          {isOwnProfile ? (
+            <Button variant="secondary" size="sm" asChild>
+              <Link href="/profile">{t("Edit profile")}</Link>
+            </Button>
+          ) : null}
+        </div>
         {state.status === "loading" ? (
           <EmptyState>
             {t("Loading profile...")}
@@ -159,8 +140,8 @@ export default function PublicProfilePage() {
           <div className="space-y-6">
             <Card>
               <Eyebrow tone="brand" spacing="wide">{t("Profile")}</Eyebrow>
-              <div className="mt-4 flex items-center gap-5">
-                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
+              <div className="mt-4 flex items-center gap-4 sm:gap-5">
+                <div className="relative h-16 w-16 shrink-0 sm:h-20 sm:w-20 overflow-hidden rounded-full border-2 border-border bg-muted">
                   {state.data.has_avatar ? (
                     <Image
                       src={avatarUrl(state.data.id, "medium")}
@@ -176,28 +157,28 @@ export default function PublicProfilePage() {
                     </div>
                   )}
                 </div>
-                <div>
-                  <SectionHeading as="h1" size="xl">
+                <div className="min-w-0">
+                  <SectionHeading as="h1" size="xl" className="break-words">
                     @{state.data.username}
                   </SectionHeading>
                   <p className="mt-1 text-sm text-muted-strong">
                     {t("Member since {date}", { date: formatDate(state.data.created_at) })}
                   </p>
-                  <SocialShareActions
-                    className="mt-4"
-                    path={`/profile/${encodeURIComponent(state.data.username)}`}
-                    title={`@${state.data.username}`}
-                    text={`${state.data.public_collection_count} public collections · ${state.data.public_item_count} public items`}
-                  />
                 </div>
               </div>
+              <SocialShareActions
+                className="mt-5"
+                path={`/profile/${encodeURIComponent(state.data.username)}`}
+                title={`@${state.data.username}`}
+                text={`${state.data.public_collection_count} public collections · ${state.data.public_item_count} public items`}
+              />
             </Card>
 
             <div className="rounded-3xl border border-panel-border bg-panel-deep p-5 text-panel-foreground">
-              <Eyebrow tone="subtle">
+              <Eyebrow tone="panel">
                 {t("Public summary")}
               </Eyebrow>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div className="rounded-2xl border border-panel-border bg-panel/70 p-4">
                   <p className="inline-flex items-center gap-2 text-xs text-panel-muted-foreground">
                     <Folder className="h-4 w-4 text-amber-300" />

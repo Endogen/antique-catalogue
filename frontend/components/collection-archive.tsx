@@ -10,7 +10,7 @@ import { useFocusTrap } from "@/lib/use-focus-trap";
 
 type Preview = { name: string; items: number; photos: number; drafts: number; private_fields: number; digest: string; fields: { name: string; is_private: boolean }[] };
 
-export function CollectionArchive({ collectionId }: { collectionId?: string | number }) {
+export function CollectionArchive({ collectionId, className }: { collectionId?: string | number; className?: string }) {
   const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -54,7 +54,7 @@ export function CollectionArchive({ collectionId }: { collectionId?: string | nu
     } catch (error) { setError(message(error)); } finally { setBusy(false); }
   };
   return <>
-    <Button variant="outline" onClick={() => setOpen(true)}>{t(collectionId ? "Export collection" : "Restore collection")}</Button>
+    <Button variant="outline" className={className} onClick={() => setOpen(true)}>{t(collectionId ? "Export collection" : "Restore collection")}</Button>
     {open && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-stone-950/40 p-4">
       <section ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="archive-title" className="max-h-[85vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-3xl bg-card p-6 shadow-xl">
         <h2 id="archive-title" className="font-display text-2xl">{t(collectionId ? "Export collection" : "Restore collection")}</h2>

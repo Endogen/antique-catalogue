@@ -36,6 +36,8 @@ import { cn } from "@/lib/utils";
 import { createUuid } from "@/lib/uuid";
 import { SectionHeading } from "@/components/ui/typography";
 import { Alert } from "@/components/ui/alert";
+import { useImmersiveShell } from "@/components/app-shell";
+import { UploadQueueButton } from "@/components/upload-queue";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -296,6 +298,7 @@ function CaptureScreen({
   const hasCurrentItem =
     currentItemId !== null || currentUploadId !== null;
   const uploading = pendingShots.length > 0;
+  useImmersiveShell(true);
 
   const triggerCapture = (mode: "new" | "same") => {
     pendingModeRef.current = mode;
@@ -311,7 +314,8 @@ function CaptureScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
+      <div className="mx-auto flex min-h-full w-full max-w-lg flex-col">
       {/* Hidden camera input */}
       <input
         ref={cameraRef}
@@ -323,31 +327,32 @@ function CaptureScreen({
       />
 
       {/* Header bar */}
-      <div className="flex items-center justify-between px-4 pb-2 pt-[max(env(safe-area-inset-top),0.75rem)]">
+      <div className="flex min-h-[3.25rem] items-center gap-3 px-4 pb-2 pt-[max(env(safe-area-inset-top),0.75rem)]">
         <button
           type="button"
-          className="flex items-center gap-2 text-sm text-muted-strong transition hover:text-foreground"
+          className="-ml-2 flex h-10 shrink-0 items-center gap-2 rounded-full px-2 text-sm text-muted-strong transition hover:text-foreground"
           onClick={onExit}
         >
           <ArrowLeft className="h-4 w-4" />
           {t("Exit")}
         </button>
-        <p className="truncate text-xs uppercase tracking-[0.2em] text-brand">
+        <p className="min-w-0 flex-1 truncate text-right text-xs uppercase tracking-[0.2em] text-brand">
           {collection.name}
         </p>
+        <UploadQueueButton />
       </div>
 
       {/* Stats bar */}
       <div className="flex items-center justify-center gap-6 py-2">
-        <div className="text-center">
-          <p className="font-display text-2xl text-foreground">{stats.items}</p>
+        <div className="min-w-[4rem] text-center">
+          <p className="font-display text-2xl leading-tight text-foreground">{stats.items}</p>
           <p className="text-xs text-muted-foreground">
             {stats.items === 1 ? t("item") : t("items")}
           </p>
         </div>
-        <div className="h-8 w-px bg-muted" />
-        <div className="text-center">
-          <p className="font-display text-2xl text-foreground">{stats.images}</p>
+        <div className="h-8 w-px bg-border" />
+        <div className="min-w-[4rem] text-center">
+          <p className="font-display text-2xl leading-tight text-foreground">{stats.images}</p>
           <p className="text-xs text-muted-foreground">
             {stats.images === 1 ? t("photo") : t("photos")}
           </p>
@@ -355,7 +360,7 @@ function CaptureScreen({
       </div>
 
       {/* Thumbnail strip */}
-      <div className="min-h-[3.75rem] px-4">
+      <div className="min-h-[3.75rem] px-4 pt-2">
         <ThumbnailStrip
           items={items}
           currentItemId={currentItemId}
@@ -400,7 +405,7 @@ function CaptureScreen({
         </div>
       ) : null}
 
-      {existingDraftsHasMore && <Button className="mx-4" variant="outline" disabled={existingDraftsLoading} onClick={onLoadMoreDrafts}>{t("Load more drafts")}</Button>}
+      {existingDraftsHasMore && <Button className="mx-4 mt-2" variant="outline" disabled={existingDraftsLoading} onClick={onLoadMoreDrafts}>{t("Load more drafts")}</Button>}
 
       {/* Spacer / center area */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
@@ -431,7 +436,7 @@ function CaptureScreen({
       <div className="space-y-3 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-2">
         <div className="flex gap-3">
           <Button
-            className="flex-1 gap-2 rounded-2xl py-6 text-base"
+            className="h-auto min-w-0 flex-1 flex-col gap-1 rounded-2xl px-3 py-4 text-base"
             onClick={() => triggerCapture("new")}
           >
             <Plus className="h-5 w-5" />
@@ -440,7 +445,7 @@ function CaptureScreen({
           {hasCurrentItem ? (
             <Button
               variant="secondary"
-              className="flex-1 gap-2 rounded-2xl py-6 text-base"
+              className="h-auto min-w-0 flex-1 flex-col gap-1 rounded-2xl border border-border px-3 py-4 text-base"
               onClick={() => triggerCapture("same")}
             >
               <ImagePlus className="h-5 w-5" />
@@ -452,7 +457,7 @@ function CaptureScreen({
         {stats.items > 0 ? (
           <Button
             variant="outline"
-            className="w-full gap-2 rounded-2xl py-5"
+            className="h-12 w-full gap-2 rounded-2xl"
             onClick={onReview}
             disabled={uploading}
           >
@@ -460,6 +465,7 @@ function CaptureScreen({
             {t("Done — Review drafts")}
           </Button>
         ) : null}
+      </div>
       </div>
     </div>
   );

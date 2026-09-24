@@ -9,18 +9,17 @@ import {
   CalendarDays,
   Globe2,
   Image as ImageIcon,
-  LogOut,
   RefreshCcw,
   Star
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Lightbox } from "@/components/lightbox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
+import { PublicHeader } from "@/components/public-header";
 import { SocialShareActions } from "@/components/social-share-actions";
 import {
   imageApi,
@@ -41,7 +40,7 @@ import { Alert } from "@/components/ui/alert";
 
 export default function PublicItemDetailPage() {
   const params = useParams();
-  const { isAuthenticated, logout, status: authStatus } = useAuth();
+  const { isAuthenticated, status: authStatus } = useAuth();
   const { t, tc, locale } = useI18n();
   const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const itemIdParam = Array.isArray(params?.itemId) ? params.itemId[0] : params?.itemId;
@@ -84,7 +83,6 @@ export default function PublicItemDetailPage() {
   );
   const [selectedImageId, setSelectedImageId] = React.useState<number | null>(null);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [itemStarred, setItemStarred] = React.useState(false);
   const [isUpdatingItemStar, setIsUpdatingItemStar] = React.useState(false);
   const [itemStarError, setItemStarError] = React.useState<string | null>(null);
@@ -225,18 +223,6 @@ export default function PublicItemDetailPage() {
     }
   };
 
-  const handleLogout = async () => {
-    if (isLoggingOut) {
-      return;
-    }
-    setIsLoggingOut(true);
-    try {
-      await logout();
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   const metadataEntries = React.useMemo(
     () => Object.entries(itemState.data?.metadata ?? {}),
     [itemState.data?.metadata]
@@ -253,65 +239,12 @@ export default function PublicItemDetailPage() {
       <div className="pointer-events-none absolute top-[35%] left-[-8%] h-72 w-72 rounded-full bg-amber-200/25 blur-[140px]" />
       <div className="pointer-events-none absolute bottom-[-15%] right-[-8%] h-80 w-80 rounded-full bg-panel/10 blur-[160px]" />
       <div className="relative z-10">
-        <header className="px-6 py-6 lg:px-12">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3">
-              <Image
-                src="/logo.png"
-                alt="Antique Catalogue"
-                width={44}
-                height={44}
-                className="rounded-full"
-              />
-              <div>
-                <p className="font-display text-lg tracking-tight">
-                  {t("Antique Catalogue")}
-                </p>
-                <Eyebrow className="tracking-[0.35em]">
-                  {t("Studio Archive")}
-                </Eyebrow>
-              </div>
-            </Link>
-            <nav className="hidden items-center gap-6 text-sm text-muted-strong md:flex">
-              <Link href="/" className="hover:text-foreground">
-                {t("Home")}
-              </Link>
-              <Link href="/explore" className="font-medium text-foreground">
-                {t("Explore")}
-              </Link>
-              <Link href="/dashboard" className="hover:text-foreground">
-                {t("Dashboard")}
-              </Link>
-            </nav>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              {showAuthenticatedCtas ? (
-                <Button
-                  variant="secondary"
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                >
-                  <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? t("Logging out...") : t("Log out")}
-                </Button>
-              ) : (
-                <>
-                  <Button variant="ghost" className="hidden sm:inline-flex" asChild>
-                    <Link href="/login">{t("Log in")}</Link>
-                  </Button>
-                  <Button asChild>
-                    <Link href="/register">{t("Create account")}</Link>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
+        <PublicHeader />
 
         <section>
           <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-10 pt-6 lg:px-12">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" className="-ml-3" asChild>
                 <Link href={`/explore/${collectionId ?? ""}`}>
                   <ArrowLeft className="h-4 w-4" />
                   {t("Back to collection")}

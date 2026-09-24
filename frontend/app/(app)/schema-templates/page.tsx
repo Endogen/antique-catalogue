@@ -160,7 +160,7 @@ export default function SchemaTemplatesPage() {
 
   return (
     <div className="space-y-8">
-      <header className="rounded-3xl border border-border bg-card/80 p-6 shadow-sm">
+      <header className="rounded-3xl border border-border bg-card/80 p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <Eyebrow tone="brand" spacing="wide">
@@ -175,9 +175,14 @@ export default function SchemaTemplatesPage() {
               )}
             </p>
           </div>
-          <Button variant="outline" onClick={refresh}>
+          <Button
+            variant="outline"
+            className="w-10 px-0"
+            onClick={refresh}
+            aria-label={t("Refresh")}
+            title={t("Refresh")}
+          >
             <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
           </Button>
         </div>
 
@@ -194,15 +199,15 @@ export default function SchemaTemplatesPage() {
           </div>
 
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 type="text"
                 value={templateName}
                 onChange={(event) => setTemplateName(event.target.value)}
                 placeholder={t("Template name")}
-                className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 sm:flex-1 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
               />
-              <Button type="button" onClick={handleCreate} disabled={isCreating}>
+              <Button type="button" className="h-11 shrink-0" onClick={handleCreate} disabled={isCreating}>
                 <Plus className="h-4 w-4" />
                 {isCreating ? t("Creating...") : t("Create template")}
               </Button>

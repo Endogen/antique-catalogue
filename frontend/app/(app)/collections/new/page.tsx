@@ -84,7 +84,7 @@ export default function NewCollectionPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-3">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" className="-ml-3" asChild>
             <Link href="/collections">
               <ArrowLeft className="h-4 w-4" />
               {t("Back to collections")}

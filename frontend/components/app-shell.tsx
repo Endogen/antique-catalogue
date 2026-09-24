@@ -24,6 +24,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UploadQueueButton } from "@/components/upload-queue";
 import { cn } from "@/lib/utils";
 import { Eyebrow } from "@/components/ui/typography";
 
@@ -267,8 +268,25 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
+const ImmersiveContext = React.createContext<(active: boolean) => void>(() => {});
+
+/**
+ * Marks the shell's own chrome as inert while a full-screen view (such as the
+ * speed-capture camera screen) covers it, so its controls are neither
+ * focusable nor announced behind the overlay.
+ */
+export function useImmersiveShell(active: boolean) {
+  const setImmersive = React.useContext(ImmersiveContext);
+  React.useEffect(() => {
+    if (!active) return;
+    setImmersive(true);
+    return () => setImmersive(false);
+  }, [active, setImmersive]);
+}
+
 export const AppShell = ({ children }: AppShellProps) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [immersive, setImmersive] = React.useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -339,6 +357,7 @@ export const AppShell = ({ children }: AppShellProps) => {
   }, [mobileOpen]);
 
   return (
+    <ImmersiveContext.Provider value={setImmersive}>
     <div className="relative min-h-screen bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 right-[-6rem] h-72 w-72 rounded-full bg-amber-200/30 blur-[140px]" />
@@ -347,36 +366,44 @@ export const AppShell = ({ children }: AppShellProps) => {
       </div>
 
       <div className="relative flex min-h-screen">
-        <aside className="relative hidden h-screen w-72 flex-col overflow-y-auto overscroll-contain border-r border-panel-border/80 bg-panel-deep text-panel-foreground lg:sticky lg:top-0 lg:flex">
+        <aside
+          inert={immersive}
+          aria-hidden={immersive || undefined}
+          className="relative hidden h-screen w-72 flex-col overflow-y-auto overscroll-contain border-r border-panel-border/80 bg-panel-deep text-panel-foreground lg:sticky lg:top-0 lg:flex">
           <div className="pointer-events-none absolute -top-24 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-[90px]" />
           <div className="relative flex h-full flex-col p-6">
             <SidebarContent />
           </div>
         </aside>
 
-        <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur">
-            <div className="flex items-center justify-between px-6 py-4 lg:px-10">
-              <div className="flex items-center gap-3">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <header
+            inert={immersive}
+            aria-hidden={immersive || undefined}
+            className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur"
+          >
+            <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-10">
+              <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/80 text-muted-strong shadow-sm transition hover:border-muted-subtle hover:text-foreground lg:hidden"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card/80 text-muted-strong shadow-sm transition hover:border-muted-subtle hover:text-foreground lg:hidden"
                   onClick={() => setMobileOpen(true)}
                   aria-label={t("Open menu")}
                 >
                   <Menu className="h-5 w-5" />
                 </button>
-                <div>
-                  <Eyebrow tone="brand" spacing="wide">
+                <div className="min-w-0">
+                  <Eyebrow tone="brand" spacing="wide" className="truncate">
                     {t("Workspace")}
                   </Eyebrow>
-                  <p className="font-display text-xl text-foreground">
+                  <p className="truncate font-display text-xl text-foreground">
                     {t("Catalogue Studio")}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <ThemeToggle className="md:hidden" />
+              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                <UploadQueueButton />
+                <ThemeToggle className="h-10 w-10 rounded-full md:hidden" />
                 <div className="hidden items-center gap-3 md:flex">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
@@ -390,19 +417,19 @@ export const AppShell = ({ children }: AppShellProps) => {
                   />
                 </div>
                 <Button
-                  size="sm"
                   variant="secondary"
+                  className="rounded-full"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                 >
                   <LogOut className="h-4 w-4" />
                   {isLoggingOut ? t("Logging out...") : t("Log out")}
                 </Button>
-                <ThemeToggle />
+                <ThemeToggle className="h-10 w-10 rounded-full" />
                 </div>
               </div>
             </div>
-            <div className="px-6 pb-4 md:hidden">
+            <div className="px-4 pb-3 sm:px-6 sm:pb-4 md:hidden">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
@@ -416,8 +443,8 @@ export const AppShell = ({ children }: AppShellProps) => {
                   />
                 </div>
                 <Button
-                  size="sm"
                   variant="secondary"
+                  className="shrink-0 rounded-full"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                 >
@@ -427,7 +454,7 @@ export const AppShell = ({ children }: AppShellProps) => {
             </div>
           </header>
 
-          <main className="flex-1 px-6 pb-12 pt-8 lg:px-10">
+          <main className="flex-1 px-4 pb-12 pt-6 sm:px-6 sm:pt-8 lg:px-10">
             {children}
           </main>
         </div>
@@ -448,5 +475,6 @@ export const AppShell = ({ children }: AppShellProps) => {
         </div>
       ) : null}
     </div>
+    </ImmersiveContext.Provider>
   );
 };

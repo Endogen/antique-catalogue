@@ -548,8 +548,8 @@ export function SchemaBuilder({
                       onDragOver={(event) => handleDragOver(event, field.id)}
                       onDrop={(event) => handleDrop(event, field.id)}
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="flex items-start gap-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex min-w-0 items-start gap-3">
                           <button
                             type="button"
                             className={cn(
@@ -597,7 +597,43 @@ export function SchemaBuilder({
                             ) : null}
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                          <span className="rounded-full border border-border bg-background px-3 py-1">
+                            {t("Position {position}", {
+                              position: index + 1
+                            })}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={t("Move up")}
+                            title={t("Move up")}
+                            onClick={() => moveField(index, index - 1)}
+                            disabled={index === 0 || isReordering}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                            <span className="hidden sm:inline">{t("Move up")}</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={t("Move down")}
+                            title={t("Move down")}
+                            onClick={() => moveField(index, index + 1)}
+                            disabled={index === fields.length - 1 || isReordering}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                            <span className="hidden sm:inline">{t("Move down")}</span>
+                          </Button>
+                          {isReordering ? (
+                            <span className="text-xs text-brand">
+                              {t("Saving order...")}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                           <Button
                             size="sm"
                             variant={isActive ? "secondary" : "ghost"}
@@ -618,36 +654,6 @@ export function SchemaBuilder({
                               : t("Delete")}
                           </Button>
                         </div>
-                      </div>
-                      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span className="rounded-full border border-border bg-background px-3 py-1">
-                          {t("Position {position}", {
-                            position: index + 1
-                          })}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => moveField(index, index - 1)}
-                          disabled={index === 0 || isReordering}
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                          {t("Move up")}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => moveField(index, index + 1)}
-                          disabled={index === fields.length - 1 || isReordering}
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                          {t("Move down")}
-                        </Button>
-                        {isReordering ? (
-                          <span className="text-xs text-brand">
-                            {t("Saving order...")}
-                          </span>
-                        ) : null}
                       </div>
                     </div>
                   );

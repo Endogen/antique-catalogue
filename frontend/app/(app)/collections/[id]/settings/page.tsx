@@ -270,7 +270,7 @@ export default function CollectionSettingsPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-3">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" className="-ml-3" asChild>
             <Link href="/collections">
               <ArrowLeft className="h-4 w-4" />
               {t("Back to collections")}
@@ -293,9 +293,14 @@ export default function CollectionSettingsPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={() => loadCollection()}>
+          <Button
+            variant="outline"
+            className="w-10 px-0"
+            onClick={() => loadCollection()}
+            aria-label={t("Refresh")}
+            title={t("Refresh")}
+          >
             <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
           </Button>
         </div>
       </header>

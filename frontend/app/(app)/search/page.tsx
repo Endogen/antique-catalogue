@@ -86,9 +86,14 @@ function SearchContent() {
               {t("Find items across every collection by name or notes.")}
             </p>
           </div>
-          <Button variant="outline" onClick={handleRefresh}>
+          <Button
+            variant="outline"
+            className="w-10 px-0"
+            onClick={handleRefresh}
+            aria-label={t("Refresh")}
+            title={t("Refresh")}
+          >
             <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
           </Button>
         </div>
         <form

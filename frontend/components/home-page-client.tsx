@@ -3,12 +3,11 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { useI18n } from "@/components/i18n-provider";
+import { PublicHeader } from "@/components/public-header";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   imageApi,
   type CollectionResponse,
@@ -57,21 +56,8 @@ export function HomePageClient({
   featuredCollectionError,
   featuredItems
 }: HomePageClientProps) {
-  const { isAuthenticated, logout, status: authStatus } = useAuth();
+  const { isAuthenticated, status: authStatus } = useAuth();
   const { t } = useI18n();
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
-
-  const handleLogout = async () => {
-    if (isLoggingOut) {
-      return;
-    }
-    setIsLoggingOut(true);
-    try {
-      await logout();
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
 
   const showAuthenticatedCtas =
     authStatus === "authenticated" && isAuthenticated;
@@ -83,64 +69,7 @@ export function HomePageClient({
       <div className="pointer-events-none absolute top-[35%] left-[-8%] h-72 w-72 rounded-full bg-amber-200/25 blur-[140px]" />
       <div className="pointer-events-none absolute bottom-[-15%] right-[-8%] h-80 w-80 rounded-full bg-panel/10 blur-[160px]" />
       <div className="relative z-10">
-        <header className="px-6 py-6 lg:px-12">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/logo.png"
-                alt="Antique Catalogue"
-                width={44}
-                height={44}
-                className="rounded-full"
-              />
-              <div>
-                <p className="font-display text-lg tracking-tight">
-                  {t("Antique Catalogue")}
-                </p>
-                <Eyebrow className="tracking-[0.35em]">
-                  {t("Studio Archive")}
-                </Eyebrow>
-              </div>
-            </div>
-            <nav className="hidden items-center gap-6 text-sm text-muted-strong md:flex">
-              <Link href="/" className="font-medium text-foreground">
-                {t("Home")}
-              </Link>
-              <Link href="/explore" className="hover:text-foreground">
-                {t("Explore")}
-              </Link>
-              <Link href="/dashboard" className="hover:text-foreground">
-                {t("Dashboard")}
-              </Link>
-            </nav>
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
-              <ThemeToggle />
-              {showAuthenticatedCtas ? (
-                <Button
-                  variant="secondary"
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                >
-                  <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? t("Logging out...") : t("Log out")}
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="whitespace-nowrap px-3 sm:px-4"
-                    asChild
-                  >
-                    <Link href="/login">{t("Log in")}</Link>
-                  </Button>
-                  <Button className="whitespace-nowrap px-3 sm:px-4" asChild>
-                    <Link href="/register">{t("Create account")}</Link>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
+        <PublicHeader />
 
         <section>
           <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6 pb-16 pt-10 lg:flex-row lg:items-center lg:px-12 lg:pt-20">
@@ -157,9 +86,15 @@ export function HomePageClient({
                 )}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button size="lg" asChild>
-                  <Link href="/dashboard">{t("Go to dashboard")}</Link>
-                </Button>
+                {showAuthenticatedCtas ? (
+                  <Button size="lg" asChild>
+                    <Link href="/dashboard">{t("Go to dashboard")}</Link>
+                  </Button>
+                ) : (
+                  <Button size="lg" asChild>
+                    <Link href="/register">{t("Create account")}</Link>
+                  </Button>
+                )}
                 <Button variant="outline" size="lg" asChild>
                   <Link href="/explore">{t("Browse public collections")}</Link>
                 </Button>
@@ -267,18 +202,18 @@ export function HomePageClient({
                     }
                   )}
                 </div>
-                <div className="mt-6 flex items-center justify-between rounded-2xl bg-panel px-4 py-3 text-panel-foreground">
-                  <div>
-                    <Eyebrow tone="panel">
+                <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-panel px-4 py-3 text-panel-foreground">
+                  <div className="min-w-0">
+                    <Eyebrow tone="panel" spacing="tight">
                       {t("Next intake")}
                     </Eyebrow>
-                    <p className="text-sm font-medium">
+                    <p className="mt-1 text-sm font-medium">
                       {featuredCollection
                         ? t("View the featured collection")
                         : t("Feature a public collection")}
                     </p>
                   </div>
-                  <Button size="sm" variant="secondary" asChild>
+                  <Button size="sm" variant="secondary" className="shrink-0" asChild>
                     <Link
                       href={
                         featuredCollection
@@ -327,13 +262,8 @@ export function HomePageClient({
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               {showAuthenticatedCtas ? (
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                >
-                  {isLoggingOut ? t("Logging out...") : t("Log out")}
+                <Button size="lg" variant="secondary" asChild>
+                  <Link href="/dashboard">{t("Go to dashboard")}</Link>
                 </Button>
               ) : (
                 <>

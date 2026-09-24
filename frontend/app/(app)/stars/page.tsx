@@ -105,9 +105,14 @@ export default function StarsPage() {
               )}
             </p>
           </div>
-          <Button variant="outline" onClick={refresh}>
+          <Button
+            variant="outline"
+            className="w-10 px-0"
+            onClick={refresh}
+            aria-label={t("Refresh")}
+            title={t("Refresh")}
+          >
             <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
           </Button>
         </div>
 

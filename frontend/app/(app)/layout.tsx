@@ -1,4 +1,4 @@
-import { UploadQueue } from "@/components/upload-queue";
+import { UploadQueueSync } from "@/components/upload-queue";
 import { AppShell } from "@/components/app-shell";
 import { AuthGuard } from "@/components/auth-guard";
 
@@ -9,7 +9,7 @@ export default function AppLayout({
 }) {
   return (
     <AuthGuard>
-      <AppShell>{children}<UploadQueue /></AppShell>
+      <AppShell>{children}<UploadQueueSync /></AppShell>
     </AuthGuard>
   );
 }

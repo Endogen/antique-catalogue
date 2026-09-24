@@ -106,7 +106,6 @@ export function SocialShareActions({
 
   const disabled = !path;
   const iconButtonClassName = iconOnly ? "w-9 px-0" : undefined;
-  const copyButtonVariant = iconOnly ? "outline" : "ghost";
 
   const shareButton = (
     <Button
@@ -125,7 +124,7 @@ export function SocialShareActions({
 
   const copyButton = (
     <Button
-      variant={copyButtonVariant}
+      variant="outline"
       size="sm"
       className={iconButtonClassName}
       onClick={() => void handleCopyLink()}

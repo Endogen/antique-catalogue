@@ -118,7 +118,7 @@ export default function RegisterPage() {
   return (
     <>
       <div className="flex flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-4">
+        <header className="flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/logo.png"
@@ -144,7 +144,7 @@ export default function RegisterPage() {
           </div>
         </header>
 
-        <section className="mt-10 rounded-3xl border border-border bg-card/90 p-8 shadow-sm">
+        <section className="mt-6 rounded-3xl border border-border bg-card/90 p-6 shadow-sm sm:mt-10 sm:p-8">
           <Eyebrow tone="brand" spacing="wide">
             {t("Create your studio")}
           </Eyebrow>
@@ -290,7 +290,7 @@ export default function RegisterPage() {
         </section>
       </div>
 
-      <aside className="order-first lg:order-none">
+      <aside>
         <Card tone="subtle" padding="lg">
           <Eyebrow spacing="wide">
             {t("How it works")}
