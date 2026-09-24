@@ -424,7 +424,7 @@ export default function AdminPage() {
             </Alert>
           ) : null}
 
-          <form className="mt-6 space-y-4" onSubmit={handleLogin}>
+          <form method="post" className="mt-6 space-y-4" onSubmit={handleLogin}>
             <div>
               <label className="text-xs font-medium text-muted-strong" htmlFor="admin-email">
                 {t("Email")}

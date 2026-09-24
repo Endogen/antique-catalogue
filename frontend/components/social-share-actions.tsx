@@ -6,6 +6,7 @@ import { Copy, Share2 } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 type SocialShareActionsProps = {
@@ -59,7 +60,7 @@ export function SocialShareActions({
     }
 
     try {
-      await navigator.clipboard.writeText(url);
+      await copyText(url);
       toast({
         tone: "success",
         message: t("Link copied.")
@@ -67,7 +68,7 @@ export function SocialShareActions({
     } catch {
       toast({
         tone: "error",
-        message: t("Unable to share right now.")
+        message: t("Unable to copy the link.")
       });
     }
   }, [resolveShareUrl, t, toast]);

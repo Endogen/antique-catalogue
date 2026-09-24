@@ -578,6 +578,7 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "Link copied.": "Link kopiert.",
   "Unable to generate a share link.": "Freigabelink konnte nicht erstellt werden.",
   "Unable to share right now.": "Teilen ist derzeit nicht möglich.",
+  "Unable to copy the link.": "Link konnte nicht kopiert werden.",
   "Share curated catalogues publicly.": "Kuratierte Kataloge öffentlich teilen.",
   "Share publicly": "Öffentlich teilen",
   "Share read-only access with the public.": "Gib der Öffentlichkeit Lesezugriff.",
