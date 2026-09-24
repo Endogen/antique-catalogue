@@ -22,7 +22,13 @@ export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => (
-    <textarea ref={ref} className={cn(fieldClassName, className)} {...props} />
+    <textarea
+      ref={ref}
+      // Grows with its content where field-sizing is supported; `rows` still
+      // sets the height everywhere else.
+      className={cn(fieldClassName, "field-sizing-content min-h-28 max-h-[60vh]", className)}
+      {...props}
+    />
   )
 );
 Textarea.displayName = "Textarea";

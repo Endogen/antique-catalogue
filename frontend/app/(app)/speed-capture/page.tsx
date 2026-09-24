@@ -239,7 +239,7 @@ function ThumbnailStrip({
       {pendingShots.map((shot) => (
         <div
           key={shot.id}
-          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-xs"
+          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-xs transition duration-300 ease-out starting:opacity-0 motion-safe:starting:scale-75"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -378,7 +378,9 @@ function CaptureScreen({
           <p className="mb-2 text-xs uppercase tracking-[0.2em] text-muted-subtle">
             {t("Existing drafts")}
           </p>
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {/* The right edge fades out as a cue that the strip scrolls; the end
+              padding lets the last draft scroll clear of the fade. */}
+          <div className="flex gap-2 overflow-x-auto pb-1 pr-12 mask-r-from-85% scrollbar-none">
             {existingDrafts.map((draft) => (
               <Link
                 key={draft.id}

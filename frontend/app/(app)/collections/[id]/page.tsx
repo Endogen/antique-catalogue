@@ -27,6 +27,7 @@ import {
 } from "@tanstack/react-query";
 
 import { useI18n } from "@/components/i18n-provider";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   collectionApi,
@@ -689,7 +690,12 @@ export default function CollectionDetailPage() {
         <Card
           id="collection-filters"
           tone="subtle"
-          className={filtersOpen ? undefined : "hidden lg:block"}
+          className={cn(
+            // Below lg the panel fades in and out; transition-discrete lets
+            // `display` flip after the fade so closing animates too.
+            "transition-[opacity,translate,display] duration-200 ease-out transition-discrete starting:opacity-0 motion-safe:starting:-translate-y-2 lg:transition-none",
+            !filtersOpen && "hidden opacity-0 lg:block lg:opacity-100"
+          )}
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

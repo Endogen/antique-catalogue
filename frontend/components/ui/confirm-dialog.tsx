@@ -65,7 +65,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       {request ? (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center bg-foreground/50 p-4 backdrop-blur-xs"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-foreground/50 p-4 backdrop-blur-xs transition-opacity duration-200 starting:opacity-0"
           onClick={handleCancel}
         >
           <div
@@ -75,7 +75,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             aria-labelledby={titleId}
             aria-describedby={request.description ? descriptionId : undefined}
             tabIndex={-1}
-            className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-xl outline-hidden"
+            className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-xl outline-hidden transition duration-200 ease-out starting:opacity-0 motion-safe:starting:translate-y-2 motion-safe:starting:scale-95"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start gap-3">

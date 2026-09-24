@@ -93,7 +93,7 @@ export function UploadQueueButton({ className }: { className?: string }) {
       <span className="hidden sm:inline">{t("Uploads")}</span>
       {pending ? <span className="tabular-nums">{pending}</span> : null}
     </button>
-    {open && <div className="absolute right-0 top-full z-50 mt-2 max-h-[65vh] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-border bg-card p-4 text-left shadow-xl">
+    {open && <div className="absolute right-0 top-full z-50 mt-2 max-h-[65vh] w-80 max-w-[calc(100vw-2rem)] origin-top-right overflow-y-auto rounded-2xl border border-border bg-card p-4 text-left shadow-xl transition duration-200 ease-out starting:opacity-0 motion-safe:starting:-translate-y-1 motion-safe:starting:scale-95">
       <p className="mb-3 text-sm text-muted-strong">{t("Photos resume on this device after reconnecting or reopening the app.")}</p>
       {error && <p role="alert" className="text-sm text-destructive">{t(error)}</p>}
       {jobs.map(job => <div key={job.id} className="space-y-2 border-t py-3 text-sm">

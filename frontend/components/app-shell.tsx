@@ -463,10 +463,10 @@ export const AppShell = ({ children }: AppShellProps) => {
       {mobileOpen ? (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
-            className="absolute inset-0 bg-stone-950/60"
+            className="absolute inset-0 bg-stone-950/60 transition-opacity duration-300 starting:opacity-0"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] overflow-y-auto overscroll-contain border-r border-panel-border bg-panel-deep p-6 text-panel-foreground shadow-2xl">
+          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] overflow-y-auto overscroll-contain border-r border-panel-border bg-panel-deep p-6 text-panel-foreground shadow-2xl transition duration-300 ease-out starting:opacity-0 motion-safe:starting:-translate-x-full">
             <SidebarContent
               onNavigate={() => setMobileOpen(false)}
               onClose={() => setMobileOpen(false)}

@@ -30,7 +30,7 @@ export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/90 p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/90 p-6 transition-opacity duration-200 starting:opacity-0"
       onClick={onClose}
     >
       <div
@@ -41,7 +41,7 @@ export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
         aria-labelledby={alt ? labelId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative max-h-full max-w-5xl outline-hidden",
+          "relative max-h-full max-w-5xl outline-hidden transition duration-300 ease-out starting:opacity-0 motion-safe:starting:scale-95",
           "rounded-2xl border border-white/10 bg-black/20 p-2"
         )}
         onClick={(event) => event.stopPropagation()}

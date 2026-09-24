@@ -160,7 +160,7 @@ export function PublicHeader({ className }: PublicHeaderProps) {
       {menuOpen ? (
         <div
           id="public-menu"
-          className="absolute inset-x-4 top-full z-30 rounded-3xl border border-border bg-card p-4 shadow-xl sm:left-auto sm:right-6 sm:w-72 lg:hidden"
+          className="absolute inset-x-4 top-full z-30 origin-top-right rounded-3xl border border-border bg-card p-4 shadow-xl transition duration-200 ease-out starting:opacity-0 motion-safe:starting:-translate-y-1 motion-safe:starting:scale-95 sm:left-auto sm:right-6 sm:w-72 lg:hidden"
         >
           <nav className="grid gap-1">
             {navLinks.map((link) => (
