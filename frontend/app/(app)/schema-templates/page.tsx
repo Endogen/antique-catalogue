@@ -160,7 +160,7 @@ export default function SchemaTemplatesPage() {
 
   return (
     <div className="space-y-8">
-      <header className="rounded-3xl border border-border bg-card/80 p-5 shadow-sm sm:p-6">
+      <header className="rounded-3xl border border-border bg-card/80 p-5 shadow-xs sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <Eyebrow tone="brand" spacing="wide">
@@ -192,7 +192,7 @@ export default function SchemaTemplatesPage() {
             <input
               type="search"
               placeholder={t("Search schema templates")}
-              className="block h-11 w-full rounded-full border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+              className="block h-11 w-full rounded-full border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -205,7 +205,7 @@ export default function SchemaTemplatesPage() {
                 value={templateName}
                 onChange={(event) => setTemplateName(event.target.value)}
                 placeholder={t("Template name")}
-                className="h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 sm:flex-1 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 sm:flex-1 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
               />
               <Button type="button" className="h-11 shrink-0" onClick={handleCreate} disabled={isCreating}>
                 <Plus className="h-4 w-4" />
@@ -251,7 +251,7 @@ export default function SchemaTemplatesPage() {
           {state.data.map((template) => (
             <article
               key={template.id}
-              className="rounded-3xl border border-border bg-card/90 p-5 shadow-sm"
+              className="rounded-3xl border border-border bg-card/90 p-5 shadow-xs"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

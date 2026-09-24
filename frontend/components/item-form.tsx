@@ -591,7 +591,7 @@ export function ItemForm({
                 {field.field_type === "select" ? (
                   <select
                     id={`metadata-${field.id}`}
-                    className="h-10 rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-10 rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-xs focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                     aria-invalid={errorMessage ? "true" : "false"}
                     {...registerMetadataField(fieldId)}
                     disabled={!options.length}
@@ -616,7 +616,7 @@ export function ItemForm({
                             : "text"
                     }
                     step={field.field_type === "number" || field.field_type === "timestamp" ? "any" : undefined}
-                    className="h-10 rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-10 rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                     aria-invalid={errorMessage ? "true" : "false"}
                       placeholder={
                         field.field_type === "date"

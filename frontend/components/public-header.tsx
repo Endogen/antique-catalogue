@@ -146,7 +146,7 @@ export function PublicHeader({ className }: PublicHeaderProps) {
           )}
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-2xl border border-border bg-card text-muted-strong transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-9 w-9 items-center justify-center rounded-2xl border border-border bg-card text-muted-strong transition hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
             onClick={() => setMenuOpen((open) => !open)}
             aria-expanded={menuOpen}
             aria-controls="public-menu"

@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-const cardVariants = cva("rounded-3xl border shadow-sm", {
+const cardVariants = cva("rounded-3xl border shadow-xs", {
   variants: {
     tone: {
       default: "border-border bg-card/90",

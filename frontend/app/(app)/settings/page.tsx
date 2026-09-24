@@ -160,7 +160,7 @@ export default function SettingsPage() {
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-border bg-background/80 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-eyebrow text-muted-foreground">
                 <Mail className="h-4 w-4 text-brand" />
                 {t("Email address")}
               </div>
@@ -173,7 +173,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="rounded-2xl border border-border bg-background/80 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-eyebrow text-muted-foreground">
                 <CalendarDays className="h-4 w-4 text-brand" />
                 {t("Member since")}
               </div>
@@ -186,7 +186,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="rounded-2xl border border-border bg-background/80 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-eyebrow text-muted-foreground">
                 <ShieldCheck className="h-4 w-4 text-brand" />
                 {t("Status")}
               </div>
@@ -199,7 +199,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="rounded-2xl border border-border bg-background/80 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-eyebrow text-muted-foreground">
                 <KeyRound className="h-4 w-4 text-brand" />
                 {t("Account ID")}
               </div>
@@ -213,7 +213,7 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <div className="rounded-3xl border border-border surface-panel p-6 text-panel-foreground shadow-sm">
+        <div className="rounded-3xl border border-border surface-panel p-6 text-panel-foreground shadow-xs">
           <Eyebrow tone="panel">
             {t("Security snapshot")}
           </Eyebrow>
@@ -354,7 +354,7 @@ export default function SettingsPage() {
 
       </section>
 
-      <section className="rounded-3xl border border-destructive-border bg-destructive-muted/60 p-6 shadow-sm">
+      <section className="rounded-3xl border border-destructive-border bg-destructive-muted/60 p-6 shadow-xs">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <Eyebrow className="text-destructive">
@@ -383,7 +383,7 @@ export default function SettingsPage() {
             <input
               id="delete-confirm"
               type="text"
-              className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-sm transition focus:border-destructive-border focus:outline-none focus:ring-2 focus:ring-destructive-border"
+              className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-xs transition focus:border-destructive-border focus:outline-hidden focus:ring-2 focus:ring-destructive-border"
               value={deletePhrase}
               onChange={(event) => setDeletePhrase(event.target.value)}
               placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}

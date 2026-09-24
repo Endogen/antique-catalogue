@@ -435,7 +435,7 @@ export default function AdminPage() {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
               />
             </div>
             <div>
@@ -448,7 +448,7 @@ export default function AdminPage() {
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
               />
             </div>
             <Button type="submit" className="w-full">
@@ -519,12 +519,12 @@ export default function AdminPage() {
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-sm">
+          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-xs">
             <Eyebrow tone="subtle">{t("Total users")}</Eyebrow>
             <p className="mt-4 text-3xl font-semibold text-foreground">{stats?.total_users ?? "-"}</p>
             <p className="mt-2 text-sm text-muted-foreground">{t("Registered accounts")}</p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-sm">
+          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-xs">
             <Eyebrow tone="subtle">
               {t("Total collections")}
             </Eyebrow>
@@ -533,7 +533,7 @@ export default function AdminPage() {
             </p>
             <p className="mt-2 text-sm text-muted-foreground">{t("Across all users")}</p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-sm">
+          <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-xs">
             <Eyebrow tone="subtle">
               {t("Featured collection")}
             </Eyebrow>
@@ -545,7 +545,7 @@ export default function AdminPage() {
         </section>
 
         <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-xs">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <Eyebrow>
@@ -661,7 +661,7 @@ export default function AdminPage() {
             )}
           </section>
 
-          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-xs">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <Eyebrow>
@@ -758,7 +758,7 @@ export default function AdminPage() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-xs">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <Eyebrow>
@@ -779,7 +779,7 @@ export default function AdminPage() {
                 value={usersSearchInput}
                 onChange={(event) => setUsersSearchInput(event.target.value)}
                 placeholder={t("Search users by email or username")}
-                className="h-9 min-w-[220px] flex-1 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-9 min-w-[220px] flex-1 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
               />
               <Button type="submit" size="sm" variant="outline" disabled={usersStatus === "loading"}>
                 {t("Search")}
@@ -910,7 +910,7 @@ export default function AdminPage() {
             )}
           </section>
 
-          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
+          <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-xs">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <Eyebrow>
@@ -931,7 +931,7 @@ export default function AdminPage() {
                 value={itemsSearchInput}
                 onChange={(event) => setItemsSearchInput(event.target.value)}
                 placeholder={t("Search items by name, notes, collection, or owner")}
-                className="h-9 min-w-[220px] flex-1 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-9 min-w-[220px] flex-1 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
               />
               <Button type="submit" size="sm" variant="outline" disabled={itemsStatus === "loading"}>
                 {t("Search")}

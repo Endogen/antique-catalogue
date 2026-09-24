@@ -41,14 +41,14 @@ export function Lightbox({ open, src, alt, onClose }: LightboxProps) {
         aria-labelledby={alt ? labelId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative max-h-full max-w-5xl outline-none",
+          "relative max-h-full max-w-5xl outline-hidden",
           "rounded-2xl border border-white/10 bg-black/20 p-2"
         )}
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
-          className="absolute -top-14 right-0 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="absolute -top-14 right-0 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/70"
           onClick={onClose}
           aria-label={t("Close image")}
         >

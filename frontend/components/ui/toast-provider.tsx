@@ -64,7 +64,7 @@ function ToastItem({
   return (
     <div
       className={cn(
-        "pointer-events-auto flex items-center gap-2 rounded-md border bg-background/95 px-3 py-2 text-sm shadow-lg backdrop-blur animate-in fade-in slide-in-from-bottom-2 duration-200",
+        "pointer-events-auto flex items-center gap-2 rounded-md border bg-background/95 px-3 py-2 text-sm shadow-lg backdrop-blur-sm transition duration-200 ease-out starting:opacity-0 motion-safe:starting:translate-y-2",
         toneStyles[toast.tone]
       )}
       role="status"

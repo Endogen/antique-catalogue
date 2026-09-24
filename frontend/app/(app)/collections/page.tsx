@@ -119,7 +119,7 @@ export default function CollectionsPage() {
       </header>
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs sm:p-5">
           <Eyebrow tone="subtle">
             {t("Total items")}
           </Eyebrow>
@@ -130,7 +130,7 @@ export default function CollectionsPage() {
             {t("Catalogued across your collections.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs sm:p-5">
           <Eyebrow tone="subtle">
             {t("Total collections")}
           </Eyebrow>
@@ -141,7 +141,7 @@ export default function CollectionsPage() {
             {t("All archives in your studio.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs sm:p-5">
           <Eyebrow tone="subtle">
             {t("Public collections")}
           </Eyebrow>
@@ -152,7 +152,7 @@ export default function CollectionsPage() {
             {t("Visible in the public directory.")}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs sm:p-5">
           <Eyebrow tone="subtle">
             {t("Private collections")}
           </Eyebrow>

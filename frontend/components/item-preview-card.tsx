@@ -76,7 +76,7 @@ export function ItemPreviewCard({
   return (
     <article
       className={cn(
-        "flex h-full min-h-[31rem] flex-col rounded-3xl border border-border bg-card/90 p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-muted-subtle hover:shadow-md",
+        "flex h-full min-h-124 flex-col rounded-3xl border border-border bg-card/90 p-5 shadow-xs transition-all duration-300 hover:-translate-y-0.5 hover:border-muted-subtle hover:shadow-md",
         isHighlighted ? highlightClassName : null,
         className
       )}
@@ -93,24 +93,24 @@ export function ItemPreviewCard({
               unoptimized
             />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-muted via-background to-brand-muted/50 text-muted-foreground">
+            <div className="flex h-full flex-col items-center justify-center gap-2 bg-linear-to-br from-muted via-background to-brand-muted/50 text-muted-foreground">
               <ImageIcon className="h-5 w-5 text-brand" />
               <Eyebrow className="tracking-[0.2em]">{imageFallbackLabel}</Eyebrow>
             </div>
           )}
         </div>
 
-        <p className="mt-4 text-[10px] font-medium uppercase tracking-[0.3em] text-muted-subtle">
+        <p className="mt-4 text-[10px] font-medium uppercase tracking-eyebrow text-muted-subtle">
           {eyebrow}
         </p>
-        <h3 className="mt-2 min-h-[3.25rem] text-lg font-semibold leading-snug text-foreground">
+        <h3 className="mt-2 min-h-13 text-lg font-semibold leading-snug text-foreground">
           {shortTitle}
         </h3>
-        <p className="mt-1 min-h-[1.25rem] text-xs text-muted-foreground">
+        <p className="mt-1 min-h-5 text-xs text-muted-foreground">
           {createdLabel ?? "\u00a0"}
         </p>
 
-        <p className="mt-3 min-h-[3.5rem] text-sm text-muted-strong">{descriptionText}</p>
+        <p className="mt-3 min-h-14 text-sm text-muted-strong">{descriptionText}</p>
 
         <div className="mt-4 h-24 rounded-2xl border border-border bg-background px-3 py-3 text-xs text-muted-strong">
           {visibleMetadata.length === 0 ? (

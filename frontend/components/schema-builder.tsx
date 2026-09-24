@@ -540,7 +540,7 @@ export function SchemaBuilder({
                     <div
                       key={field.id}
                       className={cn(
-                        "rounded-2xl border bg-card/80 p-4 shadow-sm transition",
+                        "rounded-2xl border bg-card/80 p-4 shadow-xs transition",
                         dragOverId === field.id
                           ? "border-brand-border bg-brand-muted/70"
                           : "border-border"
@@ -699,7 +699,7 @@ export function SchemaBuilder({
                   id="field-name"
                   type="text"
                   autoComplete="off"
-                  className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                   aria-invalid={errors.name ? "true" : "false"}
                   {...register("name")}
                 />
@@ -719,7 +719,7 @@ export function SchemaBuilder({
                 </label>
                 <select
                   id="field-type"
-                  className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                   {...register("field_type")}
                 >
                   {fieldTypes.map((option) => (
@@ -780,7 +780,7 @@ export function SchemaBuilder({
                         onChange={(event) => setOptionInput(event.target.value)}
                         onKeyDown={handleOptionKeyDown}
                         placeholder={t("Add option values")}
-                        className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                       />
                       <Button
                         type="button"

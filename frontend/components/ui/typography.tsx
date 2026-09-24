@@ -16,8 +16,8 @@ const eyebrowVariants = cva("text-xs uppercase", {
     },
     spacing: {
       tight: "tracking-[0.2em]",
-      normal: "tracking-[0.3em]",
-      wide: "tracking-[0.4em]"
+      normal: "tracking-eyebrow",
+      wide: "tracking-eyebrow-wide"
     }
   },
   defaultVariants: {

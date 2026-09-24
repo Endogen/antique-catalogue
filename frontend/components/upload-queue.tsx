@@ -85,7 +85,7 @@ export function UploadQueueButton({ className }: { className?: string }) {
       aria-label={label}
       title={label}
       className={cn(
-        "flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border bg-card px-3 text-sm font-medium shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border bg-card px-3 text-sm font-medium shadow-xs transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         failed ? "border-destructive-border text-destructive" : pending ? "border-brand-border text-brand" : "border-border text-success"
       )}
     >
@@ -100,7 +100,7 @@ export function UploadQueueButton({ className }: { className?: string }) {
         <p className="break-all font-medium">{job.filename}</p>
         <progress className="w-full accent-brand" value={job.received} max={job.size} aria-label={job.filename} />
         <p className="text-muted-strong">{job.state === "done" ? t("Uploaded") : `${Math.floor(job.received / job.size * 100)}%`}</p>
-        {job.error && <p className="break-words text-xs text-destructive">{t(job.error)}</p>}
+        {job.error && <p className="wrap-break-word text-xs text-destructive">{t(job.error)}</p>}
         <div className="flex gap-2">
           {job.result ? <Button size="sm" asChild><Link href={`/collections/${job.result.collection_id}/items/${job.result.item_id}`}>{t("View item")}</Link></Button>
             : <Button size="sm" disabled={job.state === "uploading"} onClick={() => { setError(null); void scheduleUpload(job.id).catch(e => setError(e.message)); }}>{t("Resume upload")}</Button>}

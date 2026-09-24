@@ -142,7 +142,7 @@ function LoginContent() {
           </div>
         </header>
 
-        <section className="mt-6 rounded-3xl border border-border bg-card/90 p-6 shadow-sm sm:mt-10 sm:p-8">
+        <section className="mt-6 rounded-3xl border border-border bg-card/90 p-6 shadow-xs sm:mt-10 sm:p-8">
           <Eyebrow tone="brand" spacing="wide">
             {t("Welcome back")}
           </Eyebrow>
@@ -234,7 +234,7 @@ function LoginContent() {
       </div>
 
       <aside>
-        <div className="rounded-3xl border border-panel-border/90 surface-panel p-8 text-panel-foreground shadow-sm">
+        <div className="rounded-3xl border border-panel-border/90 surface-panel p-8 text-panel-foreground shadow-xs">
           <Eyebrow tone="panel" spacing="wide">
             {t("Archive overview")}
           </Eyebrow>
@@ -260,7 +260,7 @@ function LoginContent() {
           {quickCards.map((item) => (
             <div
               key={item.title}
-              className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm"
+              className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs"
             >
               <Eyebrow tone="subtle">
                 {t(item.title)}

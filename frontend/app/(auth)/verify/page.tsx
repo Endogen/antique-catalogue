@@ -136,7 +136,7 @@ function VerifyContent() {
           </div>
         </header>
 
-        <section className="mt-6 rounded-3xl border border-border bg-card/90 p-6 shadow-sm sm:mt-10 sm:p-8">
+        <section className="mt-6 rounded-3xl border border-border bg-card/90 p-6 shadow-xs sm:mt-10 sm:p-8">
           <Eyebrow tone="brand" spacing="wide">
             {t("Verify your email")}
           </Eyebrow>
@@ -217,7 +217,7 @@ function VerifyContent() {
       </div>
 
       <aside>
-        <div className="rounded-3xl border border-panel-border/90 surface-panel p-8 text-panel-foreground shadow-sm">
+        <div className="rounded-3xl border border-panel-border/90 surface-panel p-8 text-panel-foreground shadow-xs">
           <Eyebrow tone="panel" spacing="wide">
             {t("Next steps")}
           </Eyebrow>

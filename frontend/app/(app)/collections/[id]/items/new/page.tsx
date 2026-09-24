@@ -245,7 +245,7 @@ export default function NewItemPage() {
               )}
             </Card>
 
-            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-xs">
               <Eyebrow tone="panel">
                 {t("Capture notes")}
               </Eyebrow>

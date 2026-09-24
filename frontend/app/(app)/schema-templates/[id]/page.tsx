@@ -276,7 +276,7 @@ export default function SchemaTemplateDetailPage() {
               ) : null}
 
               <div className="mt-6 space-y-3">
-                <label className="text-sm font-medium text-muted-strong" htmlFor="template-name">
+                <label className="block text-sm font-medium text-muted-strong" htmlFor="template-name">
                   {t("Template name")}
                 </label>
                 <Input
@@ -329,7 +329,7 @@ export default function SchemaTemplateDetailPage() {
               </div>
             </Card>
 
-            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-xs">
               <Eyebrow tone="panel">
                 {t("Template behavior")}
               </Eyebrow>

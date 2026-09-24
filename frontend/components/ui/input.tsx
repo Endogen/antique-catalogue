@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  * identical across every form in the app.
  */
 export const fieldClassName =
-  "w-full rounded-xl border border-input bg-card px-4 py-3 text-sm text-foreground shadow-sm transition placeholder:text-muted-foreground/70 focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted aria-[invalid=true]:border-destructive-border aria-[invalid=true]:focus:ring-destructive-border";
+  "w-full rounded-xl border border-input bg-card px-4 py-3 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground/70 focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted aria-invalid:border-destructive-border aria-invalid:focus:ring-destructive-border";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 

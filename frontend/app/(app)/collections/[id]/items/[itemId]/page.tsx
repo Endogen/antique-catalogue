@@ -584,14 +584,14 @@ export default function ItemDetailPage() {
                             {baseFields}
                             <div className="space-y-2">
                               <label
-                                className="text-sm font-medium text-muted-strong"
+                                className="block text-sm font-medium text-muted-strong"
                                 htmlFor="destination-collection"
                               >
                                 {t("Collection")}
                               </label>
                               <select
                                 id="destination-collection"
-                                className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+                                className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
                                 value={destinationCollectionId}
                                 onChange={(event) =>
                                   setDestinationCollectionId(event.target.value)
@@ -687,7 +687,7 @@ export default function ItemDetailPage() {
                       )}
                     </Card>
 
-                    <Alert className="rounded-3xl p-6 shadow-sm">
+                    <Alert className="rounded-3xl p-6 shadow-xs">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <Eyebrow className="text-destructive">
@@ -719,7 +719,7 @@ export default function ItemDetailPage() {
                           <input
                             id="delete-confirm"
                             type="text"
-                            className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-sm transition focus:border-destructive-border focus:outline-none focus:ring-2 focus:ring-destructive-border"
+                            className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-xs transition focus:border-destructive-border focus:outline-hidden focus:ring-2 focus:ring-destructive-border"
                             value={deletePhrase}
                             onChange={(event) => setDeletePhrase(event.target.value)}
                             placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}
@@ -756,7 +756,7 @@ export default function ItemDetailPage() {
             // and the uploader follows them directly while there are none.
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
               <div className="contents lg:block lg:space-y-6">
-                <Card className="order-3 lg:order-none">
+                <Card className="order-3 lg:order-0">
                   <Eyebrow>
                     {t("Item overview")}
                   </Eyebrow>
@@ -797,7 +797,7 @@ export default function ItemDetailPage() {
                   </div>
                 </Card>
 
-                <div className="order-1 lg:order-none">
+                <div className="order-1 lg:order-0">
                   <ImageGallery
                     itemId={itemId ?? null}
                     disabled={itemState.status !== "ready"}
@@ -809,7 +809,7 @@ export default function ItemDetailPage() {
                 <div
                   className={cn(
                     (itemState.data?.image_count ?? 0) > 0 ? "order-5" : "order-2",
-                    "lg:order-none"
+                    "lg:order-0"
                   )}
                 >
                   <ImageUploader
@@ -821,7 +821,7 @@ export default function ItemDetailPage() {
               </div>
 
               <div className="contents lg:block lg:space-y-6">
-                <Card tone="subtle" className="order-6 lg:order-none">
+                <Card tone="subtle" className="order-6 lg:order-0">
                   <Eyebrow>
                     {t("Item snapshot")}
                   </Eyebrow>
@@ -881,7 +881,7 @@ export default function ItemDetailPage() {
                   </div>
                 </Card>
 
-                <Card className="order-4 lg:order-none">
+                <Card className="order-4 lg:order-0">
                   <Eyebrow>
                     {t("Metadata")}
                   </Eyebrow>
@@ -957,7 +957,7 @@ export default function ItemDetailPage() {
                       <p className="mt-2 text-sm">{t("These values are visible only to you. Copy a value into a current field when you want to use it again.")}</p>
                       <dl className="mt-3 space-y-2">
                         {itemState.data?.preserved_metadata?.map((entry, index) => (
-                          <div key={index}><dt className="text-sm font-medium">{entry.name}</dt><dd className="break-words text-sm">{formatFieldValue(entry.value)}</dd></div>
+                          <div key={index}><dt className="text-sm font-medium">{entry.name}</dt><dd className="wrap-break-word text-sm">{formatFieldValue(entry.value)}</dd></div>
                         ))}
                       </dl>
                     </div>

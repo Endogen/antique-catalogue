@@ -119,16 +119,16 @@ export default function ExplorePage() {
                   </Button>
                 ) : null}
               </div>
-              <div className="mt-8 rounded-2xl border border-border bg-card/90 p-4 shadow-sm">
-                <label htmlFor="collection-search" className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              <div className="mt-8 rounded-2xl border border-border bg-card/90 p-4 shadow-xs">
+                <label htmlFor="collection-search" className="text-xs uppercase tracking-eyebrow text-muted-foreground">
                   {t("Search collections")}
                 </label>
-                <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-sm focus-within:border-brand-border focus-within:ring-2 focus-within:ring-ring">
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-xs focus-within:border-brand-border focus-within:ring-2 focus-within:ring-ring">
                   <Search className="h-4 w-4 text-muted-subtle" />
                   <input
                     id="collection-search"
                     type="search"
-                    className="min-w-0 w-full appearance-none bg-transparent text-sm text-muted-strong focus:outline-none"
+                    className="min-w-0 w-full appearance-none bg-transparent text-sm text-muted-strong focus:outline-hidden"
                     placeholder={t("Search by collection name or description")}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}

@@ -649,7 +649,7 @@ export default function CollectionDetailPage() {
               <input
                 type="search"
                 placeholder={t("Search items")}
-                className="h-10 w-full rounded-full sm:w-56 border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-10 w-full rounded-full sm:w-56 border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
@@ -657,7 +657,7 @@ export default function CollectionDetailPage() {
             <div className="flex gap-2 sm:gap-3">
               <select
                 aria-label={t("Sort items")}
-                className="h-10 min-w-0 flex-1 rounded-full border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring sm:flex-none"
+                className="h-10 min-w-0 flex-1 rounded-full border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-xs focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring sm:flex-none"
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
               >
@@ -731,11 +731,11 @@ export default function CollectionDetailPage() {
             <div className="mt-4 space-y-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex min-w-[200px] flex-1 flex-col gap-2">
-                  <label className="text-xs uppercase tracking-[0.3em] text-muted-subtle">
+                  <label className="text-xs uppercase tracking-eyebrow text-muted-subtle">
                     {t("Field")}
                   </label>
                   <select
-                    className="h-10 rounded-2xl border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-10 rounded-2xl border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-xs focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                     value={filterFieldId}
                     onChange={(event) => setFilterFieldId(event.target.value)}
                   >
@@ -748,12 +748,12 @@ export default function CollectionDetailPage() {
                   </select>
                 </div>
                 <div className="flex min-w-[200px] flex-1 flex-col gap-2">
-                  <label className="text-xs uppercase tracking-[0.3em] text-muted-subtle">
+                  <label className="text-xs uppercase tracking-eyebrow text-muted-subtle">
                     {t("Value")}
                   </label>
                   {selectedField?.field_type === "select" ? (
                     <select
-                      className="h-10 rounded-2xl border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="h-10 rounded-2xl border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-xs focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                       value={filterValue}
                       onChange={(event) => setFilterValue(event.target.value)}
                       disabled={selectedFieldOptions.length === 0}
@@ -767,7 +767,7 @@ export default function CollectionDetailPage() {
                     </select>
                   ) : selectedField?.field_type === "checkbox" ? (
                     <select
-                      className="h-10 rounded-2xl border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="h-10 rounded-2xl border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-xs focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                       value={filterValue}
                       onChange={(event) => setFilterValue(event.target.value)}
                     >
@@ -788,7 +788,7 @@ export default function CollectionDetailPage() {
                       step={
                         selectedField?.field_type === "number" ? "any" : undefined
                       }
-                      className="h-10 rounded-2xl border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="h-10 rounded-2xl border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                       placeholder={t("Enter value")}
                       value={filterValue}
                       onChange={(event) => setFilterValue(event.target.value)}

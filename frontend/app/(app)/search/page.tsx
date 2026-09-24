@@ -105,7 +105,7 @@ function SearchContent() {
             <input
               type="search"
               placeholder={t("Search items by name or notes")}
-              className="h-11 w-full rounded-full border border-input bg-card pl-9 pr-3 text-sm text-foreground shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+              className="h-11 w-full rounded-full border border-input bg-card pl-9 pr-3 text-sm text-foreground shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
             />

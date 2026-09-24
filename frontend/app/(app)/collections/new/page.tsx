@@ -177,7 +177,7 @@ export default function NewCollectionPage() {
                     value={templateQuery}
                     onChange={(event) => setTemplateQuery(event.target.value)}
                     placeholder={t("Search schema templates")}
-                    className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                   />
                 </div>
 
@@ -298,7 +298,7 @@ export default function NewCollectionPage() {
             </div>
           </Card>
 
-          <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+          <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-xs">
             <Eyebrow tone="panel">
               {t("Studio note")}
             </Eyebrow>

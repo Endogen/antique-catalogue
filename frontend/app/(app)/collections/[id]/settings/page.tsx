@@ -448,7 +448,7 @@ export default function CollectionSettingsPage() {
                     value={applyTemplateQuery}
                     onChange={(event) => setApplyTemplateQuery(event.target.value)}
                     placeholder={t("Search schema templates")}
-                    className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                   />
                 </div>
 
@@ -574,7 +574,7 @@ export default function CollectionSettingsPage() {
               </div>
             </Card>
 
-            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
+            <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-xs">
               <Eyebrow tone="panel">
                 {t("Next step")}
               </Eyebrow>
@@ -585,7 +585,7 @@ export default function CollectionSettingsPage() {
               </p>
             </div>
 
-            <Alert className="rounded-3xl p-6 shadow-sm">
+            <Alert className="rounded-3xl p-6 shadow-xs">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <Eyebrow className="text-destructive">
@@ -617,7 +617,7 @@ export default function CollectionSettingsPage() {
                   <input
                     id="delete-collection-confirm"
                     type="text"
-                    className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-sm transition focus:border-destructive-border focus:outline-none focus:ring-2 focus:ring-destructive-border"
+                    className="mt-2 w-full rounded-xl border border-destructive-border bg-card px-4 py-3 text-sm text-foreground shadow-xs transition focus:border-destructive-border focus:outline-hidden focus:ring-2 focus:ring-destructive-border"
                     value={deletePhrase}
                     onChange={(event) => setDeletePhrase(event.target.value)}
                     placeholder={t("Type {token} to confirm", { token: DELETE_TOKEN })}

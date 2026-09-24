@@ -168,10 +168,10 @@ function CollectionPicker({
               <button
                 key={c.id}
                 type="button"
-                className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-sm transition hover:border-brand-border hover:bg-brand-muted/50 active:scale-[0.98]"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-xs transition hover:border-brand-border hover:bg-brand-muted/50 active:scale-[0.98]"
                 onClick={() => onSelect(c)}
               >
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                   <Layers className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -227,7 +227,7 @@ function ThumbnailStrip({
       {confirmed.map((img) => (
         <div
           key={img.id}
-          className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-sm"
+          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-xs"
         >
           <AuthenticatedImage
             src={imageApi.url(img.imageId, "thumb")}
@@ -239,7 +239,7 @@ function ThumbnailStrip({
       {pendingShots.map((shot) => (
         <div
           key={shot.id}
-          className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-sm"
+          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-xs"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -327,7 +327,7 @@ function CaptureScreen({
       />
 
       {/* Header bar */}
-      <div className="flex min-h-[3.25rem] items-center gap-3 px-4 pb-2 pt-[max(env(safe-area-inset-top),0.75rem)]">
+      <div className="flex min-h-13 items-center gap-3 px-4 pb-2 pt-[max(env(safe-area-inset-top),0.75rem)]">
         <button
           type="button"
           className="-ml-2 flex h-10 shrink-0 items-center gap-2 rounded-full px-2 text-sm text-muted-strong transition hover:text-foreground"
@@ -344,14 +344,14 @@ function CaptureScreen({
 
       {/* Stats bar */}
       <div className="flex items-center justify-center gap-6 py-2">
-        <div className="min-w-[4rem] text-center">
+        <div className="min-w-16 text-center">
           <p className="font-display text-2xl leading-tight text-foreground">{stats.items}</p>
           <p className="text-xs text-muted-foreground">
             {stats.items === 1 ? t("item") : t("items")}
           </p>
         </div>
         <div className="h-8 w-px bg-border" />
-        <div className="min-w-[4rem] text-center">
+        <div className="min-w-16 text-center">
           <p className="font-display text-2xl leading-tight text-foreground">{stats.images}</p>
           <p className="text-xs text-muted-foreground">
             {stats.images === 1 ? t("photo") : t("photos")}
@@ -360,7 +360,7 @@ function CaptureScreen({
       </div>
 
       {/* Thumbnail strip */}
-      <div className="min-h-[3.75rem] px-4 pt-2">
+      <div className="min-h-15 px-4 pt-2">
         <ThumbnailStrip
           items={items}
           currentItemId={currentItemId}
@@ -383,7 +383,7 @@ function CaptureScreen({
               <Link
                 key={draft.id}
                 href={`/collections/${collection.id}/items/${draft.id}`}
-                className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted shadow-sm"
+                className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted shadow-xs"
               >
                 {draft.primary_image_id ? (
                   <AuthenticatedImage
@@ -525,7 +525,7 @@ function ReviewScreen({
           <Link
             key={item.itemId}
             href={`/collections/${collection.id}/items/${item.itemId}`}
-            className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:border-brand-border hover:shadow-md"
+            className="group overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition hover:border-brand-border hover:shadow-md"
           >
             {item.images[0] ? (
               <div className="aspect-square overflow-hidden bg-muted">

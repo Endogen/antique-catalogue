@@ -360,7 +360,7 @@ export const AppShell = ({ children }: AppShellProps) => {
     <ImmersiveContext.Provider value={setImmersive}>
     <div className="relative min-h-screen bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 right-[-6rem] h-72 w-72 rounded-full bg-amber-200/30 blur-[140px]" />
+        <div className="absolute -top-32 -right-24 h-72 w-72 rounded-full bg-amber-200/30 blur-[140px]" />
         <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-panel/10 blur-[120px]" />
         <div className="absolute top-1/3 right-1/4 h-40 w-40 rounded-full bg-brand-muted/40 blur-[90px]" />
       </div>
@@ -380,13 +380,13 @@ export const AppShell = ({ children }: AppShellProps) => {
           <header
             inert={immersive}
             aria-hidden={immersive || undefined}
-            className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur"
+            className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-sm"
           >
             <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-10">
               <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card/80 text-muted-strong shadow-sm transition hover:border-muted-subtle hover:text-foreground lg:hidden"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card/80 text-muted-strong shadow-xs transition hover:border-muted-subtle hover:text-foreground lg:hidden"
                   onClick={() => setMobileOpen(true)}
                   aria-label={t("Open menu")}
                 >
@@ -410,7 +410,7 @@ export const AppShell = ({ children }: AppShellProps) => {
                   <input
                     type="search"
                     placeholder={t("Search all items")}
-                    className="h-10 w-64 rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-10 w-64 rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
                     onKeyDown={handleSearchKeyDown}
@@ -436,7 +436,7 @@ export const AppShell = ({ children }: AppShellProps) => {
                   <input
                     type="search"
                     placeholder={t("Search all items")}
-                    className="h-10 w-full rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-10 w-full rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
                     onKeyDown={handleSearchKeyDown}

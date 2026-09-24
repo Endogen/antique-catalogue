@@ -158,7 +158,7 @@ export default function PublicProfilePage() {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <SectionHeading as="h1" size="xl" className="break-words">
+                  <SectionHeading as="h1" size="xl" className="wrap-break-word">
                     @{state.data.username}
                   </SectionHeading>
                   <p className="mt-1 text-sm text-muted-strong">
@@ -239,7 +239,7 @@ export default function PublicProfilePage() {
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-subtle" />
                 <input
                   type="search"
-                  className="h-10 w-full rounded-full border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="h-10 w-full rounded-full border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                   placeholder={t("Search collections")}
                   value={collectionSearch}
                   onChange={(event) => setCollectionSearch(event.target.value)}
@@ -261,7 +261,7 @@ export default function PublicProfilePage() {
                   {filteredCollections.map((collection) => (
                     <div
                       key={collection.id}
-                      className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm"
+                      className="rounded-2xl border border-border bg-card/90 p-4 shadow-xs"
                     >
                       <h3 className="text-base font-semibold text-foreground">
                         {collection.name}

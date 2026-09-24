@@ -135,7 +135,7 @@ export default function DashboardPage() {
               {recentCollections.map((collection) => (
                 <div
                   key={collection.id}
-                  className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm"
+                  className="rounded-2xl border border-border bg-card/90 p-4 shadow-xs"
                 >
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-2">

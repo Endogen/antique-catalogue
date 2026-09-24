@@ -202,7 +202,7 @@ export function ImageUploader({
           onDragOver={isReady ? handleDragOver : undefined}
         >
           <div className="mx-auto flex max-w-xs flex-col items-center gap-3 text-sm text-muted-strong">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card text-brand shadow-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card text-brand shadow-xs">
               <UploadCloud className="h-5 w-5" />
             </div>
             <div>

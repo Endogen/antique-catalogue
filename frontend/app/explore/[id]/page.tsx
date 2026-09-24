@@ -558,14 +558,14 @@ export default function PublicCollectionPage() {
               <input
                 type="search"
                 placeholder={t("Search items")}
-                className="h-10 w-full rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-10 w-full rounded-full border border-border bg-card/90 pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
             </div>
             <div className="flex w-full flex-wrap items-center gap-3 lg:ml-auto lg:w-auto lg:justify-end">
               <select
-                className="h-10 rounded-full border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-sm focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-10 rounded-full border border-border bg-card/90 px-3 text-sm text-muted-strong shadow-xs focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
               >
@@ -576,7 +576,7 @@ export default function PublicCollectionPage() {
                 ))}
               </select>
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-muted-strong shadow-sm">
+                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-muted-strong shadow-xs">
                   <input
                     type="checkbox"
                     className="h-3.5 w-3.5 accent-brand"
@@ -585,7 +585,7 @@ export default function PublicCollectionPage() {
                   />
                   {t("With images")}
                 </label>
-                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-brand-border/60 bg-brand-muted/70 px-3 py-2 text-brand shadow-sm">
+                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-brand-border/60 bg-brand-muted/70 px-3 py-2 text-brand shadow-xs">
                   <input
                     type="checkbox"
                     className="h-3.5 w-3.5 accent-brand"

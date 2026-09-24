@@ -66,7 +66,7 @@ function GalleryPreviewImage({
     return (
       <div
         aria-hidden="true"
-        className="block h-36 w-full bg-gradient-to-br from-muted to-muted"
+        className="block h-36 w-full bg-linear-to-br from-muted to-muted"
       />
     );
   }
@@ -403,7 +403,7 @@ export function ImageGallery({
                 <div
                   key={image.id}
                   className={cn(
-                    "rounded-2xl border bg-card/80 p-4 shadow-sm transition",
+                    "rounded-2xl border bg-card/80 p-4 shadow-xs transition",
                     dragOverId === image.id
                       ? "border-brand-border bg-brand-muted/70"
                       : "border-border"

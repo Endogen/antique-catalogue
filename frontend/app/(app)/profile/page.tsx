@@ -157,7 +157,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <header className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
+      <header className="rounded-3xl border border-border bg-card/90 p-6 shadow-xs">
         <Eyebrow tone="brand" spacing="wide">{t("Profile")}</Eyebrow>
         <SectionHeading as="h1" size="xl" className="mt-4">
           {t("Your public profile")}

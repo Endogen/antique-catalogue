@@ -90,7 +90,7 @@ export default function StarsPage() {
 
   return (
     <div className="space-y-8">
-      <header className="rounded-3xl border border-border bg-card/80 p-6 shadow-sm">
+      <header className="rounded-3xl border border-border bg-card/80 p-6 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <Eyebrow tone="brand" spacing="wide">
@@ -122,7 +122,7 @@ export default function StarsPage() {
             <input
               type="search"
               placeholder={t("Search your starred items and collections")}
-              className="h-11 w-full rounded-full border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-sm transition focus:border-brand-border focus:outline-none focus:ring-2 focus:ring-ring"
+              className="h-11 w-full rounded-full border border-border bg-card pl-9 pr-3 text-sm text-muted-strong shadow-xs transition focus:border-brand-border focus:outline-hidden focus:ring-2 focus:ring-ring"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -158,7 +158,7 @@ export default function StarsPage() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div
-              className="inline-flex rounded-full border border-border bg-card p-1 shadow-sm"
+              className="inline-flex rounded-full border border-border bg-card p-1 shadow-xs"
               role="tablist"
               aria-label={t("Starred items and collections")}
             >
@@ -169,7 +169,7 @@ export default function StarsPage() {
                 onClick={() => setActiveTab("collections")}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   activeTab === "collections"
-                    ? "bg-panel text-white shadow-sm"
+                    ? "bg-panel text-white shadow-xs"
                     : "text-muted-strong hover:text-foreground"
                 }`}
               >
@@ -182,7 +182,7 @@ export default function StarsPage() {
                 onClick={() => setActiveTab("items")}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   activeTab === "items"
-                    ? "bg-panel text-white shadow-sm"
+                    ? "bg-panel text-white shadow-xs"
                     : "text-muted-strong hover:text-foreground"
                 }`}
               >
@@ -204,7 +204,7 @@ export default function StarsPage() {
                 {state.collections.map((collection) => (
                   <div
                     key={collection.id}
-                    className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm"
+                    className="rounded-2xl border border-border bg-card/90 p-4 shadow-xs"
                   >
                     <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1">

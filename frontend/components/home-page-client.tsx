@@ -73,11 +73,11 @@ export function HomePageClient({
 
         <section>
           <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6 pb-16 pt-10 lg:flex-row lg:items-center lg:px-12 lg:pt-20">
-            <div className="flex-1 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex-1 motion-safe:animate-rise">
               <Eyebrow tone="brand" spacing="wide">
                 {t("Collection intelligence")}
               </Eyebrow>
-              <h1 className="font-display mt-4 text-4xl leading-tight text-foreground sm:text-5xl lg:text-6xl">
+              <h1 className="font-display mt-4 text-4xl leading-tight text-foreground sm:text-5xl sm:leading-none lg:text-6xl">
                 {t("Build living archives for objects that deserve a story.")}
               </h1>
               <p className="mt-6 max-w-xl text-base text-muted-strong sm:text-lg">
@@ -99,7 +99,7 @@ export function HomePageClient({
                   <Link href="/explore">{t("Browse public collections")}</Link>
                 </Button>
               </div>
-              <div className="mt-10 grid gap-4 rounded-2xl border border-border bg-card/80 p-6 backdrop-blur">
+              <div className="mt-10 grid gap-4 rounded-2xl border border-border bg-card/80 p-6 backdrop-blur-sm">
                 {highlights.map((item) => (
                   <div key={item} className="flex items-start gap-3 text-sm">
                     <span className="mt-1 h-2 w-2 rounded-full bg-amber-500" />
@@ -108,10 +108,10 @@ export function HomePageClient({
                 ))}
               </div>
             </div>
-            <div className="flex-1 animate-in slide-in-from-bottom-8 duration-700 delay-150">
+            <div className="flex-1 [--rise-from:2rem] motion-safe:animate-rise motion-safe:[animation-delay:150ms]">
               <Card className="shadow-[0_20px_80px_-40px_rgba(15,23,42,0.4)]">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
+                  <p className="text-sm uppercase tracking-eyebrow text-muted-foreground">
                     {t("Featured collection")}
                   </p>
                   {featuredCollection ? (
@@ -151,7 +151,7 @@ export function HomePageClient({
                             key={`placeholder-${item}`}
                             className="rounded-2xl border border-border bg-background p-4"
                           >
-                            <div className="h-20 rounded-xl bg-gradient-to-br from-muted via-muted to-brand-muted" />
+                            <div className="h-20 rounded-xl bg-linear-to-br from-muted via-muted to-brand-muted" />
                             <p className="mt-3 text-sm font-medium text-foreground">
                               {featuredCollection
                                 ? t("Featured item")
@@ -171,7 +171,7 @@ export function HomePageClient({
                           key={`${item.id}-${index}`}
                           href={`/explore/${item.collection_id}/items/${item.id}`}
                           className={cn(
-                            "block rounded-2xl border border-border bg-background p-4 transition hover:border-brand-border hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "block rounded-2xl border border-border bg-background p-4 transition hover:border-brand-border hover:bg-card focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                             item.is_highlight ? highlightCardClass : null
                           )}
                         >
@@ -186,7 +186,7 @@ export function HomePageClient({
                                 unoptimized
                               />
                             ) : (
-                              <div className="h-full w-full bg-gradient-to-br from-muted via-muted to-brand-muted" />
+                              <div className="h-full w-full bg-linear-to-br from-muted via-muted to-brand-muted" />
                             )}
                           </div>
                           <p className="mt-3 text-sm font-medium text-foreground">
@@ -237,7 +237,7 @@ export function HomePageClient({
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="rounded-2xl border border-border bg-card p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                className="rounded-2xl border border-border bg-card p-6 shadow-xs transition duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
                 <SectionHeading as="h3" size="md">
                   {t(feature.title)}
