@@ -23,7 +23,7 @@ const createRegisterSchema = (t: (key: string) => string) =>
       email: z
         .string()
         .min(1, t("Email is required"))
-        .email(t("Enter a valid email address")),
+        .pipe(z.email(t("Enter a valid email address"))),
       password: z.string().min(8, t("Password must be at least 8 characters")),
       confirmPassword: z
         .string()
@@ -32,7 +32,7 @@ const createRegisterSchema = (t: (key: string) => string) =>
     })
     .refine((values) => values.password === values.confirmPassword, {
       path: ["confirmPassword"],
-      message: t("Passwords do not match")
+      error: t("Passwords do not match")
     });
 
 type RegisterFormValues = z.infer<ReturnType<typeof createRegisterSchema>>;

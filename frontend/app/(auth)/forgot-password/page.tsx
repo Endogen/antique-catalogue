@@ -22,7 +22,7 @@ const createForgotSchema = (t: (key: string) => string) =>
     email: z
       .string()
       .min(1, t("Email is required"))
-      .email(t("Enter a valid email address"))
+      .pipe(z.email(t("Enter a valid email address")))
   });
 
 type ForgotFormValues = z.infer<ReturnType<typeof createForgotSchema>>;

@@ -21,7 +21,7 @@ const createLoginSchema = (t: (key: string) => string) =>
     email: z
       .string()
       .min(1, t("Email is required"))
-      .email(t("Enter a valid email address")),
+      .pipe(z.email(t("Enter a valid email address"))),
     password: z.string().min(8, t("Password must be at least 8 characters"))
   });
 

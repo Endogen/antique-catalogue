@@ -29,7 +29,7 @@ const createResetSchema = (t: (key: string) => string) =>
     })
     .refine((values) => values.password === values.confirmPassword, {
       path: ["confirmPassword"],
-      message: t("Passwords do not match")
+      error: t("Passwords do not match")
     });
 
 type ResetFormValues = z.infer<ReturnType<typeof createResetSchema>>;

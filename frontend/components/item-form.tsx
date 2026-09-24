@@ -26,7 +26,7 @@ const createItemSchema = (t: (key: string) => string) =>
       .max(2000, t("Keep the notes under 2000 characters"))
       .optional()
       .or(z.literal("")),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
     is_highlight: z.boolean().optional()
   });
 
