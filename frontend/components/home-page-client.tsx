@@ -113,7 +113,7 @@ export function HomePageClient({
                 {t("Dashboard")}
               </Link>
             </nav>
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
               <ThemeToggle />
               {showAuthenticatedCtas ? (
                 <Button
@@ -128,12 +128,12 @@ export function HomePageClient({
                 <>
                   <Button
                     variant="ghost"
-                    className="hidden sm:inline-flex"
+                    className="whitespace-nowrap px-3 sm:px-4"
                     asChild
                   >
                     <Link href="/login">{t("Log in")}</Link>
                   </Button>
-                  <Button asChild>
+                  <Button className="whitespace-nowrap px-3 sm:px-4" asChild>
                     <Link href="/register">{t("Create account")}</Link>
                   </Button>
                 </>
@@ -176,7 +176,7 @@ export function HomePageClient({
             <div className="flex-1 animate-in slide-in-from-bottom-8 duration-700 delay-150">
               <Card className="shadow-[0_20px_80px_-40px_rgba(15,23,42,0.4)]">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm uppercase tracking-[0.3em] text-muted-subtle">
+                  <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
                     {t("Featured collection")}
                   </p>
                   {featuredCollection ? (
@@ -269,7 +269,7 @@ export function HomePageClient({
                 </div>
                 <div className="mt-6 flex items-center justify-between rounded-2xl bg-panel px-4 py-3 text-panel-foreground">
                   <div>
-                    <Eyebrow tone="subtle">
+                    <Eyebrow tone="panel">
                       {t("Next intake")}
                     </Eyebrow>
                     <p className="text-sm font-medium">
@@ -318,10 +318,10 @@ export function HomePageClient({
         <section className="border-t border-border bg-panel-deep">
           <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 text-panel-foreground lg:flex-row lg:items-center lg:justify-between lg:px-12">
             <div>
-              <Eyebrow tone="subtle" spacing="wide">
+              <Eyebrow tone="panel" spacing="wide">
                 {t("Ready to start")}
               </Eyebrow>
-              <SectionHeading size="xl" className="mt-4">
+              <SectionHeading tone="panel" size="xl" className="mt-4">
                 {t("Turn your archive into a living collection.")}
               </SectionHeading>
             </div>

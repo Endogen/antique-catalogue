@@ -46,6 +46,36 @@ async function headers(page: Page) {
   return { Authorization: `Bearer ${token}` };
 }
 
+async function withoutNativeUuid(page: Page) {
+  // Reproduce HTTP LAN/Tailscale browsers even when tests run on localhost.
+  await page.addInitScript(() => {
+    Object.defineProperty(crypto, "randomUUID", { value: undefined, configurable: true });
+  });
+}
+
+test("login keeps credentials out of the URL when JavaScript is unavailable", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto("/login");
+    await page.locator("#email").fill("no-script@example.com");
+    await page.locator("#password").fill(password);
+    await page.route("**/login", route => route.request().method() === "POST"
+      ? route.fulfill({ status: 200, body: "Submission intercepted" })
+      : route.continue());
+    const submitted = page.waitForRequest(request => request.isNavigationRequest());
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    const request = await submitted;
+    expect(request.method()).toBe("POST");
+    expect(new URL(request.url()).search).toBe("");
+    const body = new URLSearchParams(request.postData() ?? "");
+    expect(body.get("email")).toBe("no-script@example.com");
+    expect(body.get("password")).toBe(password);
+  } finally {
+    await context.close();
+  }
+});
+
 async function create(page: Page, route: string, data: object) {
   const response = await page.request.post(`/api${route}`, { headers: await headers(page), data });
   expect(response.ok(), await response.text()).toBeTruthy();
@@ -101,6 +131,7 @@ test("verification resend, schema rename, private move preview, and publication"
 });
 
 test("mobile capture keeps draft photos private and renews an expired session", async ({ page, browser }) => {
+  await withoutNativeUuid(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await account(page, "capture@example.com");
   const collection = await create(page, "/collections", { name: "Mobile captures", is_public: true });
@@ -154,6 +185,7 @@ test("emailed password reset revokes existing access and refresh sessions", asyn
 });
 
 test("owner can download a backup, preview it, and restore a private copy", async ({ page }) => {
+  await withoutNativeUuid(page);
   await account(page, "backup@example.com");
   const source = await create(page, "/collections", { name: "Ceramics backup", is_public: true });
   await create(page, `/collections/${source.id}/fields`, { name: "Private cost", field_type: "number", is_private: true });
@@ -598,6 +630,7 @@ test("resuming a capture clears its error without leaving the capture screen", a
 });
 
 test("item uploader resizes large originals before enforcing server limits", async ({ page }) => {
+  await withoutNativeUuid(page);
   await account(page, "audit-large@example.com");
   const collection = await create(page, "/collections", { name: "Audit large photo" });
   const item = await create(page, `/collections/${collection.id}/items`, { name: "Vase" });

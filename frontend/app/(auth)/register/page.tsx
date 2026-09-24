@@ -184,7 +184,7 @@ export default function RegisterPage() {
             </Alert>
           ) : null}
 
-          <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
+          <form method="post" className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
               <label className="text-sm font-medium text-muted-strong" htmlFor="email">
                 {t("Email address")}
@@ -324,7 +324,7 @@ export default function RegisterPage() {
         </Card>
 
         <div className="mt-6 rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
-          <Eyebrow tone="subtle">
+          <Eyebrow tone="panel">
             {t("Studio note")}
           </Eyebrow>
           <p className="mt-3 text-sm text-panel-muted-foreground">

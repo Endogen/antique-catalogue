@@ -33,6 +33,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/components/i18n-provider";
 import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
+import { createUuid } from "@/lib/uuid";
 import { SectionHeading } from "@/components/ui/typography";
 import { Alert } from "@/components/ui/alert";
 
@@ -708,7 +709,7 @@ export default function SpeedCapturePage() {
     if (!collection) return;
 
     const shot: PendingShot = {
-      id: crypto.randomUUID(),
+      id: createUuid(),
       previewUrl: URL.createObjectURL(file),
       mode
     };

@@ -214,10 +214,10 @@ export default function SettingsPage() {
         </Card>
 
         <div className="rounded-3xl border border-border surface-panel p-6 text-panel-foreground shadow-sm">
-          <Eyebrow tone="subtle">
+          <Eyebrow tone="panel">
             {t("Security snapshot")}
           </Eyebrow>
-          <SectionHeading as="h3" className="mt-4">
+          <SectionHeading tone="panel" as="h3" className="mt-4">
             {t("Stay protected across every session.")}
           </SectionHeading>
           <p className="mt-3 text-sm text-panel-muted-foreground">

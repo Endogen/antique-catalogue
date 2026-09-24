@@ -195,6 +195,19 @@ export INTERNAL_API_URL=http://localhost:8000
 npm run dev
 ```
 
+To review the development site from another LAN or Tailscale device, bind the
+frontend to all interfaces and allow the exact hostnames or IP addresses you use
+in the browser (comma-separated, without schemes or ports):
+
+```bash
+ALLOWED_DEV_ORIGINS="100.x.y.z,my-computer,my-computer.example.ts.net" npm run dev -- --hostname 0.0.0.0
+```
+
+Replace the example hosts with your computer's addresses, then open
+`http://<address>:3000` on the other device. The backend can remain on loopback;
+the frontend proxies API requests. Restart the frontend after changing the host
+list so development scripts and live updates are allowed from those addresses.
+
 Keep the default client API URL (`/api`) so authentication cookies use the same origin.
 Configure SMTP and `PUBLIC_APP_URL` for verification/reset links, or set
 `AUTO_VERIFY_EMAIL=true` for local development. Failed registration delivery rolls

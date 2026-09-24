@@ -2,6 +2,7 @@
 
 import { apiRequest, authApi, getAccessToken } from "@/lib/api";
 import { prepareImageForUpload } from "@/lib/image-resize";
+import { createUuid } from "@/lib/uuid";
 import type { ItemImageResponse, SpeedCaptureNewResponse } from "@/lib/api";
 
 export type UploadTarget = { mode: "item" | "capture-new" | "capture-add"; item_id?: number; collection_id?: number };
@@ -126,7 +127,7 @@ export async function enqueuePhotos(selections: PhotoSelection[]): Promise<strin
   catch { throw new Error("Sign in before selecting photos."); }
   if (!Number.isSafeInteger(owner) || owner < 1) throw new Error("Sign in before selecting photos.");
   const jobs: UploadJob[] = selections.map(({ target, file, id, parentUploadId }) => ({
-    id: id ?? crypto.randomUUID(), owner, target, file, filename: file.name, size: file.size,
+    id: id ?? createUuid(), owner, target, file, filename: file.name, size: file.size,
     received: 0, state: "queued", needsPreparation: true, parentUploadId
   }));
   const db = await database();

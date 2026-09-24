@@ -11,7 +11,8 @@ const eyebrowVariants = cva("text-xs uppercase", {
     tone: {
       muted: "text-muted-foreground",
       subtle: "text-muted-foreground/70",
-      brand: "text-brand"
+      brand: "text-brand",
+      panel: "text-panel-muted-foreground"
     },
     spacing: {
       tight: "tracking-[0.2em]",
@@ -42,8 +43,12 @@ export const Eyebrow = React.forwardRef<HTMLParagraphElement, EyebrowProps>(
 );
 Eyebrow.displayName = "Eyebrow";
 
-const headingVariants = cva("font-display text-foreground", {
+const headingVariants = cva("font-display", {
   variants: {
+    tone: {
+      default: "text-foreground",
+      panel: "text-panel-foreground"
+    },
     size: {
       md: "text-xl",
       lg: "text-2xl",
@@ -52,6 +57,7 @@ const headingVariants = cva("font-display text-foreground", {
     }
   },
   defaultVariants: {
+    tone: "default",
     size: "lg"
   }
 });
@@ -65,10 +71,10 @@ export interface SectionHeadingProps
 export const SectionHeading = React.forwardRef<
   HTMLHeadingElement,
   SectionHeadingProps
->(({ className, size, as: Tag = "h2", ...props }, ref) => (
+>(({ className, size, tone, as: Tag = "h2", ...props }, ref) => (
   <Tag
     ref={ref}
-    className={cn(headingVariants({ size }), className)}
+    className={cn(headingVariants({ size, tone }), className)}
     {...props}
   />
 ));

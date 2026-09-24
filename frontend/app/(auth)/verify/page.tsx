@@ -168,7 +168,7 @@ function VerifyContent() {
             </Alert>
           ) : null}
 
-          <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
+          <form method="post" className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div>
               <label className="text-sm font-medium text-muted-strong" htmlFor="token">
                 {t("Verification token")}
@@ -218,10 +218,10 @@ function VerifyContent() {
 
       <aside className="order-first lg:order-none">
         <div className="rounded-3xl border border-panel-border/90 surface-panel p-8 text-panel-foreground shadow-sm">
-          <Eyebrow tone="subtle" spacing="wide">
+          <Eyebrow tone="panel" spacing="wide">
             {t("Next steps")}
           </Eyebrow>
-          <SectionHeading size="xl" className="mt-4">
+          <SectionHeading tone="panel" size="xl" className="mt-4">
             {t("Confirm your studio access.")}
           </SectionHeading>
           <p className="mt-3 text-sm text-panel-muted-foreground">

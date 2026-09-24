@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: (process.env.ALLOWED_DEV_ORIGINS || "")
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean),
   experimental: { proxyClientMaxBodySize: "260mb", proxyTimeout: 300000 },
   output: "standalone",
   async rewrites() {

@@ -325,7 +325,7 @@ export default function SchemaTemplateDetailPage() {
             </Card>
 
             <div className="rounded-3xl border border-panel-border/90 surface-panel p-6 text-panel-foreground shadow-sm">
-              <Eyebrow tone="subtle">
+              <Eyebrow tone="panel">
                 {t("Template behavior")}
               </Eyebrow>
               <p className="mt-3 text-sm text-panel-muted-foreground">

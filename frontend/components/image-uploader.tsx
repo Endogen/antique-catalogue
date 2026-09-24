@@ -16,6 +16,7 @@ import { useAuth } from "@/components/auth-provider";
 import { enqueuePhotos, listUploads, scheduleUpload, validatePhoto } from "@/lib/upload-queue";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import { createUuid } from "@/lib/uuid";
 import { Card } from "@/components/ui/card";
 import { Eyebrow, SectionHeading } from "@/components/ui/typography";
 import { Alert } from "@/components/ui/alert";
@@ -99,7 +100,7 @@ export function ImageUploader({
   const handleFiles = React.useCallback(
     (files: FileList | File[]) => {
       if (!itemId || disabled) return;
-      const selections = Array.from(files).map(file => ({ id: crypto.randomUUID(), file, target: { mode: "item" as const, item_id: Number(itemId) } }));
+      const selections = Array.from(files).map(file => ({ id: createUuid(), file, target: { mode: "item" as const, item_id: Number(itemId) } }));
       if (!selections.length) return;
       setGlobalError(null);
       const entries: UploadEntry[] = selections.map(({ id, file }) => {

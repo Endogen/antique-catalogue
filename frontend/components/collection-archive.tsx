@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import { apiFetch, apiRequest, isApiError } from "@/lib/api";
+import { createUuid } from "@/lib/uuid";
 
 import { useFocusTrap } from "@/lib/use-focus-trap";
 
@@ -33,7 +34,7 @@ export function CollectionArchive({ collectionId }: { collectionId?: string | nu
     } catch (error) { setError(message(error)); } finally { setBusy(false); }
   };
   const inspect = async (file: File) => {
-    setFile(file); setPreview(null); setError(null); requestId.current = crypto.randomUUID();
+    setFile(file); setPreview(null); setError(null); requestId.current = createUuid();
     if (file.size > 250 * 1024 * 1024) { setError("Archive exceeds 250MB"); return; }
     setBusy(true);
     try {
