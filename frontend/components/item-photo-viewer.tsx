@@ -188,6 +188,13 @@ export function ItemPhotoViewer({
         src={imageApi.url(selected.id, "large")}
         alt={itemName}
         onClose={() => setLightboxOpen(false)}
+        navigation={{
+          index: selectedIndex,
+          total: images.length,
+          onPrevious: () =>
+            setSelectedId(images[(selectedIndex - 1 + images.length) % images.length].id),
+          onNext: () => setSelectedId(images[(selectedIndex + 1) % images.length].id)
+        }}
       />
     </section>
   );

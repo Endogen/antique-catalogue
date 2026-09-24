@@ -138,11 +138,10 @@ export function ImageGallery({
   );
   const [draggingId, setDraggingId] = React.useState<number | null>(null);
   const [dragOverId, setDragOverId] = React.useState<number | null>(null);
-  const [lightboxImage, setLightboxImage] = React.useState<{
-    src: string;
-    alt: string;
-  } | null>(null);
+  const [lightboxImageId, setLightboxImageId] = React.useState<number | null>(null);
   const hiddenDragPreviewRef = React.useRef<HTMLSpanElement | null>(null);
+  const lightboxIndex = images.findIndex((image) => image.id === lightboxImageId);
+  const lightboxImage = lightboxIndex === -1 ? undefined : images[lightboxIndex];
 
   const canInteract = Boolean(itemId) && !disabled;
   const canEdit = canInteract && editable;
@@ -440,12 +439,7 @@ export function ImageGallery({
                       type="button"
                       className="block w-full p-0"
                       onDragStart={(event) => event.preventDefault()}
-                      onClick={() =>
-                        setLightboxImage({
-                          src: imageApi.url(image.id, "large"),
-                          alt: image.filename || t("Item image")
-                        })
-                      }
+                      onClick={() => setLightboxImageId(image.id)}
                     >
                       <GalleryPreviewImage
                         src={imageApi.url(image.id, "medium")}
@@ -507,10 +501,17 @@ export function ImageGallery({
       </div>
 
       <Lightbox
-        open={Boolean(lightboxImage)}
-        src={lightboxImage?.src ?? null}
-        alt={lightboxImage?.alt}
-        onClose={() => setLightboxImage(null)}
+        open={lightboxImage !== undefined}
+        src={lightboxImage ? imageApi.url(lightboxImage.id, "large") : null}
+        alt={lightboxImage ? lightboxImage.filename || t("Item image") : undefined}
+        onClose={() => setLightboxImageId(null)}
+        navigation={{
+          index: lightboxIndex,
+          total: images.length,
+          onPrevious: () =>
+            setLightboxImageId(images[(lightboxIndex - 1 + images.length) % images.length].id),
+          onNext: () => setLightboxImageId(images[(lightboxIndex + 1) % images.length].id)
+        }}
       />
       <span
         ref={hiddenDragPreviewRef}

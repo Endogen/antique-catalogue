@@ -3,6 +3,9 @@
 /* Class-based dark mode: the theme script toggles `.dark` on <html>. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Short screens, such as a phone held sideways. */
+@custom-variant short (@media (max-height: 32rem));
+
 /*
  * Tailwind reads the semantic tokens below through these theme variables.
  * `inline` makes each utility reference the underlying CSS variable directly,

@@ -232,6 +232,25 @@ export default function PublicItemDetailPage() {
     () => imagesState.data?.find((image) => image.id === selectedImageId) ?? null,
     [imagesState.data, selectedImageId]
   );
+  const galleryImages = imagesState.data ?? [];
+  const selectedImageIndex = galleryImages.findIndex(
+    (image) => image.id === selectedImageId
+  );
+  const lightboxNavigation =
+    selectedImageIndex === -1
+      ? undefined
+      : {
+          index: selectedImageIndex,
+          total: galleryImages.length,
+          onPrevious: () =>
+            setSelectedImageId(
+              galleryImages[(selectedImageIndex - 1 + galleryImages.length) % galleryImages.length].id
+            ),
+          onNext: () =>
+            setSelectedImageId(
+              galleryImages[(selectedImageIndex + 1) % galleryImages.length].id
+            )
+        };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -516,6 +535,7 @@ export default function PublicItemDetailPage() {
         src={selectedImage ? imageApi.url(selectedImage.id, "large") : null}
         alt={itemState.data?.name}
         onClose={() => setLightboxOpen(false)}
+        navigation={lightboxNavigation}
       />
     </main>
   );

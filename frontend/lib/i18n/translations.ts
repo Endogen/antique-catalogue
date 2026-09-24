@@ -10,6 +10,8 @@ export const DE_TRANSLATIONS: Record<string, string> = {
   "Open photo": "Foto öffnen",
   "Photo {current} of {total}": "Foto {current} von {total}",
   "Show photo {index}": "Foto {index} anzeigen",
+  "Previous photo": "Vorheriges Foto",
+  "Next photo": "Nächstes Foto",
   "Photo changes are saved immediately.": "Änderungen an Fotos werden sofort gespeichert.",
   "Choose where this item belongs.": "Wähle, zu welcher Sammlung dieses Objekt gehört.",
   "This item will be moved when you save changes.": "Das Objekt wird beim Speichern der Änderungen verschoben.",
