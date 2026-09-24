@@ -98,7 +98,7 @@ two host ports above are published, and both bind to loopback.
 
 ### Prerequisites
 - Docker & Docker Compose
-- (Optional) Node.js 22.12+ and Python 3.12+ for local development
+- (Optional) Node.js 26 (see `.nvmrc`) and Python 3.14 for local development
 
 ### Production Deployment
 
@@ -179,7 +179,7 @@ sudo certbot --nginx -d antique.example.com
 
 ```bash
 cd backend
-python3.12 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 alembic upgrade head
