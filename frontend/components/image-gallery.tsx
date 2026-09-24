@@ -7,7 +7,6 @@ import {
   ArrowRight,
   GripVertical,
   Image as ImageIcon,
-  RefreshCcw,
   Trash2
 } from "lucide-react";
 
@@ -323,16 +322,13 @@ export function ImageGallery({
               "Drag images to reorder them or use the move controls to fine-tune the sequence."
             )}
           </p>
+          {editable ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("Photo changes are saved immediately.")}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => loadImages()}
-            disabled={!itemId}
-          >
-            <RefreshCcw className="h-4 w-4" />
-            {t("Refresh")}
-          </Button>
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-muted text-brand">
             <ImageIcon className="h-6 w-6" />
           </div>

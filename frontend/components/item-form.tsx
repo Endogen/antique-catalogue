@@ -10,7 +10,7 @@ import { timestampInput, serializeTimestamp } from "@/lib/metadata-form";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import type { FieldDefinitionResponse, FieldOptions } from "@/lib/api";
-import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Eyebrow } from "@/components/ui/typography";
 import { EmptyState } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
@@ -502,18 +502,17 @@ export function ItemForm({
     </div>
   );
 
+  // Metadata is part of the same form as the name and notes, so it opens with
+  // a light divider and label rather than a heading of its own.
   const metadataFields = (
-    <div className="space-y-4">
+    <div className="space-y-4 border-t border-border pt-6">
       <div>
-          <Eyebrow>
-            {t("Metadata")}
-          </Eyebrow>
-          <SectionHeading as="h3" className="mt-3">
-            {t("Capture collection-specific fields.")}
-          </SectionHeading>
-          <p className="mt-2 text-sm text-muted-strong">
-            {t("Complete the schema-driven attributes for this item.")}
-          </p>
+        <Eyebrow>
+          {t("Metadata")}
+        </Eyebrow>
+        <p className="mt-2 text-sm text-muted-strong">
+          {t("Complete the schema-driven attributes for this item.")}
+        </p>
       </div>
 
         {sortedFields.length === 0 ? (
@@ -523,7 +522,7 @@ export function ItemForm({
             )}
           </EmptyState>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
           {sortedFields.map((field) => {
             const fieldId = String(field.id);
             const errorMessage = metadataErrors?.[fieldId]?.message;
@@ -648,8 +647,11 @@ export function ItemForm({
     </div>
   );
 
+  // The actions pin to the bottom of the screen while the form is in view, so
+  // Save is in reach from every field; they come to rest at the end of the
+  // card, whose padding the negative margins span.
   const actions = (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex items-center justify-end gap-3 rounded-b-3xl border-t border-border bg-card/95 px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm *:grow sm:*:grow-0">
       {secondaryAction}
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? submitPendingLabel ?? t("Saving...") : submitLabel}
