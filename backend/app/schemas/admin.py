@@ -19,7 +19,9 @@ class AdminTokenResponse(BaseModel):
 class AdminStatsResponse(BaseModel):
     total_users: int
     total_collections: int
+    total_items: int
     featured_collection_id: int | None
+    featured_collection_name: str | None
 
 
 class AdminCollectionResponse(BaseModel):

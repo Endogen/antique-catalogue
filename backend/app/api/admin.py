@@ -200,13 +200,16 @@ def get_admin_stats(
 ) -> AdminStatsResponse:
     total_users = db.execute(select(func.count(User.id))).scalar_one()
     total_collections = db.execute(select(func.count(Collection.id))).scalar_one()
-    featured_collection_id = db.execute(
-        select(Collection.id).where(Collection.is_featured.is_(True))
-    ).scalar_one_or_none()
+    total_items = db.execute(select(func.count(Item.id))).scalar_one()
+    featured = db.execute(
+        select(Collection.id, Collection.name).where(Collection.is_featured.is_(True))
+    ).first()
     return AdminStatsResponse(
         total_users=total_users,
         total_collections=total_collections,
-        featured_collection_id=featured_collection_id,
+        total_items=total_items,
+        featured_collection_id=featured.id if featured else None,
+        featured_collection_name=featured.name if featured else None,
     )
 
 
@@ -215,14 +218,25 @@ def list_admin_collections(
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(20, ge=1, le=100, description="Pagination limit"),
     public_only: bool = Query(False, description="Only include public collections"),
+    q: str | None = Query(None, description="Search by name, description, or owner email"),
     _: str = Depends(get_admin_subject),
     db: Session = Depends(get_db),
 ) -> AdminCollectionListResponse:
-    total_query = select(func.count(Collection.id))
+    search_term = (q or "").strip()
+    total_query = select(func.count(Collection.id)).join(User, Collection.owner_id == User.id)
     collections_query = select(Collection, User.email).join(User, Collection.owner_id == User.id)
     if public_only:
         total_query = total_query.where(Collection.is_public.is_(True))
         collections_query = collections_query.where(Collection.is_public.is_(True))
+    if search_term:
+        pattern = f"%{search_term}%"
+        search_clause = or_(
+            Collection.name.ilike(pattern),
+            Collection.description.ilike(pattern),
+            User.email.ilike(pattern),
+        )
+        total_query = total_query.where(search_clause)
+        collections_query = collections_query.where(search_clause)
 
     total_count = db.execute(total_query).scalar_one()
     rows = db.execute(

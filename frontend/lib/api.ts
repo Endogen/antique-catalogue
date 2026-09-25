@@ -286,7 +286,9 @@ export type AdminTokenResponse = {
 export type AdminStatsResponse = {
   total_users: number;
   total_collections: number;
+  total_items: number;
   featured_collection_id: number | null;
+  featured_collection_name: string | null;
 };
 
 export type AdminCollectionResponse = {
@@ -844,7 +846,12 @@ export const adminApi = {
   stats: (options: ReadOptions = {}) =>
     adminRequest<AdminStatsResponse>("/admin/stats", { signal: options.signal }),
   collections: (
-    options: { offset?: number; limit?: number; publicOnly?: boolean } & ReadOptions = {}
+    options: {
+      offset?: number;
+      limit?: number;
+      publicOnly?: boolean;
+      q?: string;
+    } & ReadOptions = {}
   ) => {
     const params = new URLSearchParams();
     if (typeof options.offset === "number") {
@@ -855,6 +862,9 @@ export const adminApi = {
     }
     if (options.publicOnly) {
       params.set("public_only", "true");
+    }
+    if (options.q) {
+      params.set("q", options.q);
     }
     const query = params.toString();
     return adminRequest<AdminCollectionListResponse>(
@@ -917,6 +927,10 @@ export const adminApi = {
       { signal: options.signal }
     );
   },
+  deleteCollection: (collectionId: number) =>
+    adminRequest<MessageResponse>(`/admin/collections/${collectionId}`, {
+      method: "DELETE"
+    }),
   deleteItem: (itemId: number) =>
     adminRequest<MessageResponse>(`/admin/items/${itemId}`, {
       method: "DELETE"

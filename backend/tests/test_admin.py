@@ -340,3 +340,47 @@ def test_admin_featured_items_exclude_drafts(
             assert public_featured_ids == {published_one_id, published_two_id}
 
     asyncio.run(_flow())
+
+
+def test_admin_collection_search_and_stats(app_with_db, db_session_factory, monkeypatch) -> None:
+    _configure_admin_credentials(monkeypatch)
+    anna_id = _create_user(db_session_factory, email="anna@example.com", password="strongpass")
+    ben_id = _create_user(db_session_factory, email="ben@example.com", password="strongpass")
+    porcelain_id, _ = _create_collection_with_items(
+        db_session_factory,
+        owner_id=anna_id,
+        collection_name="Porcelain",
+        item_names=["Cup", "Saucer"],
+    )
+    _create_collection_with_items(
+        db_session_factory,
+        owner_id=ben_id,
+        collection_name="Clocks",
+        item_names=["Mantel clock"],
+    )
+
+    async def _flow() -> None:
+        transport = httpx.ASGITransport(app=app_with_db)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            headers = await _admin_headers(client)
+
+            by_name = await client.get("/admin/collections?q=porc", headers=headers)
+            assert by_name.status_code == 200
+            assert by_name.json()["total_count"] == 1
+            assert [entry["id"] for entry in by_name.json()["items"]] == [porcelain_id]
+
+            by_owner = await client.get("/admin/collections?q=ben@", headers=headers)
+            assert [entry["name"] for entry in by_owner.json()["items"]] == ["Clocks"]
+            assert by_owner.json()["total_count"] == 1
+
+            await client.post(
+                "/admin/featured", headers=headers, json={"collection_id": porcelain_id}
+            )
+            stats = (await client.get("/admin/stats", headers=headers)).json()
+            assert stats["total_users"] == 2
+            assert stats["total_collections"] == 2
+            assert stats["total_items"] == 3
+            assert stats["featured_collection_id"] == porcelain_id
+            assert stats["featured_collection_name"] == "Porcelain"
+
+    asyncio.run(_flow())

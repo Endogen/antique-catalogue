@@ -449,17 +449,21 @@ test("one admin write refreshes each admin view exactly once", async ({ page }) 
   await page.locator("#admin-email").fill("admin@example.com");
   await page.locator("#admin-password").fill("Isolated-e2e-admin-password-42");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  // Earlier tests leave their own public collections in the shared database,
-  // so scope to the row that holds this collection's heading and button.
+  // Each section of the console is its own view, reached from its navigation.
+  await page.getByRole("link", { name: "Featured", exact: true }).first().click();
+  await expect(page).toHaveURL(/section=featured/);
+  await page.getByRole("searchbox", { name: "Search public collections" }).fill("Featurable");
+  await expect(page).toHaveURL(/q=Featurable/);
+  // Earlier tests may leave collections with similar names, so scope to the
+  // row that holds exactly this heading.
   const row = page
-    .locator("div")
+    .getByRole("listitem")
     .filter({ has: page.getByRole("heading", { name: "Featurable", exact: true }) })
-    .filter({ has: page.getByRole("button", { name: "Feature", exact: true }) })
     .last();
   const feature = row.getByRole("button", { name: "Feature", exact: true });
   await expect(feature).toBeVisible();
   // Let the reads the console issues on sign-in settle before counting.
-  await expect(page.getByText("Registered accounts", { exact: false })).toBeVisible();
+  await page.waitForLoadState("networkidle");
 
   const reads: string[] = [];
   page.on("request", request => {

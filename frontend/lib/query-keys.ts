@@ -53,9 +53,13 @@ export const queryKeys = {
   admin: {
     all: ["admin"] as const,
     stats: () => ["admin", "stats"] as const,
-    collections: (page: number) => ["admin", "collections", page] as const,
-    users: (page: number, query: string) => ["admin", "users", page, query] as const,
-    items: (page: number, query: string) => ["admin", "items", page, query] as const,
+    // The overview previews read the same lists with a smaller page size.
+    collections: (page: number, query: string, publicOnly: boolean, limit = 20) =>
+      ["admin", "collections", page, query, publicOnly, limit] as const,
+    users: (page: number, query: string, limit = 20) =>
+      ["admin", "users", page, query, limit] as const,
+    items: (page: number, query: string, collectionId: number | null, limit = 20) =>
+      ["admin", "items", page, query, collectionId, limit] as const,
     featuredItems: () => ["admin", "featured-items"] as const
   }
 } as const;

@@ -40,10 +40,12 @@ A mobile-optimized capture-first workflow for fast cataloguing:
 - **Spotlight Items** — Mark specific items as spotlights within the featured collection to highlight them on the homepage
 
 ### Admin Panel
-- User management (list, search, lock/unlock accounts, delete)
-- Collection management (featured collection selection, delete)
-- Item management (list, search, delete) with spotlight selection for featured items
-- Stats dashboard (total users, collections, items, featured status)
+- One section at a time — Overview, Users, Collections, Items, Featured, Spotlight — from a sidebar (tabs on phones); the open section, search and page live in the URL
+- Every section is searchable; the overview searches users, collections and items at once
+- User management (lock/unlock accounts, delete), linked to each user's collections and items
+- Collection and item moderation (delete), with items filterable by collection
+- Featured collection selection and spotlight items for the homepage
+- Stats (users, collections, items, featured collection)
 
 ### Internationalization
 - English and German, switchable in settings
@@ -337,7 +339,7 @@ Image responses require revalidation so newly fetched photos follow current visi
 | GET | `/admin/users` | List users |
 | PATCH | `/admin/users/{user_id}/lock` | Lock/unlock user |
 | DELETE | `/admin/users/{user_id}` | Delete user |
-| GET | `/admin/collections` | List collections |
+| GET | `/admin/collections` | List collections (`q` searches name, description, owner) |
 | DELETE | `/admin/collections/{collection_id}` | Delete collection |
 | GET | `/admin/items` | List items |
 | DELETE | `/admin/items/{item_id}` | Delete item |
