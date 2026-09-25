@@ -17,8 +17,7 @@ import { enqueuePhotos, listUploads, scheduleUpload, validatePhoto } from "@/lib
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { createUuid } from "@/lib/uuid";
-import { Card } from "@/components/ui/card";
-import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Eyebrow } from "@/components/ui/typography";
 import { Alert } from "@/components/ui/alert";
 
 const formatFileSize = (bytes: number) => {
@@ -48,12 +47,18 @@ export type ImageUploaderProps = {
   itemId?: number | string | null;
   disabled?: boolean;
   onUploaded?: (image: ItemImageResponse) => void;
+  /**
+   * Fill a 4:3 area, matching the empty photo placeholder in view mode, while
+   * the item has no photos yet.
+   */
+  expanded?: boolean;
 };
 
 export function ImageUploader({
   itemId,
   disabled = false,
-  onUploaded
+  onUploaded,
+  expanded = false
 }: ImageUploaderProps) {
   const { t } = useI18n();
   const { user } = useAuth();
@@ -166,57 +171,34 @@ export function ImageUploader({
 
   const hasUploads = uploads.length > 0;
 
+  // Rendered inside the photos panel, so it brings no card or heading of its
+  // own: the drop zone holds the actions, the queue reports progress.
   return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Eyebrow>
-            {t("Images")}
-          </Eyebrow>
-          <SectionHeading as="h3" className="mt-3">
-            {t("Upload imagery")}
-          </SectionHeading>
-          <p className="mt-3 max-w-xl text-sm text-muted-strong">
-            {t(
-              "Drag photos here, browse files, or capture new images straight from your device camera."
-            )}
-          </p>
-        </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-muted text-brand">
-          <ImagePlus className="h-6 w-6" />
-        </div>
-      </div>
-
-      <div className="mt-6 space-y-4">
-        <div
-          className={cn(
-            "rounded-2xl border border-dashed px-6 py-8 text-center transition",
-            isReady
-              ? "border-border bg-background/70"
-              : "border-border bg-background/40",
-            isDragging ? "border-brand bg-brand-muted/70" : ""
-          )}
-          onDrop={isReady ? handleDrop : undefined}
-          onDragEnter={isReady ? handleDragEnter : undefined}
-          onDragLeave={isReady ? handleDragLeave : undefined}
-          onDragOver={isReady ? handleDragOver : undefined}
-        >
-          <div className="mx-auto flex max-w-xs flex-col items-center gap-3 text-sm text-muted-strong">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card text-brand shadow-xs">
-              <UploadCloud className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">
-                {t("Drop images to upload")}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("JPG, PNG, WebP, or HEIC. Photos are resized before uploading.")}
-              </p>
-            </div>
+    <div className="space-y-4">
+      <div
+        className={cn(
+          "rounded-2xl border border-dashed px-4 py-6 text-center transition",
+          expanded && "flex aspect-4/3 items-center justify-center",
+          isReady ? "border-border bg-background/60" : "border-border bg-background/30",
+          isDragging && "border-brand bg-brand-muted/70"
+        )}
+        onDrop={isReady ? handleDrop : undefined}
+        onDragEnter={isReady ? handleDragEnter : undefined}
+        onDragLeave={isReady ? handleDragLeave : undefined}
+        onDragOver={isReady ? handleDragOver : undefined}
+      >
+        <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-card text-brand shadow-xs">
+            <UploadCloud className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {t("Drop images to upload")}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("JPG, PNG, WebP, or HEIC. Photos are resized before uploading.")}
+            </p>
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
           <input
             ref={fileInputRef}
             type="file"
@@ -235,86 +217,91 @@ export function ImageUploader({
             onChange={handleInputChange}
             disabled={!isReady}
           />
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={!isReady}
-          >
-            {t("Browse files")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => cameraInputRef.current?.click()}
-            disabled={!isReady}
-          >
-            <Camera className="h-4 w-4" />
-            {t("Use camera")}
-          </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!isReady}
+            >
+              <ImagePlus className="h-4 w-4" />
+              {t("Browse files")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={!isReady}
+            >
+              <Camera className="h-4 w-4" />
+              {t("Use camera")}
+            </Button>
+          </div>
         </div>
-
-        {!isReady ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <AlertTriangle className="h-4 w-4 text-brand" />
-            {t("Finish loading the item to enable image uploads.")}
-          </div>
-        ) : null}
-
-        {globalError ? (
-          <Alert
-            role="alert">
-            {globalError}
-          </Alert>
-        ) : null}
-
-        {hasUploads ? (
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <Eyebrow spacing="tight">
-              {t("Upload queue")}
-            </Eyebrow>
-            <div className="mt-3 max-h-40 space-y-3 overflow-y-auto pr-2 text-sm">
-              {uploads.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex flex-wrap items-center justify-between gap-3"
-                >
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {entry.filename}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(entry.size)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    {entry.status === "uploading" ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin text-brand" />
-                        <span className="text-brand">{t("Uploading")}</span>
-                      </>
-                    ) : entry.status === "success" ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 text-success" />
-                        <span className="text-success">{t("Uploaded")}</span>
-                      </>
-                    ) : entry.status === "error" ? (
-                      <>
-                        <AlertTriangle className="h-4 w-4 text-destructive" />
-                        <span className="text-destructive">
-                          {entry.error ?? t("Upload failed")}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">{t(entry.status === "saving" ? "Saving on this device..." : "Queued")}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </div>
-    </Card>
+
+      {!isReady ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <AlertTriangle className="h-4 w-4 text-brand" />
+          {t("Finish loading the item to enable image uploads.")}
+        </div>
+      ) : null}
+
+      {globalError ? (
+        <Alert
+          role="alert">
+          {globalError}
+        </Alert>
+      ) : null}
+
+      {hasUploads ? (
+        <div className="rounded-2xl border border-border bg-background/60 p-4">
+          <Eyebrow spacing="tight">
+            {t("Upload queue")}
+          </Eyebrow>
+          <div className="mt-3 max-h-40 space-y-3 overflow-y-auto pr-2 text-sm">
+            {uploads.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex flex-wrap items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-foreground">
+                    {entry.filename}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(entry.size)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  {entry.status === "uploading" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                      <span className="text-brand">{t("Uploading")}</span>
+                    </>
+                  ) : entry.status === "success" ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                      <span className="text-success">{t("Uploaded")}</span>
+                    </>
+                  ) : entry.status === "error" ? (
+                    <>
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <span className="text-destructive">
+                        {entry.error ?? t("Upload failed")}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">{t(entry.status === "saving" ? "Saving on this device..." : "Queued")}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

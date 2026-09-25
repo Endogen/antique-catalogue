@@ -428,7 +428,7 @@ export default function ItemDetailPage() {
   }, [isEditing]);
 
   return (
-    <div className={cn("space-y-6", isEditing && "mx-auto max-w-3xl")}>
+    <div className="space-y-6">
       <Button variant="ghost" size="sm" className="-ml-3 max-w-full" asChild>
         <Link href={`/collections/${collectionId ?? ""}`}>
           <ArrowLeft className="h-4 w-4 shrink-0" />
@@ -468,10 +468,12 @@ export default function ItemDetailPage() {
           </div>
         </Alert>
       ) : isEditing ? (
-        // Editing is a task, so it gets one focused column: the form, then the
-        // photos (which save on their own), then the danger zone.
-        <>
-          <header>
+        // Edit mode keeps the view layout: from xl the photos stay on the left
+        // and the details on the right become the form, so nothing moves when
+        // switching modes. Below xl it is one column, form first. As in view
+        // mode only the last row flexes, keeping the right-hand gaps even.
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:grid-rows-[auto_auto_1fr] xl:items-start xl:gap-8">
+          <header className="xl:col-start-2 xl:row-start-1">
             <Eyebrow tone="brand" spacing="wide">
               {t("Edit item")}
             </Eyebrow>
@@ -481,6 +483,7 @@ export default function ItemDetailPage() {
           </header>
 
           <ItemForm
+            className="xl:col-start-2 xl:row-start-2"
             fields={fieldsState.data}
             initialValues={{
               name: itemState.data?.name ?? "",
@@ -612,19 +615,22 @@ export default function ItemDetailPage() {
           />
 
           <ImageGallery
+            className="xl:col-start-1 xl:row-span-3 xl:row-start-1"
             itemId={itemId ?? null}
             disabled={itemState.status !== "ready"}
             refreshToken={imageRefreshToken}
             editable
+            footer={({ hasPhotos }) => (
+              <ImageUploader
+                itemId={itemId ?? null}
+                disabled={itemState.status !== "ready"}
+                onUploaded={handleImageUploaded}
+                expanded={!hasPhotos}
+              />
+            )}
           />
 
-          <ImageUploader
-            itemId={itemId ?? null}
-            disabled={itemState.status !== "ready"}
-            onUploaded={handleImageUploaded}
-          />
-
-          <Alert className="rounded-3xl p-6 shadow-xs">
+          <Alert className="rounded-3xl p-6 shadow-xs xl:col-start-2 xl:row-start-3">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <Eyebrow className="text-destructive">
@@ -684,7 +690,7 @@ export default function ItemDetailPage() {
               </Alert>
             ) : null}
           </Alert>
-        </>
+        </div>
       ) : (
         // One column up to xl. From xl the page reads like an object record:
         // the photo on the left stays in view while title, notes and

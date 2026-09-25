@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import type { FieldDefinitionResponse, FieldOptions } from "@/lib/api";
 import { Eyebrow } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
@@ -48,6 +49,7 @@ type ItemFormProps = {
   secondaryAction?: React.ReactNode;
   formError?: string | null;
   skipMetadataValidation?: boolean;
+  className?: string;
   render?: (sections: {
     formError: React.ReactNode | null;
     baseFields: React.ReactNode;
@@ -342,6 +344,7 @@ export function ItemForm({
   secondaryAction,
   formError,
   skipMetadataValidation = false,
+  className,
   render
 }: ItemFormProps) {
   const { t } = useI18n();
@@ -505,7 +508,7 @@ export function ItemForm({
   // Metadata is part of the same form as the name and notes, so it opens with
   // a light divider and label rather than a heading of its own.
   const metadataFields = (
-    <div className="space-y-4 border-t border-border pt-6">
+    <div className="@container space-y-4 border-t border-border pt-6">
       <div>
         <Eyebrow>
           {t("Metadata")}
@@ -522,7 +525,9 @@ export function ItemForm({
             )}
           </EmptyState>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        // Two columns once the form itself is wide enough, whatever the page
+        // layout around it.
+        <div className="grid gap-4 @lg:grid-cols-2">
           {sortedFields.map((field) => {
             const fieldId = String(field.id);
             const errorMessage = metadataErrors?.[fieldId]?.message;
@@ -660,7 +665,7 @@ export function ItemForm({
   );
 
   return (
-    <form className="space-y-8" onSubmit={handleSubmit(handleFormSubmit)}>
+    <form className={cn("space-y-8", className)} onSubmit={handleSubmit(handleFormSubmit)}>
       {render ? (
         render({
           formError: formErrorNode,

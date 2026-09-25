@@ -6,7 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   GripVertical,
-  Image as ImageIcon,
+  Loader2,
   Trash2
 } from "lucide-react";
 
@@ -25,7 +25,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useAuthenticatedImageUrl } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
 import { Card, EmptyState } from "@/components/ui/card";
-import { Eyebrow, SectionHeading } from "@/components/ui/typography";
+import { Eyebrow } from "@/components/ui/typography";
 import { Alert } from "@/components/ui/alert";
 
 const sortImages = (items: ItemImageResponse[]) =>
@@ -36,21 +36,6 @@ const arrayMove = <T,>(items: T[], fromIndex: number, toIndex: number) => {
   const [removed] = result.splice(fromIndex, 1);
   result.splice(toIndex, 0, removed);
   return result;
-};
-
-const formatDate = (value: string | null | undefined, locale: string) => {
-  if (!value) {
-    return "—";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  }).format(parsed);
 };
 
 function GalleryPreviewImage({
@@ -65,7 +50,7 @@ function GalleryPreviewImage({
     return (
       <div
         aria-hidden="true"
-        className="block h-36 w-full bg-linear-to-br from-muted to-muted"
+        className="block h-full w-full bg-muted"
       />
     );
   }
@@ -74,8 +59,8 @@ function GalleryPreviewImage({
       src={resolvedSrc}
       alt={alt}
       width={640}
-      height={360}
-      className="block h-36 w-full object-cover"
+      height={640}
+      className="block h-full w-full object-cover"
       draggable={false}
       unoptimized
     />
@@ -87,15 +72,20 @@ type ImageGalleryProps = {
   disabled?: boolean;
   editable?: boolean;
   refreshToken?: number;
+  className?: string;
+  /** Rendered at the bottom of the panel, e.g. the upload area. */
+  footer?: (state: { hasPhotos: boolean }) => React.ReactNode;
 };
 
 export function ImageGallery({
   itemId,
   disabled = false,
   editable = true,
-  refreshToken
+  refreshToken,
+  className,
+  footer
 }: ImageGalleryProps) {
-  const { t, locale } = useI18n();
+  const { t, tc } = useI18n();
   const confirm = useConfirm();
   const numericItemId = Number(itemId);
   const hasItemId = Boolean(itemId) && Number.isFinite(numericItemId);
@@ -306,35 +296,30 @@ export function ImageGallery({
     [confirm, deletePendingId, itemId, loadImages, t]
   );
 
-  return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Eyebrow>
-            {t("Image gallery")}
-          </Eyebrow>
-          <SectionHeading as="h3" className="mt-3">
-            {t("Arrange item imagery")}
-          </SectionHeading>
-          <p className="mt-3 max-w-xl text-sm text-muted-strong">
-            {t(
-              "Drag images to reorder them or use the move controls to fine-tune the sequence."
-            )}
-          </p>
-          {editable ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t("Photo changes are saved immediately.")}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-muted text-brand">
-            <ImageIcon className="h-6 w-6" />
-          </div>
-        </div>
-      </div>
+  const tileAction =
+    "flex h-8 w-8 items-center justify-center rounded-lg text-muted-strong transition hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-35";
 
-      <div className="mt-6 space-y-4">
+  return (
+    <Card className={className}>
+      <div className="flex items-baseline justify-between gap-3">
+        <Eyebrow>
+          {t("Photos")}
+        </Eyebrow>
+        {images.length > 0 ? (
+          <span className="text-xs text-muted-foreground">
+            {tc(images.length, "{count} photo", "{count} photos")}
+          </span>
+        ) : null}
+      </div>
+      {editable && images.length > 1 ? (
+        <p className="mt-2 text-sm text-muted-strong">
+          {t("Drag photos into a new order. Changes are saved immediately.")}
+        </p>
+      ) : null}
+
+      {/* Columns follow the panel's own width, so the grid fits whether the
+          panel spans the page or sits in the narrower desktop column. */}
+      <div className="@container mt-5 space-y-4">
         {reorderError ? (
           <Alert className="text-xs">
             {t(reorderError)}
@@ -359,12 +344,6 @@ export function ImageGallery({
           </div>
         ) : null}
 
-        {deletePendingId !== null ? (
-          <div className="text-xs text-brand">
-            {t("Deleting image...")}
-          </div>
-        ) : null}
-
         {status === "loading" ? (
           <EmptyState size="sm"
             aria-busy="true">
@@ -385,41 +364,66 @@ export function ImageGallery({
             </div>
           </Alert>
         ) : images.length === 0 ? (
-          <EmptyState size="sm">
-            {t("No images yet. Upload imagery to start building this gallery.")}
-          </EmptyState>
+          footer ? null : (
+            <EmptyState size="sm">
+              {t("No images yet. Upload imagery to start building this gallery.")}
+            </EmptyState>
+          )
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 @lg:grid-cols-3 @3xl:grid-cols-4">
             {images.map((image, index) => {
               const isFirst = index === 0;
               const isLast = index === images.length - 1;
+              const label = image.filename || t("Item image");
 
               return (
                 <div
                   key={image.id}
+                  title={image.filename || undefined}
                   className={cn(
-                    "rounded-2xl border bg-card/80 p-4 shadow-xs transition",
+                    "group overflow-hidden rounded-2xl border bg-card shadow-xs transition",
                     dragOverId === image.id
-                      ? "border-brand-border bg-brand-muted/70"
-                      : "border-border"
+                      ? "border-brand ring-2 ring-ring/60"
+                      : "border-border",
+                    draggingId === image.id && "opacity-50"
                   )}
                   onDragOver={(event) => handleDragOver(event, image.id)}
                   onDrop={(event) => handleDrop(event, image.id)}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="relative aspect-square bg-muted">
+                    <button
+                      type="button"
+                      className="block h-full w-full focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      onDragStart={(event) => event.preventDefault()}
+                      onClick={() => setLightboxImageId(image.id)}
+                      aria-label={t("Open photo")}
+                    >
+                      <GalleryPreviewImage
+                        src={imageApi.url(image.id, "medium")}
+                        alt={label}
+                      />
+                    </button>
+                    <span
+                      className={cn(
+                        "pointer-events-none absolute left-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium shadow-xs",
+                        isFirst
+                          ? "bg-brand text-brand-foreground"
+                          : "bg-background/85 text-foreground backdrop-blur-sm"
+                      )}
+                    >
+                      {isFirst ? t("Main photo") : index + 1}
+                    </span>
                     <button
                       type="button"
                       className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-xl border text-muted-foreground transition",
-                        draggingId === image.id
-                          ? "border-brand-border bg-brand-muted text-brand"
-                          : "border-border bg-background hover:border-muted-subtle",
-                        canInteract && !isBusy
-                          ? "cursor-ew-resize"
-                          : "cursor-default"
+                        "absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-background/85 text-muted-strong shadow-xs backdrop-blur-sm transition hover:text-foreground",
+                        canInteract && !isBusy ? "cursor-grab active:cursor-grabbing" : "cursor-default"
                       )}
                       draggable={canInteract && !isBusy}
                       aria-label={t("Drag to reorder {filename}", {
+                        filename: image.filename || t("this image")
+                      })}
+                      title={t("Drag to reorder {filename}", {
                         filename: image.filename || t("this image")
                       })}
                       onDragStart={(event) =>
@@ -429,68 +433,44 @@ export function ImageGallery({
                     >
                       <GripVertical className="h-4 w-4" />
                     </button>
-                    <span className="rounded-full border border-border bg-background px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                      {index + 1}
-                    </span>
                   </div>
 
-                  <div className="mt-3 overflow-hidden rounded-xl border border-border bg-background">
+                  <div className="flex items-center gap-1 px-1.5 py-1.5">
                     <button
                       type="button"
-                      className="block w-full p-0"
-                      onDragStart={(event) => event.preventDefault()}
-                      onClick={() => setLightboxImageId(image.id)}
-                    >
-                      <GalleryPreviewImage
-                        src={imageApi.url(image.id, "medium")}
-                        alt={image.filename || t("Item image")}
-                      />
-                    </button>
-                  </div>
-
-                  <div className="mt-3">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {image.filename || t("Untitled image")}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t("Added {date}", {
-                        date: formatDate(image.created_at, locale)
-                      })}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <Button
-                      size="sm"
-                      variant="ghost"
+                      className={tileAction}
                       onClick={() => moveImage(index, index - 1)}
                       disabled={!canInteract || isBusy || isFirst}
+                      aria-label={t("Move left")}
+                      title={t("Move left")}
                     >
                       <ArrowLeft className="h-4 w-4" />
-                      {t("Move left")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
+                    </button>
+                    <button
+                      type="button"
+                      className={tileAction}
                       onClick={() => moveImage(index, index + 1)}
                       disabled={!canInteract || isBusy || isLast}
+                      aria-label={t("Move right")}
+                      title={t("Move right")}
                     >
                       <ArrowRight className="h-4 w-4" />
-                      {t("Move right")}
-                    </Button>
+                    </button>
                     {editable ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:bg-destructive-muted hover:text-destructive"
+                      <button
+                        type="button"
+                        className={cn(tileAction, "ml-auto text-destructive hover:bg-destructive-muted hover:text-destructive")}
                         onClick={() => handleDelete(image)}
                         disabled={!canEdit || isBusy}
+                        aria-label={t("Delete")}
+                        title={t("Delete")}
                       >
-                        <Trash2 className="h-4 w-4" />
-                        {deletePendingId === image.id
-                          ? t("Deleting...")
-                          : t("Delete")}
-                      </Button>
+                        {deletePendingId === image.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
                     ) : null}
                   </div>
                 </div>
@@ -498,6 +478,12 @@ export function ImageGallery({
             })}
           </div>
         )}
+
+        {footer && status !== "loading" ? (
+          <div className={cn(images.length > 0 && "border-t border-border pt-5")}>
+            {footer({ hasPhotos: images.length > 0 })}
+          </div>
+        ) : null}
       </div>
 
       <Lightbox
