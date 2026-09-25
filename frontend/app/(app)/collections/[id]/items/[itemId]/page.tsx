@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CalendarPlus,
+  History,
   Lock,
   Pencil,
   ShieldAlert,
@@ -427,22 +429,102 @@ export default function ItemDetailPage() {
     window.scrollTo({ top: 0 });
   }, [isEditing]);
 
+  const backLink = (
+    <Button variant="ghost" size="sm" className="-ml-3 max-w-full" asChild>
+      <Link href={`/collections/${collectionId ?? ""}`}>
+        <ArrowLeft className="h-4 w-4 shrink-0" />
+        {collectionName ? (
+          <span className="truncate">
+            {/* Visible as a breadcrumb; announced as the back link it is. */}
+            <span className="sr-only">{t("Back to collection")}: </span>
+            {collectionName}
+          </span>
+        ) : (
+          <span className="truncate">{t("Back to collection")}</span>
+        )}
+      </Link>
+    </Button>
+  );
+
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" className="-ml-3 max-w-full" asChild>
-        <Link href={`/collections/${collectionId ?? ""}`}>
-          <ArrowLeft className="h-4 w-4 shrink-0" />
-          {collectionName ? (
-            <span className="truncate">
-              {/* Visible as a breadcrumb; announced as the back link it is. */}
-              <span className="sr-only">{t("Back to collection")}: </span>
-              {collectionName}
-            </span>
-          ) : (
-            <span className="truncate">{t("Back to collection")}</span>
-          )}
-        </Link>
-      </Button>
+      {item ? (
+        // One title band for both modes, spanning the full width so the
+        // columns below start on the same line. It keeps its height when
+        // switching modes, so the photos stay in place.
+        <header className="space-y-2">
+          {backLink}
+          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <SectionHeading as="h1" size="xl" className="min-w-0 wrap-break-word">
+                  {item.name}
+                </SectionHeading>
+                {isEditing ? (
+                  <span className="rounded-full border border-brand-border bg-brand-muted px-2.5 py-0.5 text-xs font-medium text-brand">
+                    {t("Editing")}
+                  </span>
+                ) : null}
+              </div>
+              {/* Icons rather than dot separators, so wrapped lines never
+                  end or start with a stray dot. */}
+              <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("Created {date}", { date: formatDate(item.created_at) })}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <History className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("Updated {date}", { date: formatDate(item.updated_at) })}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5" aria-hidden="true" />
+                  {tc(item.star_count ?? 0, "{count} star", "{count} stars")}
+                </span>
+                {item.is_highlight ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-brand-border bg-brand-muted px-2.5 py-0.5 text-xs font-medium text-brand">
+                    <Sparkles className="h-3 w-3" aria-hidden="true" />
+                    {t("Spotlight")}
+                  </span>
+                ) : null}
+              </p>
+            </div>
+            {/* Edit mode saves and cancels from the pinned bar of the form. */}
+            {!isEditing ? (
+              <div className="flex w-full gap-2 sm:w-auto">
+                <Button
+                  className="grow sm:grow-0"
+                  onClick={() => setIsEditing(true)}
+                  disabled={!canEdit}
+                  title={!canEdit ? t("Reload schema to edit this item.") : undefined}
+                >
+                  <Pencil className="h-4 w-4" />
+                  {t("Edit item")}
+                </Button>
+                <Button
+                  variant={itemStarred ? "secondary" : "outline"}
+                  className="grow sm:grow-0"
+                  onClick={handleToggleItemStar}
+                  disabled={isUpdatingItemStar}
+                >
+                  <Star className={`h-4 w-4 ${itemStarred ? "fill-current" : ""}`} />
+                  {itemStarred ? t("Starred") : t("Star")}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+          {itemStarError ? (
+            <p className="text-sm text-destructive">{t(itemStarError)}</p>
+          ) : null}
+        </header>
+      ) : (
+        backLink
+      )}
+      {!isEditing && saveMessage ? (
+        <Alert tone="success" role="status">
+          {t(saveMessage)}
+        </Alert>
+      ) : null}
       {item?.is_draft && <p role="status" className="rounded-xl bg-brand-muted p-4 text-sm text-brand-strong">{t("This item is a private draft. Complete its fields and save to publish it in this collection.")}</p>}
 
       {itemState.status === "loading" ? (
@@ -472,18 +554,9 @@ export default function ItemDetailPage() {
         // and the details on the right become the form, so nothing moves when
         // switching modes. Below xl it is one column, form first. As in view
         // mode only the last row flexes, keeping the right-hand gaps even.
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:grid-rows-[auto_auto_1fr] xl:items-start xl:gap-8">
-          <header className="xl:col-start-2 xl:row-start-1">
-            <Eyebrow tone="brand" spacing="wide">
-              {t("Edit item")}
-            </Eyebrow>
-            <SectionHeading as="h1" size="xl" className="mt-3 wrap-break-word">
-              {item?.name}
-            </SectionHeading>
-          </header>
-
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:grid-rows-[auto_1fr] xl:items-start xl:gap-8">
           <ItemForm
-            className="xl:col-start-2 xl:row-start-2"
+            className="xl:col-start-2 xl:row-start-1"
             fields={fieldsState.data}
             initialValues={{
               name: itemState.data?.name ?? "",
@@ -615,7 +688,7 @@ export default function ItemDetailPage() {
           />
 
           <ImageGallery
-            className="xl:col-start-1 xl:row-span-3 xl:row-start-1"
+            className="xl:col-start-1 xl:row-span-2 xl:row-start-1"
             itemId={itemId ?? null}
             disabled={itemState.status !== "ready"}
             refreshToken={imageRefreshToken}
@@ -630,7 +703,7 @@ export default function ItemDetailPage() {
             )}
           />
 
-          <Alert className="rounded-3xl p-6 shadow-xs xl:col-start-2 xl:row-start-3">
+          <Alert className="rounded-3xl p-6 shadow-xs xl:col-start-2 xl:row-start-2">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <Eyebrow className="text-destructive">
@@ -693,68 +766,13 @@ export default function ItemDetailPage() {
         </div>
       ) : (
         // One column up to xl. From xl the page reads like an object record:
-        // the photo on the left stays in view while title, notes and
-        // attributes on the right scroll. The photo spans all three rows, so
-        // only the last row is flexible: extra photo height collects below
-        // the attributes instead of widening the gaps between the panels.
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:grid-rows-[auto_auto_1fr] xl:items-start xl:gap-8">
-          <header className="space-y-4 xl:col-start-2 xl:row-start-1">
-            <div>
-              <Eyebrow tone="brand" spacing="wide">
-                {t("Item detail")}
-              </Eyebrow>
-              <SectionHeading as="h1" size="xl" className="mt-3 wrap-break-word">
-                {item?.name}
-              </SectionHeading>
-            </div>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-              <span>{t("Created {date}", { date: formatDate(item?.created_at) })}</span>
-              <span aria-hidden="true">·</span>
-              <span>{t("Updated {date}", { date: formatDate(item?.updated_at) })}</span>
-              <span aria-hidden="true">·</span>
-              <span className="inline-flex items-center gap-1">
-                <Star className="h-3.5 w-3.5" aria-hidden="true" />
-                {tc(item?.star_count ?? 0, "{count} star", "{count} stars")}
-              </span>
-              {item?.is_highlight ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-brand-border bg-brand-muted px-2.5 py-0.5 text-xs font-medium text-brand">
-                  <Sparkles className="h-3 w-3" aria-hidden="true" />
-                  {t("Spotlight")}
-                </span>
-              ) : null}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                className="grow sm:grow-0"
-                onClick={() => setIsEditing(true)}
-                disabled={!canEdit}
-                title={!canEdit ? t("Reload schema to edit this item.") : undefined}
-              >
-                <Pencil className="h-4 w-4" />
-                {t("Edit item")}
-              </Button>
-              <Button
-                variant={itemStarred ? "secondary" : "outline"}
-                className="grow sm:grow-0"
-                onClick={handleToggleItemStar}
-                disabled={isUpdatingItemStar}
-              >
-                <Star className={`h-4 w-4 ${itemStarred ? "fill-current" : ""}`} />
-                {itemStarred ? t("Starred") : t("Star")}
-              </Button>
-            </div>
-            {itemStarError ? (
-              <p className="text-sm text-destructive">{t(itemStarError)}</p>
-            ) : null}
-            {saveMessage ? (
-              <Alert tone="success" role="status">
-                {t(saveMessage)}
-              </Alert>
-            ) : null}
-          </header>
-
+        // the photo on the left stays in view while notes and attributes on
+        // the right scroll. The photo spans both rows, so only the last row
+        // is flexible: extra photo height collects below the attributes
+        // instead of widening the gap between the panels.
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:grid-rows-[auto_1fr] xl:items-start xl:gap-8">
           <ItemPhotoViewer
-            className="xl:sticky xl:top-28 xl:col-start-1 xl:row-span-3 xl:row-start-1"
+            className="xl:sticky xl:top-28 xl:col-start-1 xl:row-span-2 xl:row-start-1"
             itemId={Number(itemId)}
             itemName={item?.name ?? ""}
             emptyAction={
@@ -770,7 +788,7 @@ export default function ItemDetailPage() {
             }
           />
 
-          <Card className="xl:col-start-2">
+          <Card className="xl:col-start-2 xl:row-start-1">
             <Eyebrow>
               {t("Notes")}
             </Eyebrow>
@@ -785,7 +803,7 @@ export default function ItemDetailPage() {
             )}
           </Card>
 
-          <Card className="xl:col-start-2">
+          <Card className="xl:col-start-2 xl:row-start-2">
             <Eyebrow>
               {t("Metadata")}
             </Eyebrow>
