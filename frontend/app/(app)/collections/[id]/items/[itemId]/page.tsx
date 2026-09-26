@@ -5,12 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  CalendarPlus,
-  History,
-  Lock,
   Pencil,
   ShieldAlert,
-  Sparkles,
   Star,
   Trash2
 } from "lucide-react";
@@ -18,11 +14,12 @@ import {
 import { ItemForm, type ItemFormValues } from "@/components/item-form";
 import { ImageGallery } from "@/components/image-gallery";
 import { ImageUploader } from "@/components/image-uploader";
+import { AttributeList, AttributeRow } from "@/components/attribute-list";
 import { ItemPhotoViewer } from "@/components/item-photo-viewer";
+import { ItemTitleBand } from "@/components/item-title-band";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useI18n } from "@/components/i18n-provider";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   collectionApi,
@@ -452,48 +449,25 @@ export default function ItemDetailPage() {
         // One title band for both modes, spanning the full width so the
         // columns below start on the same line. It keeps its height when
         // switching modes, so the photos stay in place.
-        <header className="space-y-2">
-          {backLink}
-          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
-            <div className="min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <SectionHeading as="h1" size="xl" className="min-w-0 wrap-break-word">
-                  {item.name}
-                </SectionHeading>
-                {isEditing ? (
-                  <span className="rounded-full border border-brand-border bg-brand-muted px-2.5 py-0.5 text-xs font-medium text-brand">
-                    {t("Editing")}
-                  </span>
-                ) : null}
-              </div>
-              {/* Icons rather than dot separators, so wrapped lines never
-                  end or start with a stray dot. */}
-              <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t("Created {date}", { date: formatDate(item.created_at) })}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <History className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t("Updated {date}", { date: formatDate(item.updated_at) })}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Star className="h-3.5 w-3.5" aria-hidden="true" />
-                  {tc(item.star_count ?? 0, "{count} star", "{count} stars")}
-                </span>
-                {item.is_highlight ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-brand-border bg-brand-muted px-2.5 py-0.5 text-xs font-medium text-brand">
-                    <Sparkles className="h-3 w-3" aria-hidden="true" />
-                    {t("Spotlight")}
-                  </span>
-                ) : null}
-              </p>
-            </div>
-            {/* Edit mode saves and cancels from the pinned bar of the form. */}
-            {!isEditing ? (
-              <div className="flex w-full gap-2 sm:w-auto">
+        <ItemTitleBand
+          backLink={backLink}
+          name={item.name}
+          badge={
+            isEditing ? (
+              <span className="rounded-full border border-brand-border bg-brand-muted px-2.5 py-0.5 text-xs font-medium text-brand">
+                {t("Editing")}
+              </span>
+            ) : null
+          }
+          createdAt={item.created_at}
+          updatedAt={item.updated_at}
+          starCount={item.star_count ?? 0}
+          isHighlight={item.is_highlight}
+          actions={
+            // Edit mode saves and cancels from the pinned bar of the form.
+            isEditing ? null : (
+              <>
                 <Button
-                  className="grow sm:grow-0"
                   onClick={() => setIsEditing(true)}
                   disabled={!canEdit}
                   title={!canEdit ? t("Reload schema to edit this item.") : undefined}
@@ -503,20 +477,20 @@ export default function ItemDetailPage() {
                 </Button>
                 <Button
                   variant={itemStarred ? "secondary" : "outline"}
-                  className="grow sm:grow-0"
                   onClick={handleToggleItemStar}
                   disabled={isUpdatingItemStar}
                 >
                   <Star className={`h-4 w-4 ${itemStarred ? "fill-current" : ""}`} />
                   {itemStarred ? t("Starred") : t("Star")}
                 </Button>
-              </div>
-            ) : null}
-          </div>
+              </>
+            )
+          }
+        >
           {itemStarError ? (
             <p className="text-sm text-destructive">{t(itemStarError)}</p>
           ) : null}
-        </header>
+        </ItemTitleBand>
       ) : (
         backLink
       )}
@@ -826,37 +800,23 @@ export default function ItemDetailPage() {
                   )}
                 </EmptyState>
               ) : (
-                <dl className="divide-y divide-border">
+                <AttributeList>
                   {sortedFields.map((field) => {
                     const rawValue = metadataMap[field.name];
-                    const isMissing =
-                      rawValue === null || rawValue === undefined || rawValue === "";
                     return (
-                      <div
+                      <AttributeRow
                         key={field.id}
-                        className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 py-3 first:pt-1 last:pb-0"
-                      >
-                        <dt className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                          <span className="wrap-break-word">{field.name}</span>
-                          {field.is_private ? (
-                            <span className="mt-0.5 shrink-0" title={t("Private")}>
-                              <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-                              <span className="sr-only">{t("Private")}</span>
-                            </span>
-                          ) : null}
-                        </dt>
-                        <dd
-                          className={cn(
-                            "text-sm wrap-break-word",
-                            isMissing ? "text-muted-subtle" : "text-foreground"
-                          )}
-                        >
-                          {isMissing ? "—" : formatFieldValue(rawValue, field.field_type)}
-                        </dd>
-                      </div>
+                        label={field.name}
+                        isPrivate={field.is_private}
+                        value={
+                          rawValue === null || rawValue === undefined || rawValue === ""
+                            ? null
+                            : formatFieldValue(rawValue, field.field_type)
+                        }
+                      />
                     );
                   })}
-                </dl>
+                </AttributeList>
               )}
             </div>
 

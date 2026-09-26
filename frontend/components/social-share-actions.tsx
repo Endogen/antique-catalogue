@@ -16,6 +16,9 @@ type SocialShareActionsProps = {
   className?: string;
   iconOnly?: boolean;
   copyFirst?: boolean;
+  /** Matches the buttons beside them, e.g. in an item's title band. */
+  size?: "sm" | "default";
+  buttonClassName?: string;
 };
 
 const buildShareText = (title: string, text?: string | null): string => {
@@ -33,7 +36,9 @@ export function SocialShareActions({
   text,
   className,
   iconOnly = false,
-  copyFirst = false
+  copyFirst = false,
+  size = "sm",
+  buttonClassName
 }: SocialShareActionsProps) {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -106,12 +111,15 @@ export function SocialShareActions({
   }, [handleCopyLink, resolveShareUrl, t, text, title, toast]);
 
   const disabled = !path;
-  const iconButtonClassName = iconOnly ? "w-9 px-0" : undefined;
+  const iconButtonClassName = cn(
+    iconOnly && (size === "sm" ? "w-9 px-0" : "w-10 px-0"),
+    buttonClassName
+  );
 
   const shareButton = (
     <Button
       variant="outline"
-      size="sm"
+      size={size}
       className={iconButtonClassName}
       onClick={() => void handleNativeShare()}
       disabled={disabled}
@@ -126,7 +134,7 @@ export function SocialShareActions({
   const copyButton = (
     <Button
       variant="outline"
-      size="sm"
+      size={size}
       className={iconButtonClassName}
       onClick={() => void handleCopyLink()}
       disabled={disabled}
