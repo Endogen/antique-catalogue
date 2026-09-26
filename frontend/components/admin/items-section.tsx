@@ -172,8 +172,12 @@ export function ItemsSection() {
             />
           ))}
         </RowList>
-        <Pagination page={page} total={total} onPage={setPage} />
       </ListState>
+      <Pagination
+        page={page}
+        total={query.isSuccess && !query.isPlaceholderData && !query.isFetching ? total : undefined}
+        onPage={setPage}
+      />
     </div>
   );
 }

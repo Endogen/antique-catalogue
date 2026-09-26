@@ -316,13 +316,21 @@ export function Pagination({
   onPage
 }: {
   page: number;
-  total: number;
+  total: number | undefined;
   pageSize?: number;
   onPage: (page: number) => void;
 }) {
   const { t } = useI18n();
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (pages <= 1) {
+  const pages = Math.max(1, Math.ceil((total ?? 0) / pageSize));
+  React.useEffect(() => {
+    // Only correct the URL using a settled result for the current query,
+    // never a previous search's placeholder data or the initial empty state.
+    if (total !== undefined && page >= pages) {
+      onPage(pages - 1);
+    }
+  }, [onPage, page, pages, total]);
+
+  if (total === undefined || (pages <= 1 && page === 0)) {
     return null;
   }
   return (
